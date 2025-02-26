@@ -1,0 +1,62 @@
+C251 COMPILER V5.60.0,  main                                                               22/02/25  17:48:04  PAGE 1   
+
+
+C251 COMPILER V5.60.0, COMPILATION OF MODULE main
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: C:\Keil_v5\C251\BIN\C251.EXE main.c INTR2 BROWSE DEBUG PRINT(.\Listings\main.lst) TABS(2) OBJECT(.\
+                    -Objects\main.obj) 
+
+stmt  level    source
+
+    1          #include <AI8051U.H>
+    2          void qwq(){
+    3   1        qwq();
+*** WARNING C190 IN LINE 3 OF main.c: 'qwq': recursive call to non-reentrant function
+    4   1      }
+    5          void Delay10ms(void)  //@11.0592MHz
+    6          {
+    7   1        unsigned long edata i;
+    8   1        i = 27646UL;
+    9   1        while (i) i--;
+   10   1      }
+   11          
+   12          void main (void)
+   13          {
+   14   1        int i = 0;
+   15   1        P2M0 = 0X00;
+   16   1        P2M1 = 0x00;
+   17   1        while(1)
+   18   1        {
+   19   2          for (i = 0; i < 255;i++){
+   20   3            P2 = i;
+   21   3            Delay10ms();
+   22   3      
+   23   3          }
+   24   2      
+   25   2      
+   26   2        }
+   27   1      }
+
+
+Module Information          Static   Overlayable
+------------------------------------------------
+  code size            =        37     ------
+  ecode size           =    ------     ------
+  data size            =    ------     ------
+  idata size           =    ------     ------
+  pdata size           =    ------     ------
+  xdata size           =    ------     ------
+  xdata-const size     =    ------     ------
+  edata size           =    ------     ------
+  bit size             =    ------     ------
+  ebit size            =    ------     ------
+  bitaddressable size  =    ------     ------
+  ebitaddressable size =    ------     ------
+  far data size        =    ------     ------
+  huge data size       =    ------     ------
+  const size           =    ------     ------
+  hconst size          =    ------     ------
+End of Module Information.
+
+
+C251 COMPILATION COMPLETE.  1 WARNING(S),  0 ERROR(S)

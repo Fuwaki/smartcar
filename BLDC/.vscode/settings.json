@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "*.conf": "nginx",
+        "ai8051u.h": "c",
+        "AI8051U.H": "cpp"
+    }
+}
