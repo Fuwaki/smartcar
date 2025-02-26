@@ -1,15 +1,28 @@
 #include <AI8051U.H>
-void qwq(){
+#include <intrins.h>
+#include "PWM_Controller.h"
+
+
+void qwq()
+{
+	printf("fk u fuwaky\n");
 	qwq();
 }
-void Delay10ms(void)	//@11.0592MHzr
+
+void Delay100us(void)	//@12.000MHz
 {
 	unsigned long edata i;
-	i = 27646UL;
+
+	_nop_();
+	_nop_();
+	_nop_();
+	i = 298UL;
 	while (i) i--;
 }
+
 typedef (int)
-void run(void * callback){
+void run(void * callback)
+{
 	
 }
 
@@ -20,7 +33,8 @@ void main (void)
 	P2M1 = 0x00;
 	while(1)
 	{
-		for (i = 0; i < 255;i++){
+		for (i = 0; i < 255;i++)
+		{
 			P2 = i;
 			Delay10ms();
 
