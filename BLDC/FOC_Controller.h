@@ -4,7 +4,7 @@
     void OutPutter(double Uq, double Ud, double angle_elsped);
     double Electric_Angle(double shaft_angle, int pole_pairs);
     double _normalizeAngle(double angle);
-    double velocityOpenloop(double target_velocity)
+    double velocityOpenloop(double target_velocity);
     // extern double Electric_Angle;
     // extern double Shaft_Angle;
     // extern double Ualpha;

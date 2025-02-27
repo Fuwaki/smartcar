@@ -17,10 +17,12 @@ double Uc;
 double DC_a;
 double DC_b;
 double DC_c;
+double Uq;
 
 float voltage_power_supply = 12;//12v??
+float Ts = 0.001; //1ms 系统时间间隔
 
-double Electric_Angle(double shaft_angle, int pole_pairs) //电机的电角度 = 机械角度 * 极对数
+double _electric_Angle(double shaft_angle, int pole_pairs) //电机的电角度 = 机械角度 * 极对数
 {
     return shaft_angle * pole_pairs;
 }
@@ -69,12 +71,12 @@ double velocityOpenloop(double target_velocity) //finally...
 {
     /* 使用早前设置的voltage_power_supply的1/3作为Uq值，这个值会直接影响输出力矩
     最大只能设置为Uq = voltage_power_supply/2，否则ua,ub,uc会超出供电电压限幅 */
-    double Uq = voltage_power_supply/3;
-    float Ts = 0.001; //1ms 系统时间间隔
+    Uq = voltage_power_supply/3;
+
 //
-    Shaft_Angle = _normalizeAngle(Shaft_Angle + target_velocity*Ts) //emm然后就是机械角度的归一化damn
+    Shaft_Angle = _normalizeAngle(Shaft_Angle + target_velocity*Ts); //emm然后就是机械角度的归一化damn
 //
 
-    OutPutter(Uq, 0, Electric_Angle(Shaft_Angle, 1));
+    OutPutter(Uq, 0.0, _electric_Angle(Shaft_Angle, 1.0));
     return Uq;
 }

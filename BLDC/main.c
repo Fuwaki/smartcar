@@ -3,9 +3,9 @@
 #include "PWM_Controller.h"
 #include "FOC_Controller.h"
 
-sbit PWMa = P1^0;
-sbit PWMb = P1^1;
-sbit PWMc = P1^2;
+sbit PWMa = P0^0;
+sbit PWMb = P0^1;
+sbit PWMc = P0^2;
 
 void Delay100us(void)	//@12.000MHz
 {
@@ -22,15 +22,14 @@ void Inits()
 {
 	P0M0 = 0xff; P0M1 = 0x00;
 	PWM_Init();
-	printf("Init done!LOL\n");
-	Delay100us();
+	Delay100us(); 
 }
 
-typedef (int)
-void run(void * callback)
-{
+// typedef (int)
+// void run(void * callback)
+// {
 	
-}
+// }
 
 void En_PWM()
 {
@@ -45,6 +44,6 @@ void main (void)
 
 	while(1)
 	{
-		velocityOpenloop(/*num*/);
+		velocityOpenloop(2.0);
 	}
 }

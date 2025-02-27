@@ -1,4 +1,4 @@
-C251 COMPILER V5.60.0,  main                                                               27/02/25  15:35:45  PAGE 1   
+C251 COMPILER V5.60.0,  main                                                               27/02/25  18:35:06  PAGE 1   
 
 
 C251 COMPILER V5.60.0, COMPILATION OF MODULE main
@@ -13,10 +13,9 @@ stmt  level    source
     3          #include "PWM_Controller.h"
     4          #include "FOC_Controller.h"
     5          
-    6          sbit PWMa = P1^0;
-*** ERROR C25 IN LINE 6 OF main.c: syntax error near 'sbit'
-    7          sbit PWMb = P1^1;
-    8          sbit PWMc = P1^2;
+    6          sbit PWMa = P0^0;
+    7          sbit PWMb = P0^1;
+    8          sbit PWMc = P0^2;
     9          
    10          void Delay100us(void)   //@12.000MHz
    11          {
@@ -33,37 +32,54 @@ stmt  level    source
    22          {
    23   1              P0M0 = 0xff; P0M1 = 0x00;
    24   1              PWM_Init();
-   25   1              printf("Init done!LOL\n");
-*** WARNING C140 IN LINE 25 OF main.c: 'printf' undefined; assuming 'extern int printf()'
-*** WARNING C95 IN LINE 25 OF main.c: 'printf': too many actual parameters
-   26   1              Delay100us();
-   27   1      }
-   28          
-   29          typedef (int)
-*** ERROR C25 IN LINE 29 OF main.c: syntax error near 'int'
-*** ERROR C25 IN LINE 29 OF main.c: syntax error near ')'
-   30          void run(void * callback)
-   31          {
-   32   1              
-   33   1      }
-*** WARNING C47 IN LINE 30 OF main.c: 'callback': unreferenced parameter
-   34          
-   35          void En_PWM()
-   36          {
-   37   1              PWMa = PWM_EN0;
-   38   1              PWMb = PWM_EN1;
-   39   1              PWMc = PWM_EN2;
-   40   1      }
-   41          
-   42          void main (void)
-   43          {
-   44   1              Inits();
-   45   1      
-   46   1              while(1)
-   47   1              {
-   48   2                      velocityOpenloop(/*num*/);
-*** WARNING C140 IN LINE 48 OF main.c: 'velocityOpenloop' undefined; assuming 'extern int velocityOpenloop()'
-   49   2              }
-   50   1      }
+   25   1              Delay100us(); 
+   26   1      }
+   27          
+   28          // typedef (int)
+   29          // void run(void * callback)
+   30          // {
+   31                  
+   32          // }
+   33          
+   34          void En_PWM()
+   35          {
+   36   1              PWMa = PWM_EN0;
+   37   1              PWMb = PWM_EN1;
+   38   1              PWMc = PWM_EN2;
+   39   1      }
+   40          
+   41          void main (void)
+   42          {
+   43   1              Inits();
+   44   1      
+   45   1              while(1)
+   46   1              {
+   47   2                      velocityOpenloop(2.0);
+   48   2              }
+   49   1      }
 
-C251 COMPILATION COMPLETE.  4 WARNING(S),  3 ERROR(S)
+
+Module Information          Static   Overlayable
+------------------------------------------------
+  code size            =        57     ------
+  ecode size           =    ------     ------
+  data size            =    ------     ------
+  idata size           =    ------     ------
+  pdata size           =    ------     ------
+  xdata size           =    ------     ------
+C251 COMPILER V5.60.0,  main                                                               27/02/25  18:35:06  PAGE 2   
+
+  xdata-const size     =    ------     ------
+  edata size           =    ------     ------
+  bit size             =    ------     ------
+  ebit size            =    ------     ------
+  bitaddressable size  =    ------     ------
+  ebitaddressable size =    ------     ------
+  far data size        =    ------     ------
+  huge data size       =    ------     ------
+  const size           =    ------     ------
+  hconst size          =    ------     ------
+End of Module Information.
+
+
+C251 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
