@@ -329,6 +329,26 @@
               <FileType>1</FileType>
               <FilePath>.\main.c</FilePath>
             </File>
+            <File>
+              <FileName>FOC_Controller.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\FOC_Controller.c</FilePath>
+            </File>
+            <File>
+              <FileName>FOC_Controller.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\FOC_Controller.h</FilePath>
+            </File>
+            <File>
+              <FileName>PWM_Controller.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\PWM_Controller.c</FilePath>
+            </File>
+            <File>
+              <FileName>PWM_Controller.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\PWM_Controller.h</FilePath>
+            </File>
           </Files>
         </Group>
       </Groups>

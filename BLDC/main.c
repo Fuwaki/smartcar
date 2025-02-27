@@ -1,13 +1,11 @@
 #include <AI8051U.H>
 #include <intrins.h>
 #include "PWM_Controller.h"
+#include "FOC_Controller.h"
 
-
-void qwq()
-{
-	printf("fk u fuwaky\n");
-	qwq();
-}
+sbit PWMa = P1^0;
+sbit PWMb = P1^1;
+sbit PWMc = P1^2;
 
 void Delay100us(void)	//@12.000MHz
 {
@@ -20,26 +18,33 @@ void Delay100us(void)	//@12.000MHz
 	while (i) i--;
 }
 
+void Inits()
+{
+	P0M0 = 0xff; P0M1 = 0x00;
+	PWM_Init();
+	printf("Init done!LOL\n");
+	Delay100us();
+}
+
 typedef (int)
 void run(void * callback)
 {
 	
 }
 
+void En_PWM()
+{
+	PWMa = PWM_EN0;
+	PWMb = PWM_EN1;
+	PWMc = PWM_EN2;
+}
+
 void main (void)
 {
-	int i = 0;
-	P2M0 = 0X00;
-	P2M1 = 0x00;
+	Inits();
+
 	while(1)
 	{
-		for (i = 0; i < 255;i++)
-		{
-			P2 = i;
-			Delay10ms();
-
-		}
-
-
+		velocityOpenloop(/*num*/);
 	}
 }

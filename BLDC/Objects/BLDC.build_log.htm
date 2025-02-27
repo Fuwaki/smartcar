@@ -5,11 +5,11 @@
 <h2>Tool Versions:</h2>
 IDE-Version: ¦ÌVision V5.25.3.0
 Copyright (C) 2018 ARM Ltd and ARM Germany GmbH. All rights reserved.
-License Information: fu waki, hnust, LIC=----
+License Information: Uniko Zera, 1, LIC=TI39H-W3A4N-SFII1-CIJZ6-RW7Z9-1N2G3
  
 Tool Versions:
-Toolchain:       DK251 Develpers Kit  Version: 5.60.0.0
-Toolchain Path:  C:\Keil_v5\C251\BIN
+Toolchain:       PK251 Prof. Developers Kit  Version: 5.60.0.0
+Toolchain Path:  D:\mcu\Keil5\C251\BIN
 C Compiler:      C251.exe V5.60.0.0
 Assembler:       A251.exe V4.69.13.0
 Linker/Locator:  L251.exe V4.66.93.0
@@ -18,17 +18,30 @@ Hex Converter:   OH251.exe V1.47.0.0
 CPU DLL:         S251.DLL V3.129.0.0
 Dialog DLL:      DCORE51.DLL V2.81.6.0 
 <h2>Project:</h2>
-D:\smartcar\BLDC\BLDC.uvproj
-Project File Date:  02/21/2025
+D:\mcu\projects\smartCarUpdate\smartcar\BLDC\BLDC.uvproj
+Project File Date:  02/27/2025
 
 <h2>Output:</h2>
 Build target 'Target 1'
-linking...
-*** WARNING L57: UNCALLED FUNCTION, IGNORED FOR OVERLAY PROCESS
-    NAME:    qwq/main
-Program Size: data=8.0 edata+hdata=256 xdata=0 const=0 code=62
-creating hex file from ".\Objects\BLDC"...
-".\Objects\BLDC" - 0 Error(s), 1 Warning(s).
+compiling main.c...
+main.c(6): error C25: syntax error near 'sbit'
+main.c(25): warning C140: 'printf' undefined; assuming 'extern int printf()'
+main.c(25): warning C95: 'printf': too many actual parameters
+main.c(29): error C25: syntax error near 'int'
+main.c(29): error C25: syntax error near ')'
+main.c(30): warning C47: 'callback': unreferenced parameter
+main.c(48): warning C140: 'velocityOpenloop' undefined; assuming 'extern int velocityOpenloop()'
+compiling FOC_Controller.c...
+FOC_Controller.c(24): error C53: redefinition of 'Electric_Angle': different function attributes
+FOC_Controller.c(24): error C53: redefinition of 'Electric_Angle': different basic types
+FOC_Controller.c(78): error C25: syntax error near 'OutPutter'
+FOC_Controller.c(78): error C76: formal parameter ignored
+FOC_Controller.c(78): error C25: syntax error near '0'
+FOC_Controller.c(78): error C25: syntax error near ')'
+FOC_Controller.c(79): warning C34: 'Uq': missing declaration specifiers
+FOC_Controller.c(79): error C53: redefinition of 'Uq'
+FOC_Controller.c(80): error C25: syntax error near '}'
+Target not created.
 Build Time Elapsed:  00:00:00
 </pre>
 </body>

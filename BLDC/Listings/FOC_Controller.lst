@@ -1,0 +1,105 @@
+C251 COMPILER V5.60.0,  FOC_Controller                                                     27/02/25  15:35:45  PAGE 1   
+
+
+C251 COMPILER V5.60.0, COMPILATION OF MODULE FOC_Controller
+OBJECT MODULE PLACED IN .\Objects\FOC_Controller.obj
+COMPILER INVOKED BY: D:\mcu\Keil5\C251\BIN\C251.EXE FOC_Controller.c INTR2 BROWSE DEBUG PRINT(.\Listings\FOC_Controller.
+                    -lst) OBJECT(.\Objects\FOC_Controller.obj) 
+
+stmt  level    source
+
+    1          #include <AI8051U.H>
+    2          #include <intrins.h>
+    3          #include <math.h>
+    4          #include "PWM_Controller.h"
+    5          
+    6          #define PI 3.14159265358979323846
+    7          
+    8          #define _constrain(amt,low,high) ((amt)<(low)?(low):((amt)>(high)?(high):(amt)))
+    9          
+   10          double Electric_Angle;
+   11          double Shaft_Angle;
+   12          double Ualpha;
+   13          double Ubeta;
+   14          double Ua;
+   15          double Ub;
+   16          double Uc;
+   17          double DC_a;
+   18          double DC_b;
+   19          double DC_c;
+   20          
+   21          float voltage_power_supply = 12;//12v??
+   22          
+   23          double Electric_Angle(double shaft_angle, int pole_pairs) //电机的电角度 = 机械角度 * 极对数
+   24          {
+*** ERROR C53 IN LINE 24 OF FOC_Controller.c: redefinition of 'Electric_Angle': different function attributes
+*** ERROR C53 IN LINE 24 OF FOC_Controller.c: redefinition of 'Electric_Angle': different basic types
+   25   1          return shaft_angle * pole_pairs;
+   26   1      }
+   27          
+   28          double _normalizeAngle(double angle) //控制在0~2π之间 LOL
+   29          {
+   30   1          while(angle > 2*PI)
+   31   1          {
+   32   2              angle -= 2*PI;
+   33   2          }
+   34   1          while(angle < 0)
+   35   1          {
+   36   2              angle += 2*PI;
+   37   2          }
+   38   1          return angle;
+   39   1      }
+   40          
+   41          void Set_PWM(double Ua, double Ub, double Uc)
+   42          {
+   43   1          DC_a = _constrain(Ua/voltage_power_supply, 0.0f, 1.0f);
+   44   1          DC_b = _constrain(Ub/voltage_power_supply, 0.0f, 1.0f);
+   45   1          DC_c = _constrain(Uc/voltage_power_supply, 0.0f, 1.0f);
+   46   1      
+   47   1          PWM_DUTY0 = (unsigned char)(DC_a * 100);
+   48   1          PWM_DUTY1 = (unsigned char)(DC_b * 100);
+   49   1          PWM_DUTY2 = (unsigned char)(DC_c * 100);
+   50   1      }
+   51          
+   52          void OutPutter(double Uq, double Ud, double angle_elsped) //Ud暂时不知道2333，貌似影响不大，
+             -但是留着.Uq是主要的，Ud直轴电压，什么？为什么叫_elsped?LOL LUA
+   53          {
+   54   1          angle_elsped = _normalizeAngle(angle_elsped);
+   55   1      
+C251 COMPILER V5.60.0,  FOC_Controller                                                     27/02/25  15:35:45  PAGE 2   
+
+   56   1          /* 帕克变换 */
+   57   1          Ualpha = -Uq * sin(angle_elsped) + Ud * cos(angle_elsped); 
+   58   1          Ubeta = Uq * cos(angle_elsped) + Ud * sin(angle_elsped); 
+   59   1      
+   60   1          /* 逆克拉克变换 */
+   61   1          Ua = Ualpha + voltage_power_supply/2; //电压被平移到中间去玩
+   62   1          Ub = (sqrt(3)*Ubeta-Ualpha)/2 + voltage_power_supply/2;
+   63   1          Uc = (-Ualpha-sqrt(3)*Ubeta)/2 + voltage_power_supply/2;
+   64   1          
+   65   1          Set_PWM(Ua,Ub,Uc); //还是在这里做转化吧
+   66   1      }
+   67          
+   68          double velocityOpenloop(double target_velocity) //finally...
+   69          {
+   70   1          /* 使用早前设置的voltage_power_supply的1/3作为Uq值，这个值会直接影响输出力矩
+   71   1          最大只能设置为Uq = voltage_power_supply/2，否则ua,ub,uc会超出供电电压限幅 */
+   72   1          double Uq = voltage_power_supply/3;
+   73   1          float Ts = 0.001; //1ms 系统时间间隔
+   74   1      //
+   75   1          Shaft_Angle = _normalizeAngle(Shaft_Angle + target_velocity*Ts) //emm然后就是机械角度的归�
+             -�化damn
+   76   1      //
+   77   1      
+   78   1          OutPutter(Uq, 0, Electric_Angle(Shaft_Angle, 1));
+*** ERROR C25 IN LINE 78 OF FOC_Controller.c: syntax error near 'OutPutter'
+*** ERROR C76 IN LINE 78 OF FOC_Controller.c: formal parameter ignored
+*** ERROR C25 IN LINE 78 OF FOC_Controller.c: syntax error near '0'
+*** ERROR C25 IN LINE 78 OF FOC_Controller.c: syntax error near ')'
+   79   1          return Uq;
+*** WARNING C34 IN LINE 79 OF FOC_Controller.c: 'Uq': missing declaration specifiers
+*** ERROR C53 IN LINE 79 OF FOC_Controller.c: redefinition of 'Uq'
+   80   1      }
+*** ERROR C25 IN LINE 80 OF FOC_Controller.c: syntax error near '}'
+
+C251 COMPILATION COMPLETE.  1 WARNING(S),  8 ERROR(S)
