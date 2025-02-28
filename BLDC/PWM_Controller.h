@@ -11,4 +11,6 @@
     extern unsigned char PWM_EN1;
     extern unsigned char PWM_EN2;
     extern unsigned char PWM_EN3;
+    extern double timestamp;
+    extern double timestamp_previous;
 #endif
