@@ -19,22 +19,43 @@ CPU DLL:         S251.DLL V3.129.0.0
 Dialog DLL:      DCORE51.DLL V2.81.6.0 
 <h2>Project:</h2>
 D:\mcu\projects\smartCarUpdate\smartcar\BLDC\BLDC.uvproj
-Project File Date:  02/27/2025
+Project File Date:  03/01/2025
 
 <h2>Output:</h2>
 Rebuild target 'Target 1'
 compiling main.c...
 compiling FOC_Controller.c...
+FOC_Controller.c(11): warning C2: 'REGION': unknown #pragma/control, line ignored
+FOC_Controller.c(25): warning C2: 'ENDREGION': unknown #pragma/control, line ignored
 compiling PWM_Controller.c...
+PWM_Controller.c(7): warning C2: 'REGION': unknown #pragma/control, line ignored
+PWM_Controller.c(21): warning C2: 'ENDREGION': unknown #pragma/control, line ignored
+PWM_Controller.c(210): warning C186: '>=': meaningless use of an expression
+compiling PID_Controller.c...
+compiling Lowpass_Filter.c...
+compiling Observer.c...
+Observer.c(15): warning C47: 'C': unreferenced parameter
 linking...
 *** WARNING L57: UNCALLED FUNCTION, IGNORED FOR OVERLAY PROCESS
-    NAME:    En_PWM/main
+    NAME:    Set_PWM_Frequency/PWM_Controller
 *** WARNING L57: UNCALLED FUNCTION, IGNORED FOR OVERLAY PROCESS
-    NAME:    Set_PWM_Duty/PWM_Controller
-Program Size: data=85.0 edata+hdata=256 xdata=0 const=90 code=2018
+    NAME:    PWM_Channel_Controller/PWM_Controller
+*** WARNING L57: UNCALLED FUNCTION, IGNORED FOR OVERLAY PROCESS
+    NAME:    Timer1_Init/PWM_Controller
+*** WARNING L57: UNCALLED FUNCTION, IGNORED FOR OVERLAY PROCESS
+    NAME:    AdjustPID/PID_Controller
+*** WARNING L57: UNCALLED FUNCTION, IGNORED FOR OVERLAY PROCESS
+    NAME:    PID_Controller/PID_Controller
+*** WARNING L57: UNCALLED FUNCTION, IGNORED FOR OVERLAY PROCESS
+    NAME:    Lowpass_Filter/Lowpass_Filter
+*** WARNING L57: UNCALLED FUNCTION, IGNORED FOR OVERLAY PROCESS
+    NAME:    Update_Observer/Observer
+*** WARNING L57: UNCALLED FUNCTION, IGNORED FOR OVERLAY PROCESS
+    NAME:    Init_Observer/Observer
+Program Size: data=8.0 edata+hdata=428 xdata=0 const=109 code=3100
 creating hex file from ".\Objects\BLDC"...
-".\Objects\BLDC" - 0 Error(s), 2 Warning(s).
-Build Time Elapsed:  00:00:00
+".\Objects\BLDC" - 0 Error(s), 14 Warning(s).
+Build Time Elapsed:  00:00:01
 </pre>
 </body>
 </html>

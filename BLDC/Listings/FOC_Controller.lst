@@ -1,10 +1,10 @@
-C251 COMPILER V5.60.0,  FOC_Controller                                                     27/02/25  18:35:06  PAGE 1   
+C251 COMPILER V5.60.0,  FOC_Controller                                                     01/03/25  15:57:30  PAGE 1   
 
 
 C251 COMPILER V5.60.0, COMPILATION OF MODULE FOC_Controller
 OBJECT MODULE PLACED IN .\Objects\FOC_Controller.obj
-COMPILER INVOKED BY: D:\mcu\Keil5\C251\BIN\C251.EXE FOC_Controller.c INTR2 BROWSE DEBUG PRINT(.\Listings\FOC_Controller.
-                    -lst) OBJECT(.\Objects\FOC_Controller.obj) 
+COMPILER INVOKED BY: D:\mcu\Keil5\C251\BIN\C251.EXE FOC_Controller.c XSMALL INTR2 BROWSE DEBUG PRINT(.\Listings\FOC_Cont
+                    -roller.lst) OBJECT(.\Objects\FOC_Controller.obj) 
 
 stmt  level    source
 
@@ -12,101 +12,105 @@ stmt  level    source
     2          #include <intrins.h>
     3          #include <math.h>
     4          #include "PWM_Controller.h"
-    5          
-    6          #define PI 3.14159265358979323846
-    7          
-    8          #define _constrain(amt,low,high) ((amt)<(low)?(low):((amt)>(high)?(high):(amt)))
-    9          
-   10          double Electric_Angle;
-   11          double Shaft_Angle;
-   12          double Ualpha;
-   13          double Ubeta;
-   14          double Ua;
-   15          double Ub;
-   16          double Uc;
-   17          double DC_a;
-   18          double DC_b;
-   19          double DC_c;
-   20          double Uq;
-   21          
-   22          float voltage_power_supply = 12;//12v??
-   23          float Ts = 0.001; //1ms 系统时间间隔
-   24          
-   25          double _electric_Angle(double shaft_angle, int pole_pairs) //电机的电角度 = 机械角度 * 极对�
+    5          #include "Lowpass_Filter.h"
+    6          
+    7          #define PI 3.14159265358979323846 //这么长怎么你了！
+    8          
+    9          #define _constrain(amt,low,high) ((amt)<(low)?(low):((amt)>(high)?(high):(amt)))
+   10          
+   11          #pragma region Motor_Parameters
+*** WARNING C2 IN LINE 11 OF FOC_Controller.c: 'REGION': unknown #pragma/control, line ignored
+   12          float voltage_power_supply = 12;//12v??
+   13          double Electric_Angle;
+   14          double Shaft_Angle;
+   15          double Initial_Angle = 0; //有可能转子不在0度位置，所以需要一个初始角度
+   16          double Ualpha;
+   17          double Ubeta;
+   18          double Ua;
+   19          double Ub;
+   20          double Uc;
+   21          double DC_a;
+   22          double DC_b;
+   23          double DC_c;
+   24          double Uq;
+   25          #pragma endregion
+*** WARNING C2 IN LINE 25 OF FOC_Controller.c: 'ENDREGION': unknown #pragma/control, line ignored
+   26          
+   27          float Ts = 0.001; //1ms 系统时间间隔
+   28          
+   29          double _electric_Angle(double shaft_angle, int pole_pairs) //电机的电角度 = 机械角度 * 极对�
              -�
-   26          {
-   27   1          return shaft_angle * pole_pairs;
-   28   1      }
-   29          
-   30          double _normalizeAngle(double angle) //控制在0~2π之间 LOL
-   31          {
-   32   1          while(angle > 2*PI)
-   33   1          {
-   34   2              angle -= 2*PI;
-   35   2          }
-   36   1          while(angle < 0)
+   30          {
+   31   1          return shaft_angle * pole_pairs;
+   32   1      }
+   33          
+   34          double _normalizeAngle(double angle) //控制在0~2π之间 LOL
+   35          {
+   36   1          while(angle > 2*PI)
    37   1          {
-   38   2              angle += 2*PI;
+   38   2              angle -= 2*PI;
    39   2          }
-   40   1          return angle;
-   41   1      }
-   42          
-   43          void Set_PWM(double Ua, double Ub, double Uc)
-   44          {
-   45   1          DC_a = _constrain(Ua/voltage_power_supply, 0.0f, 1.0f);
-   46   1          DC_b = _constrain(Ub/voltage_power_supply, 0.0f, 1.0f);
-   47   1          DC_c = _constrain(Uc/voltage_power_supply, 0.0f, 1.0f);
-   48   1      
-   49   1          PWM_DUTY0 = (unsigned char)(DC_a * 100);
-   50   1          PWM_DUTY1 = (unsigned char)(DC_b * 100);
-   51   1          PWM_DUTY2 = (unsigned char)(DC_c * 100);
-   52   1      }
-   53          
-   54          void OutPutter(double Uq, double Ud, double angle_elsped) //Ud暂时不知道2333，貌似影响不大，
-             -但是留着.Uq是主要的，Ud直轴电压，什么？为什么叫_elsped?LOL LUA
-   55          {
-   56   1          angle_elsped = _normalizeAngle(angle_elsped);
-C251 COMPILER V5.60.0,  FOC_Controller                                                     27/02/25  18:35:06  PAGE 2   
+   40   1          while(angle < 0)
+   41   1          {
+   42   2              angle += 2*PI;
+   43   2          }
+   44   1          return angle;
+   45   1      }
+   46          
+   47          void Set_PWM(double Ua, double Ub, double Uc)
+   48          {
+   49   1          DC_a = _constrain(Ua/voltage_power_supply, 0.0f, 1.0f);
+   50   1          DC_b = _constrain(Ub/voltage_power_supply, 0.0f, 1.0f);
+   51   1          DC_c = _constrain(Uc/voltage_power_supply, 0.0f, 1.0f);
+   52   1      
+   53   1          Set_PWM_Duty(0, (unsigned char)(DC_a * 100));
+   54   1          Set_PWM_Duty(1, (unsigned char)(DC_b * 100));
+   55   1          Set_PWM_Duty(2, (unsigned char)(DC_c * 100));
+C251 COMPILER V5.60.0,  FOC_Controller                                                     01/03/25  15:57:30  PAGE 2   
 
-   57   1      
-   58   1          /* 帕克变换 */
-   59   1          Ualpha = -Uq * sin(angle_elsped) + Ud * cos(angle_elsped); 
-   60   1          Ubeta = Uq * cos(angle_elsped) + Ud * sin(angle_elsped); 
-   61   1      
-   62   1          /* 逆克拉克变换 */
-   63   1          Ua = Ualpha + voltage_power_supply/2; //电压被平移到中间去玩
-   64   1          Ub = (sqrt(3)*Ubeta-Ualpha)/2 + voltage_power_supply/2;
-   65   1          Uc = (-Ualpha-sqrt(3)*Ubeta)/2 + voltage_power_supply/2;
-   66   1          
-   67   1          Set_PWM(Ua,Ub,Uc); //还是在这里做转化吧
-   68   1      }
-   69          
-   70          double velocityOpenloop(double target_velocity) //finally...
-   71          {
-   72   1          /* 使用早前设置的voltage_power_supply的1/3作为Uq值，这个值会直接影响输出力矩
-   73   1          最大只能设置为Uq = voltage_power_supply/2，否则ua,ub,uc会超出供电电压限幅 */
-   74   1          Uq = voltage_power_supply/3;
-   75   1      
-   76   1      //
-   77   1          Shaft_Angle = _normalizeAngle(Shaft_Angle + target_velocity*Ts); //emm然后就是机械角度的归�
-             -��化damn
-   78   1      //
-   79   1      
-   80   1          OutPutter(Uq, 0.0, _electric_Angle(Shaft_Angle, 1.0));
-   81   1          return Uq;
-   82   1      }
+   56   1      }
+   57          
+   58          void OutPutter(double Uq, double Ud, double angle_elsped) //Ud暂时不知道2333，貌似影响不大，
+             -但是留着.Uq是主要的，Ud直轴电压，什么？为什么叫_elsped?LOL LUA
+   59          {
+   60   1          double angle_el;
+   61   1          angle_el = _normalizeAngle(angle_elsped + Initial_Angle);
+   62   1      
+   63   1          /* Park变换 */
+   64   1          Ualpha = -Uq * sin(angle_el) + Ud * cos(angle_el); 
+   65   1          Ubeta = Uq * cos(angle_el) + Ud * sin(angle_el); 
+   66   1      
+   67   1          /* Anti-Clarke变换 */
+   68   1          Ua = Ualpha + voltage_power_supply/2; //电压被平移到中间去玩
+   69   1          Ub = (sqrt(3)*Ubeta-Ualpha)/2 + voltage_power_supply/2;
+   70   1          Uc = (-Ualpha-sqrt(3)*Ubeta)/2 + voltage_power_supply/2;
+   71   1          
+   72   1          Set_PWM(Ua,Ub,Uc); //还是在这里做转化吧
+   73   1      }
+   74          
+   75          double velocityOpenloop(double target_velocity) //finally...
+   76          {
+   77   1          /* 使用早前设置的voltage_power_supply的1/3作为Uq值，这个值会直接影响输出力矩
+   78   1          最大只能设置为Uq = voltage_power_supply/2，否则ua,ub,uc会超出供电电压限幅 */
+   79   1          Uq = voltage_power_supply/3;
+   80   1      
+   81   1          Shaft_Angle = _normalizeAngle(Shaft_Angle + target_velocity*Ts); //开环控制，软件++
+   82   1      
+   83   1          OutPutter(Uq, 0.0, _electric_Angle(Shaft_Angle, 1));
+   84   1          return Uq;
+   85   1      }
 
 
 Module Information          Static   Overlayable
 ------------------------------------------------
-  code size            =       579     ------
+  code size            =       656     ------
   ecode size           =    ------     ------
-  data size            =        52         16
+  data size            =    ------     ------
   idata size           =    ------     ------
   pdata size           =    ------     ------
   xdata size           =    ------     ------
   xdata-const size     =    ------     ------
-  edata size           =    ------     ------
+  edata size           =        56         20
   bit size             =    ------     ------
   ebit size            =    ------     ------
   bitaddressable size  =    ------     ------
@@ -114,8 +118,8 @@ Module Information          Static   Overlayable
   far data size        =    ------     ------
   huge data size       =    ------     ------
   const size           =    ------     ------
-  hconst size          =        16     ------
+  hconst size          =        24     ------
 End of Module Information.
 
 
-C251 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
+C251 COMPILATION COMPLETE.  2 WARNING(S),  0 ERROR(S)

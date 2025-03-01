@@ -2,10 +2,9 @@
 #include <intrins.h>
 #include "PWM_Controller.h"
 #include "FOC_Controller.h"
-
-sbit PWMa = P0^0;
-sbit PWMb = P0^1;
-sbit PWMc = P0^2;
+#include "PID_Controller.h"
+#include "Observer.h"
+#include "Lowpass_Filter.h"
 
 void Delay100us(void)	//@12.000MHz
 {
@@ -20,22 +19,12 @@ void Delay100us(void)	//@12.000MHz
 
 void Inits()
 {
-	P0M0 = 0xff; P0M1 = 0x00;
-	PWM_Init();
+	P0M0 = 0xff; P0M1 = 0x00; //设置P0口为推挽输出
+	P1M0 = 0xff; P1M1 = 0x00; //设置P1口为推挽输出 (PWM输出)
+    PWM_Init(20000, 16); //20KHz PWM频率, 16个系统时钟周期的死区时间
+	Timer0_Init();
+	// Timer1_Init();
 	Delay100us(); 
-}
-
-// typedef (int)
-// void run(void * callback)
-// {
-	
-// }
-
-void En_PWM()
-{
-	PWMa = PWM_EN0;
-	PWMb = PWM_EN1;
-	PWMc = PWM_EN2;
 }
 
 void main (void)
@@ -44,6 +33,6 @@ void main (void)
 
 	while(1)
 	{
-		velocityOpenloop(2.0);
+		velocityOpenloop(5);
 	}
 }

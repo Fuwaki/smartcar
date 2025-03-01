@@ -186,7 +186,7 @@
         </Utilities>
         <Target251>
           <Target251Misc>
-            <MemoryModel>0</MemoryModel>
+            <MemoryModel>3</MemoryModel>
             <RTOS>0</RTOS>
             <RomSize>3</RomSize>
             <NearDataHold>0</NearDataHold>
@@ -348,6 +348,36 @@
               <FileName>PWM_Controller.h</FileName>
               <FileType>5</FileType>
               <FilePath>.\PWM_Controller.h</FilePath>
+            </File>
+            <File>
+              <FileName>PID_Controller.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\PID_Controller.c</FilePath>
+            </File>
+            <File>
+              <FileName>PID_Controller.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\PID_Controller.h</FilePath>
+            </File>
+            <File>
+              <FileName>Lowpass_Filter.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Lowpass_Filter.c</FilePath>
+            </File>
+            <File>
+              <FileName>Lowpass_Filter.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\Lowpass_Filter.h</FilePath>
+            </File>
+            <File>
+              <FileName>Observer.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Observer.c</FilePath>
+            </File>
+            <File>
+              <FileName>Observer.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\Observer.h</FilePath>
             </File>
           </Files>
         </Group>

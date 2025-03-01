@@ -1,0 +1,57 @@
+C251 COMPILER V5.60.0,  Observer                                                           01/03/25  15:57:31  PAGE 1   
+
+
+C251 COMPILER V5.60.0, COMPILATION OF MODULE Observer
+OBJECT MODULE PLACED IN .\Objects\Observer.obj
+COMPILER INVOKED BY: D:\mcu\Keil5\C251\BIN\C251.EXE Observer.c XSMALL INTR2 BROWSE DEBUG PRINT(.\Listings\Observer.lst) 
+                    -OBJECT(.\Objects\Observer.obj) 
+
+stmt  level    source
+
+    1          #include <AI8051U.H>
+    2          #include <intrins.h>
+    3          
+    4          struct info
+    5          {
+    6              float motor_postion; //电机位置
+    7              float angular_speed; //电机角速度
+    8          };
+    9          
+   10          void Init_Observer()
+   11          {
+   12   1          // Init_Observer();
+   13   1      }
+   14          
+   15          struct info Update_Observer(float A,float B,float C)
+   16          {
+   17   1          struct info temp;
+   18   1          temp.motor_postion = A;
+   19   1          temp.angular_speed = B;
+   20   1          /*C自己写*/
+   21   1          return temp;
+   22   1      }
+*** WARNING C47 IN LINE 15 OF Observer.c: 'C': unreferenced parameter
+
+
+Module Information          Static   Overlayable
+------------------------------------------------
+  code size            =        18     ------
+  ecode size           =    ------     ------
+  data size            =    ------     ------
+  idata size           =    ------     ------
+  pdata size           =    ------     ------
+  xdata size           =    ------     ------
+  xdata-const size     =    ------     ------
+  edata size           =    ------         12
+  bit size             =    ------     ------
+  ebit size            =    ------     ------
+  bitaddressable size  =    ------     ------
+  ebitaddressable size =    ------     ------
+  far data size        =    ------     ------
+  huge data size       =    ------     ------
+  const size           =    ------     ------
+  hconst size          =    ------     ------
+End of Module Information.
+
+
+C251 COMPILATION COMPLETE.  1 WARNING(S),  0 ERROR(S)

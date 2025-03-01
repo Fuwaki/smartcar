@@ -1,128 +1,254 @@
-C251 COMPILER V5.60.0,  PWM_Controller                                                     27/02/25  18:35:06  PAGE 1   
+C251 COMPILER V5.60.0,  PWM_Controller                                                     01/03/25  15:57:30  PAGE 1   
 
 
 C251 COMPILER V5.60.0, COMPILATION OF MODULE PWM_Controller
 OBJECT MODULE PLACED IN .\Objects\PWM_Controller.obj
-COMPILER INVOKED BY: D:\mcu\Keil5\C251\BIN\C251.EXE PWM_Controller.c INTR2 BROWSE DEBUG PRINT(.\Listings\PWM_Controller.
-                    -lst) OBJECT(.\Objects\PWM_Controller.obj) 
+COMPILER INVOKED BY: D:\mcu\Keil5\C251\BIN\C251.EXE PWM_Controller.c XSMALL INTR2 BROWSE DEBUG PRINT(.\Listings\PWM_Cont
+                    -roller.lst) OBJECT(.\Objects\PWM_Controller.obj) 
 
 stmt  level    source
 
     1          #include <AI8051U.H>
     2          #include <intrins.h>
     3          
-    4          #define FOSC 12000000L
-    5          #define PWM_FREQ 50
-    6          #define PWM_CYCLE 100
-    7          #define TIMER_RELOAD (256 - ((FOSC/12) / (PWM_FREQ * PWM_CYCLE))) //pretty well, isn't it?
-    8          
-    9          unsigned char PWM_DUTY0;
-   10          unsigned char PWM_DUTY1;
-   11          unsigned char PWM_DUTY2;
-   12          unsigned char PWM_DUTY3;
-   13          
-   14          unsigned char PWM_EN0;
-   15          unsigned char PWM_EN1;
-   16          unsigned char PWM_EN2;
-   17          unsigned char PWM_EN3;
-   18          
-   19          static unsigned char pwm_count = 0;
-   20          
-   21          void PWM_Init(void) //use this if you want to FK the PWM controller
-   22          {
-   23   1          TMOD &= 0xF0;
-   24   1          TMOD |= 0x02;
-   25   1          TH0 = TIMER_RELOAD;//??
-   26   1          TL0 = TIMER_RELOAD;
-   27   1          ET0 = 1;
-   28   1          TR0 = 1;
-   29   1          EA = 1;
-   30   1      }
-   31          
-   32          typedef struct //没想好，上课去了lol
+    4          #define FOSC 12000000L  // 系统时钟12MHz
+    5          #define PWM_TIMER_PERIOD 20000
+    6          
+    7          #pragma region PWM_Controller
+*** WARNING C2 IN LINE 7 OF PWM_Controller.c: 'REGION': unknown #pragma/control, line ignored
+    8          // PWM输出引脚定义
+    9          sbit PWM1P = P1^0;  // PWM通道1正端
+   10          sbit PWM1N = P1^1;  // PWM通道1负端
+   11          sbit PWM2P = P1^2;  // PWM通道2正端
+   12          sbit PWM2N = P1^3;  // PWM通道2负端
+   13          sbit PWM3P = P1^4;  // PWM通道3正端
+   14          sbit PWM3N = P1^5;  // PWM通道3负端
+   15          
+   16          // PWM全局变量
+   17          unsigned char PWM_DUTY0;  // 通道1占空比值(0-100)
+   18          unsigned char PWM_DUTY1;  // 通道2占空比值(0-100)
+   19          unsigned char PWM_DUTY2;  // 通道3占空比值(0-100)
+   20          unsigned int PWM_PERIOD;  // PWM周期值(ARR寄存器值)
+   21          #pragma endregion
+*** WARNING C2 IN LINE 21 OF PWM_Controller.c: 'ENDREGION': unknown #pragma/control, line ignored
+   22          
+   23          //时间戳,为提供systick
+   24          double timestamp;
+   25          double timestamp_previous;
+   26          
+   27          /**
+   28           * PWM初始化函数 - 配置PWM为中心对齐互补模式
+   29           * @param freq: PWM频率，单位Hz
+   30           * @param dead_time: 死区时间，单位为系统时钟周期数
+   31           */
+   32          void PWM_Init(unsigned int freq, unsigned char dead_time)
    33          {
-   34              unsigned char pwm;
-   35              unsigned char dir;
-   36          } PWM_Controller;
-   37          
-   38          void Timer0_ISR(void) interrupt 1
-   39          {
-   40   1          pwm_count++;
-   41   1      
-   42   1          if(pwm_count >= PWM_CYCLE)
-   43   1          {
-   44   2              pwm_count = 0;
-   45   2          }
-   46   1      
-   47   1          if (pwm_count < PWM_DUTY0)
-   48   1          {
-   49   2              PWM_EN0 = 1;
-   50   2          }
-   51   1          else
-   52   1          {
-   53   2              PWM_EN0 = 0;
-   54   2          }
-   55   1      
-   56   1          if (pwm_count < PWM_DUTY1)
-   57   1          {
-   58   2              PWM_EN1 = 1;
-C251 COMPILER V5.60.0,  PWM_Controller                                                     27/02/25  18:35:06  PAGE 2   
+   34   1          unsigned long arr;
+   35   1          
+   36   1          // 计算自动重载寄存器值
+   37   1          arr = (FOSC / (freq * 2)) - 1;  // 中心对齐模式，频率=FOSC/(2*ARR+1)
+   38   1          if(arr > 0xFFFF) arr = 0xFFFF;  // 防止溢出
+   39   1          
+   40   1          // 保存周期值
+   41   1          PWM_PERIOD = arr;
+   42   1          
+   43   1          // 初始化占空比为0
+   44   1          PWM_DUTY0 = 0;
+   45   1          PWM_DUTY1 = 0;
+   46   1          PWM_DUTY2 = 0;
+   47   1          
+   48   1          // 1. 停止计数器
+   49   1          PWMA_CR1 = 0x00;  // 停止计数器
+   50   1          
+   51   1          // 2. 配置PWM时钟预分频（默认为系统时钟）
+   52   1          PWMA_PSCRH = 0x00;  // 预分频高位
+   53   1          PWMA_PSCRL = 0x00;  // 预分频低位（分频系数=1）
+   54   1          
+   55   1          // 3. 配置自动重载寄存器（ARR）初值
+   56   1          PWMA_ARRH = (arr >> 8) & 0xFF;  // ARR高位
+C251 COMPILER V5.60.0,  PWM_Controller                                                     01/03/25  15:57:30  PAGE 2   
 
-   59   2          }
-   60   1          else
-   61   1          {
-   62   2              PWM_EN1 = 0;
-   63   2          }
-   64   1      
-   65   1          if (pwm_count < PWM_DUTY2)
-   66   1          {
-   67   2              PWM_EN2 = 1;
-   68   2          }
-   69   1          else
-   70   1          {
-   71   2              PWM_EN2 = 0;
-   72   2          }
-   73   1      
-   74   1          if (pwm_count < PWM_DUTY3)
-   75   1          {
-   76   2              PWM_EN3 = 1;
-   77   2          }
-   78   1          else
-   79   1          {
-   80   2              PWM_EN3 = 0;
-   81   2          }
-   82   1      }
-   83          
-   84          void Set_PWM_Duty(unsigned char num, unsigned char duty)
-   85          {
-   86   1              switch(num)
-   87   1              {
-   88   2                      case 0:
-   89   2                              PWM_DUTY0 = duty;
-   90   2                              break;
-   91   2                      case 1:
-   92   2                              PWM_DUTY1 = duty;
-   93   2                              break;
-   94   2                      case 2:
-   95   2                              PWM_DUTY2 = duty;
-   96   2                              break;
-   97   2                      case 3:
-   98   2                              PWM_DUTY3 = duty;
-   99   2                              break;
-  100   2              }
-  101   1      }
+   57   1          PWMA_ARRL = arr & 0xFF;         // ARR低位
+   58   1          
+   59   1          // 4. 配置死区时间
+   60   1          PWMA_DTR = dead_time;  // 死区时间设置
+   61   1          
+   62   1          // 5. 配置通道1-3为PWM模式1，预装载使能
+   63   1          PWMA_CCMR1 = 0x68;  // 通道1: PWM模式1(0110)，预装载使能(1000)
+   64   1          PWMA_CCMR2 = 0x68;  // 通道2: PWM模式1，预装载使能
+   65   1          PWMA_CCMR3 = 0x68;  // 通道3: PWM模式1，预装载使能
+   66   1          
+   67   1          // 6. 使能互补输出
+   68   1          // 0x55 = 0101 0101, 表示通道1-3的正负端均使能
+   69   1          PWMA_CCER1 = 0x55;  // 通道1-2使能正负输出
+   70   1          PWMA_CCER2 = 0x55;  // 通道3使能正负输出
+   71   1          
+   72   1          // 7. 配置中心对齐模式和计数方向
+   73   1          PWMA_CR1 |= 0x20;  // 中心对齐模式1
+   74   1          
+   75   1          // 8. 使能PWM输出
+   76   1          PWMA_BKR = 0x80;  // 主输出使能
+   77   1          PWMA_ENO = 0x3F;  // 使能所有6个输出通道(0011 1111)
+   78   1          
+   79   1          // 9. 启动计数器
+   80   1          PWMA_CR1 |= 0x01;  // 启动计数器
+   81   1      }
+   82          
+   83          /**
+   84           * 设置PWM频率
+   85           * @param freq: 频率，单位Hz
+   86           */
+   87          void Set_PWM_Frequency(unsigned int freq)
+   88          {
+   89   1          unsigned long arr;
+   90   1          
+   91   1          // 停止计数器
+   92   1          PWMA_CR1 &= ~0x01;
+   93   1          
+   94   1          // 计算自动重载寄存器值
+   95   1          arr = (FOSC / (freq * 2)) - 1;  // 中心对齐模式下的计算
+   96   1          if(arr > 0xFFFF) arr = 0xFFFF;  // 防止溢出
+   97   1          
+   98   1          // 保存周期值
+   99   1          PWM_PERIOD = arr;
+  100   1          
+  101   1          // 设置ARR寄存器
+  102   1          PWMA_ARRH = (arr >> 8) & 0xFF;
+  103   1          PWMA_ARRL = arr & 0xFF;
+  104   1          
+  105   1          // 重新启动计数器
+  106   1          PWMA_CR1 |= 0x01;
+  107   1      }
+  108          
+  109          /**
+  110           * 设置PWM通道占空比
+  111           * @param channel: 通道号(0-2)
+  112           * @param duty: 占空比(0-100)
+  113           */
+  114          void Set_PWM_Duty(unsigned char channel, unsigned char duty)
+  115          {
+  116   1          unsigned int compare_value;
+  117   1          
+  118   1          // 限制占空比范围
+  119   1          if(duty > 100) duty = 100;
+  120   1          
+  121   1          // 计算比较值
+  122   1          compare_value = (PWM_PERIOD * duty) / 100;
+C251 COMPILER V5.60.0,  PWM_Controller                                                     01/03/25  15:57:30  PAGE 3   
+
+  123   1          
+  124   1          // 根据通道选择对应寄存器
+  125   1          switch(channel) {
+  126   2              case 0:
+  127   2                  PWM_DUTY0 = duty;
+  128   2                  PWMA_CCR1H = (compare_value >> 8) & 0xFF;
+  129   2                  PWMA_CCR1L = compare_value & 0xFF;
+  130   2                  break;
+  131   2              case 1:
+  132   2                  PWM_DUTY1 = duty;
+  133   2                  PWMA_CCR2H = (compare_value >> 8) & 0xFF;
+  134   2                  PWMA_CCR2L = compare_value & 0xFF;
+  135   2                  break;
+  136   2              case 2:
+  137   2                  PWM_DUTY2 = duty;
+  138   2                  PWMA_CCR3H = (compare_value >> 8) & 0xFF;
+  139   2                  PWMA_CCR3L = compare_value & 0xFF;
+  140   2                  break;
+  141   2          }
+  142   1      }
+  143          
+  144          /**
+  145           * 启用/禁用PWM通道
+  146           * @param channel: 通道号(0-2)
+  147           * @param enable: 1=启用, 0=禁用
+  148           */
+  149          void PWM_Channel_Controller(unsigned char channel, unsigned char enable)
+  150          {
+  151   1          unsigned char mask = 0;
+  152   1          
+  153   1          // 设置通道掩码
+  154   1          switch(channel) {
+  155   2              case 0:
+  156   2                  mask = 0x03;  // 通道1的正负端
+  157   2                  break;
+  158   2              case 1:
+  159   2                  mask = 0x0C;  // 通道2的正负端
+  160   2                  break;
+  161   2              case 2:
+  162   2                  mask = 0x30;  // 通道3的正负端
+  163   2                  break;
+  164   2          }
+  165   1          
+  166   1          // 根据enable参数启用或禁用通道
+  167   1          if(enable) {
+  168   2              if(channel < 2)
+  169   2                  PWMA_CCER1 |= mask;
+  170   2              else
+  171   2                  PWMA_CCER2 |= mask;
+  172   2          } else {
+  173   2              if(channel < 2)
+  174   2                  PWMA_CCER1 &= ~mask;
+  175   2              else
+  176   2                  PWMA_CCER2 &= ~mask;
+  177   2          }
+  178   1      }
+  179          
+  180          //定时器部分
+  181          void Timer0_Init()
+  182          {
+  183   1          TMOD |= 0x01;
+  184   1          TH0 = 0xFF;
+  185   1          TL0 = 0x00; 
+  186   1          ET0 = 1;
+  187   1          EA = 1;
+  188   1          TR0 = 1;
+C251 COMPILER V5.60.0,  PWM_Controller                                                     01/03/25  15:57:30  PAGE 4   
+
+  189   1      }
+  190          
+  191          void Timer1_Init(void)
+  192          {
+  193   1          TMOD |= 0x10;
+  194   1          TH1 = 0xFF;
+  195   1          TL1 = 0x00; 
+  196   1          ET1 = 1;
+  197   1          TR1 = 1;
+  198   1      }
+  199          
+  200          void Timer0_ISR(void) interrupt 1
+  201          {
+  202   1          static unsigned char pwmCounter1 = 0;
+  203   1          TH0 = 0xFF;
+  204   1          TL0 = 0x00;
+  205   1      
+  206   1          timestamp_previous = timestamp;
+  207   1          timestamp = timestamp + 0.01;
+  208   1      
+  209   1          pwmCounter1++;
+  210   1          if (pwmCounter1 >= PWM_TIMER_PERIOD)
+*** WARNING C186 IN LINE 210 OF PWM_Controller.c: '>=': meaningless use of an expression
+  211   1          {
+  212   2              pwmCounter1 = 0;
+  213   2          }
+  214   1      
+  215   1      }
+  216          
+  217          void Timer1_ISR(void) interrupt 3
+  218          {
+  219   1          //place ur code when you want to use second timer!
+  220   1      }
 
 
 Module Information          Static   Overlayable
 ------------------------------------------------
-  code size            =       137     ------
+  code size            =       581     ------
   ecode size           =    ------     ------
-  data size            =         9     ------
+  data size            =    ------     ------
   idata size           =    ------     ------
   pdata size           =    ------     ------
   xdata size           =    ------     ------
   xdata-const size     =    ------     ------
-  edata size           =    ------     ------
+  edata size           =        14     ------
   bit size             =    ------     ------
   ebit size            =    ------     ------
   bitaddressable size  =    ------     ------
@@ -130,8 +256,8 @@ Module Information          Static   Overlayable
   far data size        =    ------     ------
   huge data size       =    ------     ------
   const size           =    ------     ------
-  hconst size          =    ------     ------
+  hconst size          =         5     ------
 End of Module Information.
 
 
-C251 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
+C251 COMPILATION COMPLETE.  3 WARNING(S),  0 ERROR(S)
