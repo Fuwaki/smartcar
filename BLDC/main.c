@@ -17,6 +17,7 @@ void Delay100us(void)	//@12.000MHz
 	while (i) i--;
 }
 
+
 void Inits()
 {
 	P0M0 = 0xff; P0M1 = 0x00; //设置P0口为推挽输出
@@ -28,6 +29,7 @@ void Inits()
 }
 
 void main (void)
+
 {
 	Inits();
 

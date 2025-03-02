@@ -1,9 +1,0 @@
-Build target 'Target 1'
-linking...
-*** WARNING L57: UNCALLED FUNCTION, IGNORED FOR OVERLAY PROCESS
-    NAME:    qwq/main
-
-Program Size: data=8.0 edata+hdata=256 xdata=0 const=0 code=62
-creating hex file from ".\Objects\BLDC"...
-".\Objects\BLDC" - 0 Error(s), 1 Warning(s).
-Build Time Elapsed:  00:00:00
