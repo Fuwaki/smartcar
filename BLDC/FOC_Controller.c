@@ -1,4 +1,4 @@
-#include <AI8051U.H>
+#include <STC32G.H>
 #include <intrins.h>
 #include <math.h>
 #include "PWM_Controller.h"

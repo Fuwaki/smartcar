@@ -1,4 +1,4 @@
-#include <AI8051U.H>
+#include <STC32G.H>
 #include <intrins.h>
 //--------------电机参数-----------------
 #define R 10  // 电阻
