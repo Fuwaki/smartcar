@@ -2,6 +2,7 @@
 #include <intrins.h>
 #include <math.h>
 #include "PWM_Controller.h"
+#include "Observer.h"
 #include "Lowpass_Filter.h"
 
 #define PI 3.14159265358979323846 //这么长怎么你了！
@@ -11,7 +12,7 @@
 #pragma region Motor_Parameters
 float voltage_power_supply = 12;//12v??
 double Electric_Angle;
-double Shaft_Angle;
+// double Shaft_Angle; 闭环所用的变量
 double Initial_Angle = 0; //有可能转子不在0度位置，所以需要一个初始角度
 double Ualpha;
 double Ubeta;
@@ -24,24 +25,17 @@ double DC_c;
 double Uq;
 #pragma endregion
 
-float Ts = 0.001; //1ms 系统时间间隔
-
-double _electric_Angle(double shaft_angle, int pole_pairs) //电机的电角度 = 机械角度 * 极对数
-{
-    return shaft_angle * pole_pairs;
-}
+struct info MotorVariables;
 
 double _normalizeAngle(double angle) //控制在0~2π之间 LOL
 {
-    while(angle > 2*PI)
-    {
-        angle -= 2*PI;
-    }
-    while(angle < 0)
-    {
-        angle += 2*PI;
-    }
-    return angle;
+    double a = fmod(angle, 2*PI);
+    return a >= 0 ? a : a + 2*PI;
+}
+
+double _electric_Angle(double shaft_angle, int pole_pairs) //电机的电角度 = 机械角度 * 极对数
+{
+    return _normalizeAngle((double) MotorVariables.motor_direction * pole_pairs * shaft_angle - Initial_Angle);
 }
 
 void Set_PWM(double Ua, double Ub, double Uc)
@@ -55,10 +49,9 @@ void Set_PWM(double Ua, double Ub, double Uc)
     Set_PWM_Duty(2, (unsigned char)(DC_c * 100));
 }
 
-void OutPutter(double Uq, double Ud, double angle_elsped) //Ud暂时不知道2333，貌似影响不大，但是留着.Uq是主要的，Ud直轴电压，什么？为什么叫_elsped?LOL LUA
+void OutPutter(double Uq, double Ud, double angle_el) //Ud暂时不知道2333，貌似影响不大，但是留着.Uq是主要的，Ud直轴电压，什么？为什么叫_elsped?LOL LUA
 {
-    double angle_el;
-    angle_el = _normalizeAngle(angle_elsped + Initial_Angle);
+    angle_el = _normalizeAngle(angle_el); //物理上，而不是理论上
 
     /* Park变换 */
     Ualpha = -Uq * sin(angle_el) + Ud * cos(angle_el); 
@@ -72,14 +65,19 @@ void OutPutter(double Uq, double Ud, double angle_elsped) //Ud暂时不知道233
     Set_PWM(Ua,Ub,Uc); //还是在这里做转化吧
 }
 
-double velocityOpenloop(double target_velocity) //finally...
+// double velocityOpenloop(double target_velocity) //finally...
+// {
+//     /* 使用早前设置的voltage_power_supply的1/3作为Uq值，这个值会直接影响输出力矩
+//     最大只能设置为Uq = voltage_power_supply/2，否则ua,ub,uc会超出供电电压限幅 */
+//     Uq = voltage_power_supply/3;
+
+//     Shaft_Angle = _normalizeAngle(Shaft_Angle + target_velocity*dt); //开环控制，软件++
+
+//     OutPutter(Uq, 0.0, _electric_Angle(Shaft_Angle, 1));
+//     return Uq;
+// }
+
+void positionCloseLoop(double target_position)
 {
-    /* 使用早前设置的voltage_power_supply的1/3作为Uq值，这个值会直接影响输出力矩
-    最大只能设置为Uq = voltage_power_supply/2，否则ua,ub,uc会超出供电电压限幅 */
-    Uq = voltage_power_supply/3;
-
-    Shaft_Angle = _normalizeAngle(Shaft_Angle + target_velocity*Ts); //开环控制，软件++
-
-    OutPutter(Uq, 0.0, _electric_Angle(Shaft_Angle, 1));
-    return Uq;
+    OutPutter(_constrain((target_position - MotorVariables.motor_direction*MotorVariables.motor_postion)*180/PI,-6,6), 0.0, _electric_Angle(MotorVariables.motor_direction, 1));
 }

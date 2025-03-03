@@ -15,6 +15,7 @@ typedef unsigned long int u32;
 
 float timestamp = 0;
 float timestamp_previous = 0;
+float dt = 0;
 
 void PWM_Init(void)
 {
@@ -30,29 +31,37 @@ void PWM_Init(void)
     PWMA_CCMR2 = 0x68;                        // 设置 CC2 CC2N为 PWMA 输出模式，PWM模式1
     PWMA_CCER1 |= 0x50;                       // 使能 CC2 CC2N通道(位置4和位置6)
     
-    // ==== 第3对互补PWM配置(通道3) ====
-    PWMA_CCER2 &= 0xF0;                       // 保留通道4配置，清除通道3配置
-    PWMA_CCMR3 = 0x68;                        // 设置 CC3 CC3N为 PWMA 输出模式，PWM模式1
-    PWMA_CCER2 |= 0x05;  
+    // // ==== 第3对互补PWM配置(通道3) ====
+    // PWMA_CCER2 &= 0xF0;                       // 保留通道4配置，清除通道3配置
+    // PWMA_CCMR3 = 0x68;                        // 设置 CC3 CC3N为 PWMA 输出模式，PWM模式1
+    // PWMA_CCER2 |= 0x05;  
+
+    // ==== 第4对互补PWM配置(通道4) ====
+    PWMA_CCER2 &= 0x0F;                       // 保留通道3配置，清除通道4配置
+    PWMA_CCMR4 = 0x68;                        // 设置 CC4 CC4N为 PWMA 输出模式，PWM模式1
+    PWMA_CCER2 |= 0x50;                       // 使能 CC4 CC4N通道(位置4和位置6)
 	
 	PWMA_CCR1H = (u16)(PWM_DUTY >> 8);	// 设置初始占空
 	PWMA_CCR1L = (u16)(PWM_DUTY); 
 
     PWMA_CCR2H = (u16)(PWM_DUTY >> 8);
-    PWMA_CCR2L = (u16)(PWM_DUTY);
+    PWMA_CCR2L = (u16)(PWM_DUTY); 
 
     PWMA_CCR3H = (u16)(PWM_DUTY >> 8);
     PWMA_CCR3L = (u16)(PWM_DUTY);
+
+    PWMA_CCR4H = (u16)(PWM_DUTY >> 8);
+    PWMA_CCR4L = (u16)(PWM_DUTY);
 	
 	PWMA_ARRH = (u16)(PWM_PERIOD >> 8); // 设置PWM周期
 	PWMA_ARRL = (u16)(PWM_PERIOD); 
 	
-	PWMA_DTR = PWM_DTime;								// 插入死区时间
+	PWMA_DTR = PWM_DTime; // 插入死区时间
 	
-    PWMA_ENO = 0x3F;
-	PWMA_BKR = 0x80;										// 使能主输出
+    PWMA_ENO = 0xCF; //如果想全部使用请用0xFF;
+	PWMA_BKR = 0x80; // 使能主输出
 	
-	PWMA_CR1 = 0x01; 										// 启动PWMA定时器
+	PWMA_CR1 = 0x01; // 启动PWMA定时器
 }
 
 /*num是通道名为0,1,2 || duty为0~100*/
@@ -73,9 +82,13 @@ void Set_PWM_Duty(unsigned char channel, unsigned char duty)
         PWMA_CCR2H = (u16)(_duty_Cal(duty) >> 8);
         PWMA_CCR2L = (u16)(_duty_Cal(duty));
         break;
+    // case 2:
+    //     PWMA_CCR3H = (u16)(_duty_Cal(duty) >> 8);
+    //     PWMA_CCR3L = (u16)(_duty_Cal(duty));
+    //     break;
     case 2:
-        PWMA_CCR3H = (u16)(_duty_Cal(duty) >> 8);
-        PWMA_CCR3L = (u16)(_duty_Cal(duty));
+        PWMA_CCR4H = (u16)(_duty_Cal(duty) >> 8);
+        PWMA_CCR4L = (u16)(_duty_Cal(duty));
         break;
     default:
         break;
@@ -100,6 +113,7 @@ void Timer1_Init(void)
     TL1 = 0x00; 
     ET1 = 1;
     TR1 = 1;
+    dt = 0;
 }
 
 void Timer0_ISR(void) interrupt 1
@@ -108,6 +122,7 @@ void Timer0_ISR(void) interrupt 1
     TH0 = 0xFF;
     TL0 = 0x00;
 
+    dt = timestamp - timestamp_previous;
     timestamp_previous = timestamp;
     timestamp = timestamp + 0.01;
 

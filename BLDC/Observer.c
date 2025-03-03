@@ -1,6 +1,7 @@
 #include <STC32G.H>
 #include <intrins.h>
 #include <math.h> //TODO:这个好像用不了硬件三角函数加速器捏
+#include "PWM_Controller.h"
 //--------------电机参数-----------------
 #define R 10  // 电阻
 #define L 100 // 电感
@@ -9,7 +10,6 @@
 #define eK 0.5    // 电动势观测器增益
 #define iK 0.5    // 电流观测器增益
 #define LPF_k 0.1 // 低通滤波器截止系数
-#define dt 0.0001 // 微小的时间 控制周期
 #define sK 0.2    // 转速估计参数
 
 //--------------观测器缓存----------------
@@ -32,6 +32,7 @@ struct info
 {
     float motor_postion; // 电机位置
     float angular_speed; // 电机角速度
+    int motor_direction; // 电机方向
 };
 
 void Init_Observer()
@@ -89,5 +90,6 @@ struct info Update_Observer(float Ix, float Iy, float Ux, float Uy)
 
     i.angular_speed = angular_speed;
     i.motor_postion = angle;
+    i.angular_speed > 0 ? i.motor_direction = 1 : i.motor_direction = -1;
     return i;
 }

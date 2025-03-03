@@ -32,6 +32,7 @@ void Inits()
 	P6M1 = 0x00;P6M0 = 0x00;		//设置P6口为准双向口模式 //00：准双向口 01：推挽输出 10：高阻输入 11：开漏输出
 	P7M1 = 0x00;P7M0 = 0x00;		//设置P7口为准双向口模式 //00：准双向口 01：推挽输出 10：高阻输入 11：开漏输出
 
+	Init_Observer();
     PWM_Init();
 	Timer0_Init();
 	// Timer1_Init();
@@ -44,6 +45,8 @@ void main (void)
     
 	while(1)
 	{
-		velocityOpenloop(5);
+
+		// velocityOpenloop(50);
+		positionCloseLoop(50);
 	}
 }
