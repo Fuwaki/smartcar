@@ -6,7 +6,5 @@ struct info
     float angular_speed; // 电机角速度
     int motor_direction; // 电机方向
 };
-
-void Init_Observer();
-struct info Update_Observer(float Ix, float Iy, float Ux, float Uy);
+    struct info Update_Observer(float Ix, float Iy, float Ux, float Uy);
 #endif

@@ -35,17 +35,14 @@ struct info
     int motor_direction; // 电机方向
 };
 
-void Init_Observer()
-{
-    // Init_Observer();
-}
 // TODO:换成sat函数以抑制高频抖动
 float sign(float input)
 {
 }
+
 float arctan2(float,float)
 {
-    // arctan2函数未实现
+    // arctan2函数未实现 //还是得泰勒公式!!!!!!!!!!
 }
 // 绝对坐标系下的电压电流
 struct info Update_Observer(float Ix, float Iy, float Ux, float Uy)
@@ -69,7 +66,7 @@ struct info Update_Observer(float Ix, float Iy, float Ux, float Uy)
 
     // 更新电流 使用欧拉法可能引入误差 看具体情况考虑切换到SK4
     I_x_est += delta_i_x_est * dt;
-    I_y_est += delta_i_y_est * dt;
+		I_y_est += delta_i_y_est * dt;
 
     // 估计反电动势
     E_x_est_new = E_x_est + eK * s_x;
@@ -90,6 +87,6 @@ struct info Update_Observer(float Ix, float Iy, float Ux, float Uy)
 
     i.angular_speed = angular_speed;
     i.motor_postion = angle;
-    i.angular_speed > 0 ? i.motor_direction = 1 : i.motor_direction = -1;
+    i.motor_direction = (i.angular_speed > 0) ? 1 : -1;
     return i;
 }
