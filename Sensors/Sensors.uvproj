@@ -13,14 +13,14 @@
       <uAC6>0</uAC6>
       <TargetOption>
         <TargetCommonOption>
-          <Device>STC32G12K128 Series</Device>
-          <Vendor>STC</Vendor>
-          <Cpu>IRAM(0-0xFFF) XRAM(0x10000-0x11FFF) IROM(0xFE0000-0xFFFFFF) CLOCK(35000000)</Cpu>
+          <Device>AI8051U-32Bit Series</Device>
+          <Vendor>AI</Vendor>
+          <Cpu>IRAM(0-0x7FF) XRAM(0x10000-0x17FFF) IROM(0xFF0000-0xFFFFFF) CLOCK(35000000)</Cpu>
           <FlashUtilSpec></FlashUtilSpec>
           <StartupFile>"LIB\STARTUP251.ASM" ("80251 Startup Code")</StartupFile>
           <FlashDriverDll></FlashDriverDll>
-          <DeviceId>63457</DeviceId>
-          <RegisterFile>STC32G.H</RegisterFile>
+          <DeviceId>30900</DeviceId>
+          <RegisterFile>AI8051U.H</RegisterFile>
           <MemoryEnv></MemoryEnv>
           <Cmp></Cmp>
           <Asm></Asm>
@@ -46,10 +46,10 @@
             <InvalidFlash>1</InvalidFlash>
           </TargetStatus>
           <OutputDirectory>.\Objects\</OutputDirectory>
-          <OutputName>BLDC</OutputName>
+          <OutputName>Sensors</OutputName>
           <CreateExecutable>1</CreateExecutable>
           <CreateLib>0</CreateLib>
-          <CreateHexFile>1</CreateHexFile>
+          <CreateHexFile>0</CreateHexFile>
           <DebugInformation>1</DebugInformation>
           <BrowseInformation>1</BrowseInformation>
           <ListingPath>.\Listings\</ListingPath>
@@ -186,7 +186,7 @@
         </Utilities>
         <Target251>
           <Target251Misc>
-            <MemoryModel>3</MemoryModel>
+            <MemoryModel>0</MemoryModel>
             <RTOS>0</RTOS>
             <RomSize>3</RomSize>
             <NearDataHold>0</NearDataHold>
@@ -211,18 +211,18 @@
               </RCB>
               <IROM>
                 <Type>1</Type>
-                <StartAddress>0xfe0000</StartAddress>
-                <Size>0x20000</Size>
+                <StartAddress>0xff0000</StartAddress>
+                <Size>0x10000</Size>
               </IROM>
               <IRAM>
                 <Type>0</Type>
                 <StartAddress>0x0</StartAddress>
-                <Size>0x1000</Size>
+                <Size>0x800</Size>
               </IRAM>
               <XRAM>
                 <Type>0</Type>
                 <StartAddress>0x10000</StartAddress>
-                <Size>0x2000</Size>
+                <Size>0x8000</Size>
               </XRAM>
               <Ocm1>
                 <Type>0</Type>
@@ -262,7 +262,7 @@
             <uAlias>1</uAlias>
             <uRentF>0</uRentF>
             <uUch>0</uUch>
-            <uFlt64>0</uFlt64>
+            <uFlt64>1</uFlt64>
             <Fuzzy>3</Fuzzy>
             <Optim>7</Optim>
             <wLevel>2</wLevel>
@@ -325,69 +325,9 @@
           <GroupName>Source Group 1</GroupName>
           <Files>
             <File>
-              <FileName>FOC_Controller.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\FOC_Controller.c</FilePath>
-            </File>
-            <File>
-              <FileName>FOC_Controller.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>.\FOC_Controller.h</FilePath>
-            </File>
-            <File>
-              <FileName>Lowpass_Filter.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\Lowpass_Filter.c</FilePath>
-            </File>
-            <File>
-              <FileName>Lowpass_Filter.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>.\Lowpass_Filter.h</FilePath>
-            </File>
-            <File>
               <FileName>main.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\main.c</FilePath>
-            </File>
-            <File>
-              <FileName>Observer.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\Observer.c</FilePath>
-            </File>
-            <File>
-              <FileName>Observer.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>.\Observer.h</FilePath>
-            </File>
-            <File>
-              <FileName>PID_Controller.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\PID_Controller.c</FilePath>
-            </File>
-            <File>
-              <FileName>PID_Controller.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>.\PID_Controller.h</FilePath>
-            </File>
-            <File>
-              <FileName>PWM_Controller.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\PWM_Controller.c</FilePath>
-            </File>
-            <File>
-              <FileName>PWM_Controller.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>.\PWM_Controller.h</FilePath>
-            </File>
-            <File>
-              <FileName>ADC.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\ADC.c</FilePath>
-            </File>
-            <File>
-              <FileName>ADC.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>.\ADC.h</FilePath>
             </File>
           </Files>
         </Group>

@@ -1,4 +1,16 @@
 #include <STC32G.H>
+#include <intrins.h>
+
+void Delay200us(void)
+{
+	unsigned long edata i;
+
+	_nop_();
+	_nop_();
+	_nop_();
+	i = 873UL;
+	while (i) i--;
+}
 
 /**
  * @brief 初始化ADC
@@ -17,8 +29,7 @@ void ADC_Init(void)
     ADCCFG = 0x20;                  // 结果左对齐 (RESFMT = 1)
     
     // 延时，ADC上电需要一段时间稳定
-    unsigned char i = 100;
-    while(--i);
+    Delay100us();
 }
 
 /**
