@@ -605,9 +605,14 @@
               <FilePath>..\..\bldc\bldc_config.h</FilePath>
             </File>
             <File>
-              <FileName>bldc_version.txt</FileName>
+              <FileName>can.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\bldc\can.c</FilePath>
+            </File>
+            <File>
+              <FileName>can.h</FileName>
               <FileType>5</FileType>
-              <FilePath>..\..\bldc\bldc_version.txt</FilePath>
+              <FilePath>..\..\bldc\can.h</FilePath>
             </File>
           </Files>
         </Group>
