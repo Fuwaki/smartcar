@@ -23,15 +23,15 @@
 
 #include "common.h"
 
-#define PWM_A_H_PIN     P20
-#define PWM_A_L_PIN     P21
+#define PWM_A_H_PIN     P54
+#define PWM_A_L_PIN     P13
 
 
-#define PWM_B_H_PIN     P22
-#define PWM_B_L_PIN     P23
+#define PWM_B_H_PIN     P17
+#define PWM_B_L_PIN     P16
 
-#define PWM_C_H_PIN     P24
-#define PWM_C_L_PIN     P25
+#define PWM_C_H_PIN     P15
+#define PWM_C_L_PIN     P14
 
 
 extern uint8 g_use_complementary;

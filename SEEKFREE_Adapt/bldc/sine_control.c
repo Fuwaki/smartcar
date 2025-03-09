@@ -4,6 +4,7 @@
 
 #pragma warning disable = 183
 
+//三相电流的相位
 int16 motor_a_position = 0;
 int16 motor_b_position = 0;
 int16 motor_c_position = 0;
