@@ -1,42 +1,44 @@
 #ifndef __GYROSCOPE_H__
 #define __GYROSCOPE_H__
+
+    typedef struct {
+        // Accelerometer data (mg)
+        float accel_x;
+        float accel_y;
+        float accel_z;
+        // Gyroscope data (degrees/s)
+        float gyro_x;
+        float gyro_y;
+        float gyro_z;
+        // Temperature data (Celsius)
+        float temperature;
+    } icm426888_data_t;
+
+    /**
+     * @brief Parse ICM-426888 data from SIP packet
+     * @param sip_payload Pointer to SIP payload data
+     * @param payload_len Length of the SIP payload
+     * @param sensor_data Pointer to store the parsed sensor data
+     * @return 0 if successful, negative error code otherwise
+     */
+    int icm426888_parse_sip_data(const char *sip_payload, unsigned int payload_len, icm426888_data_t *sensor_data);
+
     // 卡尔曼滤波器结构体定义
     typedef struct {
-        float Q_angle;   // 过程噪声协方差
-        float Q_bias;    // 过程噪声协方差
-        float R_measure; // 测量噪声协方差
-        
-        float angle;     // 角度
-        float bias;      // 角速度偏差
-        
-        float P[2][2];   // 误差协方差矩阵
-    } GyroKalman_t;
+        float x;      // 状态估计
+        float P;      // 估计误差协方差
+        float Q;      // 过程噪声协方差
+        float R;      // 测量噪声协方差
+        float K;      // 卡尔曼增益
+    } kalman_filter_t;
 
-    /**
-     * @brief 初始化卡尔曼滤波器
-     * @param kalman 卡尔曼滤波器结构体指针
-     * @param Q_angle 角度过程噪声协方差
-     * @param Q_bias 偏差过程噪声协方差
-     * @param R_measure 测量噪声协方差
-     */
-    void Gyro_KalmanInit(GyroKalman_t *kalman, float Q_angle, float Q_bias, float R_measure);
+    // 卡尔曼滤波函数声明
+    void kalman_init(kalman_filter_t *filter, float Q, float R, float P_initial, float x_initial);
+    float kalman_update(kalman_filter_t *filter, float measurement);
+    void apply_kalman_filter(icm426888_data_t *raw_data, icm426888_data_t *filtered_data, 
+                            kalman_filter_t *kf_accel_x, kalman_filter_t *kf_accel_y, kalman_filter_t *kf_accel_z,
+                            kalman_filter_t *kf_gyro_x, kalman_filter_t *kf_gyro_y, kalman_filter_t *kf_gyro_z);
+    void init_gyro_kalman_filters(kalman_filter_t *kf_accel_x, kalman_filter_t *kf_accel_y, kalman_filter_t *kf_accel_z,
+                                kalman_filter_t *kf_gyro_x, kalman_filter_t *kf_gyro_y, kalman_filter_t *kf_gyro_z);
 
-    /**
-     * @brief 卡尔曼滤波处理函数
-     * @param kalman 卡尔曼滤波器结构体指针
-     * @param newAngle 测量的角度值
-     * @param newRate 测量的角速度值
-     * @param dt 采样时间间隔(秒)
-     * @return 滤波后的角度值
-     */
-    float Gyro_KalmanFilter(GyroKalman_t *kalman, float newAngle, float newRate, float dt);
-
-    /**
-     * @brief 应用卡尔曼滤波处理陀螺仪数据示例
-     * @param rawAngle 原始角度数据
-     * @param rawRate 原始角速度数据
-     * @param filteredAngle 滤波后的角度指针
-     */
-    void Gyro_ProcessData(float rawAngle, float rawRate, float *filteredAngle);
-
-#endif __GYROSCOPE_H__
+#endif

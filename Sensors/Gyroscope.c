@@ -1,8 +1,13 @@
 #include <AI8051U.H>
 #include <intrins.h>
+#include <stdio.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 #include <math.h>
+#include "Gyroscope.h"
 
-// ICM42688-På¯„å­˜å™¨åœ°å€å®šä¹‰
+// ICM42688-P¼Ä´æÆ÷µØÖ·¶¨Òå
 #define ICM42688_WHOAMI           0x75
 #define ICM42688_PWR_MGMT0        0x4E
 #define ICM42688_GYRO_CONFIG0     0x4F
@@ -20,22 +25,6 @@
 #define ICM42688_ACCEL_DATA_Z1    0x23
 #define ICM42688_ACCEL_DATA_Z0    0x24
 
-// å§¿æ€å‚æ•°ç»“æ„ä½“
-typedef struct {
-    float AngleX; // Xè½´è§’åº¦
-    float AngleY; // Yè½´è§’åº¦
-    float AngleZ; // Zè½´è§’åº¦
-} Gyroscope;
-
-// å¡å°”æ›¼æ»¤æ³¢å‚æ•°
-typedef struct {
-    float Q_angle;   // è¿‡ç¨‹å™ªå£°åæ–¹å·®
-    float Q_bias;    // è¿‡ç¨‹å™ªå£°åæ–¹å·®
-    float R_measure; // æµ‹é‡å™ªå£°åæ–¹å·®
-    float angle;     // è§’åº¦
-    float bias;      // è§’é€Ÿåº¦åå·®
-    float P[2][2];   // åæ–¹å·®çŸ©é˜µ
-} Kalman_t;
 
 void Delay500ms(void)	//@35.000MHz
 {
@@ -47,67 +36,231 @@ void Delay500ms(void)	//@35.000MHz
 	while (i) i--;
 }
 
-float fast_sqrt(float x) // é€Ÿåº¦æ›´å¿«çš„å¹³æ–¹æ ¹è®¡ç®—
+float fast_sqrt(float x) // ËÙ¶È¸ü¿ìµÄÆ½·½¸ù¼ÆËã
 {
 	float halfx = 0.5f * x;
 	float y = x;
 	long i = *(long*) & y;
-    //0x5f3759dfæ˜¯ä¸€ä¸ªå¹³æ–¹æ ¹å€’æ•°é€Ÿç®—æ³•
+    //0x5f3759dfÊÇÒ»¸öÆ½·½¸ùµ¹ÊıËÙËã·¨
 	i = 0x5f3759df - (i >> 1);
 	y = *(float*) & i;
 	y = y * (1.5f - (halfx * y * y));
 	return y;
 }
 
-// å¡å°”æ›¼æ»¤æ³¢åˆå§‹åŒ–
-void Kalman_Init(Kalman_t *kalman)
+/**
+ * @brief ³õÊ¼»¯¿¨¶ûÂüÂË²¨Æ÷
+ * @param filter ÂË²¨Æ÷½á¹¹ÌåÖ¸Õë
+ * @param Q ¹ı³ÌÔëÉùĞ­·½²î
+ * @param R ²âÁ¿ÔëÉùĞ­·½²î
+ * @param P_initial ³õÊ¼¹À¼ÆÎó²îĞ­·½²î
+ * @param x_initial ³õÊ¼×´Ì¬¹À¼Æ
+ */
+void kalman_init(kalman_filter_t *filter, float Q, float R, float P_initial, float x_initial) 
 {
-    kalman->Q_angle = 0.001f;
-    kalman->Q_bias = 0.003f;
-    kalman->R_measure = 0.03f;
-    
-    kalman->angle = 0.0f;
-    kalman->bias = 0.0f;
-    
-    kalman->P[0][0] = 0.0f;
-    kalman->P[0][1] = 0.0f;
-    kalman->P[1][0] = 0.0f;
-    kalman->P[1][1] = 0.0f;
+    filter->x = x_initial;
+    filter->P = P_initial;
+    filter->Q = Q;
+    filter->R = R;
+    filter->K = 0;
 }
 
-// å¡å°”æ›¼æ»¤æ³¢å™¨
-float Kalman_Filter(Kalman_t *kalman, float new_angle, float new_rate, float dt)
+/**
+ * @brief ¿¨¶ûÂüÂË²¨¸üĞÂ²½Öè
+ * @param filter ÂË²¨Æ÷½á¹¹ÌåÖ¸Õë
+ * @param measurement µ±Ç°²âÁ¿Öµ
+ * @return ÂË²¨ºóµÄ¹À¼ÆÖµ
+ */
+float kalman_update(kalman_filter_t *filter, float measurement) 
 {
-    float rate = new_rate - kalman->bias;
-    kalman->angle += dt * rate;
+    // Ô¤²â²½Öè
+    // x = x (×´Ì¬Ô¤²â£¬¼ò»¯Ä£ĞÍÏÂ±£³Ö²»±ä)
+    filter->P = filter->P + filter->Q;
     
-    // æ›´æ–°ä¼°è®¡åæ–¹å·®çŸ©é˜µ
-    kalman->P[0][0] += dt * (dt * kalman->P[1][1] - kalman->P[0][1] - kalman->P[1][0] + kalman->Q_angle);
-    kalman->P[0][1] -= dt * kalman->P[1][1];
-    kalman->P[1][0] -= dt * kalman->P[1][1];
-    kalman->P[1][1] += kalman->Q_bias * dt;
+    // ¸üĞÂ²½Öè
+    filter->K = filter->P / (filter->P + filter->R);
+    filter->x = filter->x + filter->K * (measurement - filter->x);
+    filter->P = (1 - filter->K) * filter->P;
     
-    // è®¡ç®—å¡å°”æ›¼å¢ç›Š
-    float S = kalman->P[0][0] + kalman->R_measure;
-    float K[2];
-    K[0] = kalman->P[0][0] / S;
-    K[1] = kalman->P[1][0] / S;
-    
-    // è®¡ç®—è§’åº¦è¯¯å·®
-    float y = new_angle - kalman->angle;
-    
-    // æ›´æ–°æ»¤æ³¢å€¼
-    kalman->angle += K[0] * y;
-    kalman->bias += K[1] * y;
-    
-    // æ›´æ–°åæ–¹å·®çŸ©é˜µ
-    float P00_temp = kalman->P[0][0];
-    float P01_temp = kalman->P[0][1];
-    
-    kalman->P[0][0] -= K[0] * P00_temp;
-    kalman->P[0][1] -= K[0] * P01_temp;
-    kalman->P[1][0] -= K[1] * P00_temp;
-    kalman->P[1][1] -= K[1] * P01_temp;
-    
-    return kalman->angle;
+    return filter->x;
 }
+
+/**
+ * @brief ¶ÔÍÓÂİÒÇºÍ¼ÓËÙ¶ÈÊı¾İÓ¦ÓÃ¿¨¶ûÂüÂË²¨
+ * @param raw_data Ô­Ê¼´«¸ĞÆ÷Êı¾İ
+ * @param filtered_data ÂË²¨ºóµÄÊı¾İ
+ * @param kf_accel_x,kf_accel_y,kf_accel_z ¼ÓËÙ¶ÈÊı¾İµÄÂË²¨Æ÷
+ * @param kf_gyro_x,kf_gyro_y,kf_gyro_z ÍÓÂİÒÇÊı¾İµÄÂË²¨Æ÷
+ */
+void apply_kalman_filter(icm426888_data_t *raw_data, icm426888_data_t *filtered_data, 
+                        kalman_filter_t *kf_accel_x, kalman_filter_t *kf_accel_y, kalman_filter_t *kf_accel_z,
+                        kalman_filter_t *kf_gyro_x, kalman_filter_t *kf_gyro_y, kalman_filter_t *kf_gyro_z) 
+{
+    // ¸üĞÂ¼ÓËÙ¶ÈÊı¾İ
+    filtered_data->accel_x = kalman_update(kf_accel_x, raw_data->accel_x);
+    filtered_data->accel_y = kalman_update(kf_accel_y, raw_data->accel_y);
+    filtered_data->accel_z = kalman_update(kf_accel_z, raw_data->accel_z);
+    
+    // ¸üĞÂÍÓÂİÒÇÊı¾İ
+    filtered_data->gyro_x = kalman_update(kf_gyro_x, raw_data->gyro_x);
+    filtered_data->gyro_y = kalman_update(kf_gyro_y, raw_data->gyro_y);
+    filtered_data->gyro_z = kalman_update(kf_gyro_z, raw_data->gyro_z);
+    
+    // ÎÂ¶ÈÊı¾İÍ¨³£²»ĞèÒªÂË²¨£¬Ö±½Ó´«µİ
+    filtered_data->temperature = raw_data->temperature;
+}
+
+/**
+ * @brief ³õÊ¼»¯ËùÓĞÍÓÂİÒÇÊı¾İµÄ¿¨¶ûÂüÂË²¨Æ÷
+ * @param kf_accel_x,kf_accel_y,kf_accel_z ¼ÓËÙ¶ÈÊı¾İµÄÂË²¨Æ÷
+ * @param kf_gyro_x,kf_gyro_y,kf_gyro_z ÍÓÂİÒÇÊı¾İµÄÂË²¨Æ÷
+ */
+void init_gyro_kalman_filters(kalman_filter_t *kf_accel_x, kalman_filter_t *kf_accel_y, kalman_filter_t *kf_accel_z,
+                            kalman_filter_t *kf_gyro_x, kalman_filter_t *kf_gyro_y, kalman_filter_t *kf_gyro_z)
+{
+    // ³õÊ¼»¯¼ÓËÙ¶È¼ÆÂË²¨Æ÷
+    // ²ÎÊı¿É¸ù¾İÊµ¼ÊÓ¦ÓÃµ÷Õû£ºQ(¹ı³ÌÔëÉù), R(²âÁ¿ÔëÉù), ³õÊ¼P, ³õÊ¼x
+    kalman_init(kf_accel_x, 0.01f, 0.1f, 1.0f, 0.0f);
+    kalman_init(kf_accel_y, 0.01f, 0.1f, 1.0f, 0.0f);
+    kalman_init(kf_accel_z, 0.01f, 0.1f, 1.0f, 0.0f);
+    
+    // ³õÊ¼»¯ÍÓÂİÒÇÂË²¨Æ÷
+    kalman_init(kf_gyro_x, 0.003f, 0.03f, 1.0f, 0.0f);
+    kalman_init(kf_gyro_y, 0.003f, 0.03f, 1.0f, 0.0f);
+    kalman_init(kf_gyro_z, 0.003f, 0.03f, 1.0f, 0.0f);
+}
+
+/**
+ * @brief Parse ICM-426888 data from SIP packet
+ * @param sip_payload Pointer to SIP payload data
+ * @param payload_len Length of the SIP payload
+ * @param sensor_data Pointer to store the parsed sensor data
+ * @return 0 if successful, negative error code otherwise
+ */
+int icm426888_parse_sip_data(const char *sip_payload, unsigned int payload_len, icm426888_data_t *sensor_data)
+{
+    int raw_accel_x, raw_accel_y, raw_accel_z;
+    int raw_gyro_x, raw_gyro_y, raw_gyro_z;
+    char raw_temp;
+    float accel_scale, gyro_scale; 
+    
+    if (sip_payload == NULL || sensor_data == NULL || payload_len < 16) {
+        return -1; // Invalid parameters
+    }
+    
+    if (sip_payload[0] != 0x49 || sip_payload[1] != 0x43 || sip_payload[2] != 0x4D) {
+        return -2; // Invalid header - should start with "ICM"
+    }
+
+    // Ê¹ÓÃ³Ë·¨´úÌæÎ»ÒÆÉµ±Ækeil
+    raw_accel_x = ((unsigned char)sip_payload[3] * 256) + (unsigned char)sip_payload[4];
+    raw_accel_y = ((unsigned char)sip_payload[5] * 256) + (unsigned char)sip_payload[6];
+    raw_accel_z = ((unsigned char)sip_payload[7] * 256) + (unsigned char)sip_payload[8];
+    
+    raw_gyro_x = ((unsigned char)sip_payload[9] * 256) + (unsigned char)sip_payload[10];
+    raw_gyro_y = ((unsigned char)sip_payload[11] * 256) + (unsigned char)sip_payload[12];
+    raw_gyro_z = ((unsigned char)sip_payload[13] * 256) + (unsigned char)sip_payload[14];
+    
+    raw_temp = sip_payload[15];
+    
+    accel_scale = 16.0f / 32768.0f * 1000.0f; // ×ª»»Îª mg
+    gyro_scale = 2000.0f / 32768.0f;          // ×ª»»Îª degrees/s
+    
+    sensor_data->accel_x = raw_accel_x * accel_scale;
+    sensor_data->accel_y = raw_accel_y * accel_scale;
+    sensor_data->accel_z = raw_accel_z * accel_scale;
+    
+    sensor_data->gyro_x = raw_gyro_x * gyro_scale;
+    sensor_data->gyro_y = raw_gyro_y * gyro_scale;
+    sensor_data->gyro_z = raw_gyro_z * gyro_scale;
+    
+
+    sensor_data->temperature = (float)raw_temp + 25.0f;
+    
+    return 0; // Success
+}
+
+// Ciallo¡«(¡Ï9§9¦Ø< )¡Ğ¡ï     
+// Ciallo¡«(¡Ï9§9¦Ø< )¡Ğ¡ï     
+// Ciallo¡«(¡Ï9§9¦Ø< )¡Ğ¡ï     
+
+
+// void test_icm426888_parser(void)
+// {
+//     // Ä£ÄâµÄSIPÊı¾İ°ü£¨Êµ¼ÊÓ¦ÓÃÖĞ£¬ÕâĞ©Êı¾İ½«´ÓÍ¨ĞÅ½Ó¿Ú»ñÈ¡£©
+//     // ¸ñÊ½: [ICM±êÊ¶·û(3)][accel_x(2)][accel_y(2)][accel_z(2)][gyro_x(2)][gyro_y(2)][gyro_z(2)][temp(1)]
+//     unsigned char test_sip_data[16] = {
+//         0x49, 0x43, 0x4D,             // "ICM" ±êÊ¶·û
+//         0x01, 0x23,                   // accel_x raw data (291)
+//         0x45, 0x67,                   // accel_y raw data (17767)
+//         0x89, 0xAB,                   // accel_z raw data (-30293)
+//         0xCD, 0xEF,                   // gyro_x raw data (-12817)
+//         0x02, 0x46,                   // gyro_y raw data (582)
+//         0x8A, 0xBC,                   // gyro_z raw data (-30020)
+//         0x15                         // temp raw data (21¡ãC)
+//     };
+    
+//     // ÉùÃ÷´«¸ĞÆ÷Êı¾İ½á¹¹Ìå
+//     icm426888_data_t sensor_data;
+//     int result;
+    
+//     // µ÷ÓÃ½âÎöº¯Êı
+//     result = icm426888_parse_sip_data((char*)test_sip_data, 16, &sensor_data);
+    
+//     // ¼ì²é½á¹û
+//     if (result == 0) {
+//         // ´òÓ¡½âÎöµÄÊı¾İ£¨Êµ¼ÊÓ¦ÓÃÖĞ¿ÉÒÔ½øĞĞÆäËû´¦Àí£©
+//         printf("¼ÓËÙ¶ÈÊı¾İ (mg):\n");
+//         printf("  X: %.2f\n", sensor_data.accel_x);
+//         printf("  Y: %.2f\n", sensor_data.accel_y);
+//         printf("  Z: %.2f\n", sensor_data.accel_z);
+        
+//         printf("ÍÓÂİÒÇÊı¾İ (degrees/s):\n");
+//         printf("  X: %.2f\n", sensor_data.gyro_x);
+//         printf("  Y: %.2f\n", sensor_data.gyro_y);
+//         printf("  Z: %.2f\n", sensor_data.gyro_z);
+        
+//         printf("ÎÂ¶È: %.1f¡ãC\n", sensor_data.temperature);
+        
+//         // ÔÚÊµ¼ÊÓ¦ÓÃÖĞ£¬Äú¿ÉÄÜ»áÊ¹ÓÃÕâĞ©Êı¾İÀ´¿ØÖÆÉè±¸»ò½øĞĞ½øÒ»²½¼ÆËã
+//         // ÀıÈç£¬¼ÆËã·½Î»¡¢¼ì²âÔË¶¯µÈ
+//     }
+//     else {
+//         printf("½âÎöSIPÊı¾İÊ§°Ü£¬´íÎó´úÂë: %d\n", result);
+//     }
+// }
+
+// /**
+//  * @brief Êµ¼ÊÓ¦ÓÃÊ¾Àı£º´ÓUART½ÓÊÕSIPÊı¾İ²¢½âÎö
+//  * ´Ëº¯Êı¼ÙÉèÄúµÄÏµÍ³ÓĞUART½ÓÊÕ¹¦ÄÜ
+//  */
+// void process_uart_gyro_data(void)
+// {
+//     unsigned char sip_buffer[32]; // »º³åÇø£¬¸ù¾İĞèÒªµ÷Õû´óĞ¡
+//     unsigned int received_bytes = 0;
+//     icm426888_data_t sensor_data;
+    
+//     // ÕâÀïÓ¦¸ÃÊÇÄúµÄ½ÓÊÕUARTÊı¾İµÄ´úÂë
+//     // ÀıÈç£ºreceived_bytes = uart_receive_data(sip_buffer, 32);
+    
+//     if (received_bytes >= 16) { // È·±£½ÓÊÕµ½×ã¹»µÄÊı¾İ
+//         if (icm426888_parse_sip_data((char*)sip_buffer, received_bytes, &sensor_data) == 0) {
+//             // Ê¹ÓÃ½âÎöºóµÄ´«¸ĞÆ÷Êı¾İ
+//             // ÀıÈç£º¼ÆËãÉè±¸Çã½Ç
+//             float pitch = fast_sqrt(sensor_data.accel_x * sensor_data.accel_x + 
+//                                     sensor_data.accel_z * sensor_data.accel_z);
+//             // ÓÃÓÚÔË¶¯¿ØÖÆ¡¢×´Ì¬¼à²âµÈ
+//         }
+//     }
+// }
+
+// int main()
+// {
+//     // ²âÊÔ½âÎöº¯Êı
+//     test_icm426888_parser();
+    
+//     // Êµ¼ÊÓ¦ÓÃÊ¾Àı£º´¦ÀíUART½ÓÊÕµÄSIPÊı¾İ
+//     process_uart_gyro_data();
+    
+//     return 0;
+// }
