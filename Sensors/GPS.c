@@ -1,250 +1,236 @@
-#include <AI8051U.H>
+#include <stdio.h>
+// #include <AI8051U.H>
 #include <string.h>
 #include <stdlib.h>
+#include <math.h>
 
-typedef unsigned char uint8_t;
-typedef unsigned int uint16_t;
-/*
- * GPS踩点
- */
-double Point_lat[], Point_lon[]; // 纬度,经度
-int Flash_Point_Num = 0;         // 采样点数
-int aim1, aim2, aim3, aim4, aim5;
-
-// GPS数据结构
+// RMC数据结构体
 typedef struct
 {
-    double latitude;    // 纬度
-    double longitude;   // 经度
-    double altitude;    // 海拔高度
-    double speed;       // 速度（节）
-    double direction;   // 航向角
-    uint8_t satellites; // 卫星数量
-    uint8_t status;     // 定位状态 0=未定位，1=非差分定位，2=差分定位
-    uint8_t valid;      // 数据有效性 0=无效，1=有效
-    // 时间信息
-    uint8_t hour;
-    uint8_t minute;
-    uint8_t second;
-    uint8_t day;
-    uint8_t month;
-    uint8_t year;
-} GPS_Data_t;
+    int hour;         // 时
+    int minute;       // 分
+    float second;     // 秒
+    char status;      // 定位状态，A=有效，V=无效
+    double latitude;  // 纬度(度)
+    char ns;          // 纬度方向，N=北半球，S=南半球
+    double longitude; // 经度(度)
+    char ew;          // 经度方向，E=东经，W=西经
+    float speed;      // 地面速度(节)
+    float course;     // 地面航向角(度)
+    int day;          // 日
+    int month;        // 月
+    int year;         // 年
+    float mag_var;    // 磁偏角
+    char mag_dir;     // 磁偏角方向，E=东，W=西
+    char mode;        // 模式指示，A=自动，D=差分，E=估算，N=数据无效
+    int valid;        // 数据是否有效
+} RMC_Data;
 
-GPS_Data_t gps_data;
-
-// 分割NMEA语句的辅助函数
-void NMEA_Split(char *str, char **fields, int max_fields)
+// 将NMEA格式的经纬度转换为标准的十进制度
+double nmea_to_decimal(double val)
 {
+    int degrees;
+    double minutes;
+    degrees = (int)(val / 100);
+    minutes = val - degrees * 100;
+    return degrees + minutes / 60.0;
+}
+
+// 解析RMC语句
+void parse_rmc(char *sentence, RMC_Data *rmc_data)
+{
+    char buffer[128];
+    char *field[15]; // 用于存储分割后的字段
+    int field_count = 0;
     int i = 0;
-    fields[i++] = str;
+    char *ptr;
 
-    while (*str && i < max_fields)
+    // 初始化数据
+    for (i = 0; i < sizeof(RMC_Data); i++)
+        ((char *)rmc_data)[i] = 0;
+    rmc_data->valid = 0;
+
+    // 复制语句以便进行处理
+    i = 0;
+    while (sentence[i] != 0 && i < 127)
     {
-        if (*str == ',')
-        {
-            *str = '\0';
-            fields[i++] = str + 1;
-        }
-        str++;
+        buffer[i] = sentence[i];
+        i++;
     }
-}
+    buffer[i] = 0; // 确保字符串结束
 
-// 计算校验和
-char NMEA_Checksum(const char *str, int len)
-{
-    uint8_t checksum = 0;
+    // 手动分割字符串
+    ptr = buffer;
+    field[0] = ptr; // 第一个字段
+    field_count = 1;
 
-    while (len--)
+    for (i = 0; buffer[i] != 0 && field_count < 15; i++)
     {
-        checksum ^= *str++;
-    }
-
-    return checksum;
-}
-
-// 将NMEA格式的经纬度转换为度
-double NMEA_Deg_To_Decimal(char *deg_str)
-{
-    double degree;
-    double minute;
-    char *dot;
-
-    if (!deg_str || !*deg_str)
-        return 0.0;
-
-    degree = atof(deg_str) / 100;
-    int int_degree = (int)degree;
-    minute = degree - int_degree;
-
-    return int_degree + minute * 100 / 60;
-}
-
-// 解析GPRMC语句
-void NMEA_Parse_RMC(char **fields)
-{
-    // 检查定位状态
-    if (fields[2][0] == 'A')
-    {
-        gps_data.valid = 1;
-
-        // 解析纬度
-        if (fields[3] && *fields[3])
+        if (buffer[i] == ',' || buffer[i] == '*')
         {
-            gps_data.latitude = NMEA_Deg_To_Decimal(fields[3]);
-            // 南北半球
-            if (fields[4][0] == 'S')
-                gps_data.latitude = -gps_data.latitude;
-        }
-
-        // 解析经度
-        if (fields[5] && *fields[5])
-        {
-            gps_data.longitude = NMEA_Deg_To_Decimal(fields[5]);
-            // 东西半球
-            if (fields[6][0] == 'W')
-                gps_data.longitude = -gps_data.longitude;
-        }
-
-        // 解析速度（节）
-        if (fields[7] && *fields[7])
-            gps_data.speed = atof(fields[7]);
-
-        // 解析航向角
-        if (fields[8] && *fields[8])
-            gps_data.direction = atof(fields[8]);
-
-        // 解析日期
-        if (fields[9] && strlen(fields[9]) >= 6)
-        {
-            gps_data.day = (fields[9][0] - '0') * 10 + (fields[9][1] - '0');
-            gps_data.month = (fields[9][2] - '0') * 10 + (fields[9][3] - '0');
-            gps_data.year = (fields[9][4] - '0') * 10 + (fields[9][5] - '0');
+            buffer[i] = 0;                         // 将分隔符替换为字符串结束符
+            field[field_count++] = &buffer[i + 1]; // 记录下一个字段的起始位置
         }
     }
-    else
+
+    // 解析各字段
+    if (field_count > 1)
     {
-        gps_data.valid = 0;
+        // UTC时间 (字段1)
+        if (strlen(field[1]) >= 6)
+        {
+            rmc_data->hour = (field[1][0] - '0') * 10 + (field[1][1] - '0');
+            rmc_data->minute = (field[1][2] - '0') * 10 + (field[1][3] - '0');
+            rmc_data->second = atof(&field[1][4]);
+        }
     }
 
-    // 解析时间
-    if (fields[1] && strlen(fields[1]) >= 6)
+    if (field_count > 2)
     {
-        gps_data.hour = (fields[1][0] - '0') * 10 + (fields[1][1] - '0');
-        gps_data.minute = (fields[1][2] - '0') * 10 + (fields[1][3] - '0');
-        gps_data.second = (fields[1][4] - '0') * 10 + (fields[1][5] - '0');
+        // 定位状态 (字段2)
+        rmc_data->status = field[2][0];
     }
+
+    if (field_count > 3)
+    {
+        // 纬度 (字段3)
+        if (strlen(field[3]) > 0)
+        {
+            rmc_data->latitude = nmea_to_decimal(atof(field[3]));
+        }
+    }
+
+    if (field_count > 4)
+    {
+        // 南北半球 (字段4)
+        rmc_data->ns = field[4][0];
+        if (rmc_data->ns == 'S')
+        {
+            rmc_data->latitude = -rmc_data->latitude;
+        }
+    }
+
+    if (field_count > 5)
+    {
+        // 经度 (字段5)
+        if (strlen(field[5]) > 0)
+        {
+            rmc_data->longitude = nmea_to_decimal(atof(field[5]));
+        }
+    }
+
+    if (field_count > 6)
+    {
+        // 东西半球 (字段6)
+        rmc_data->ew = field[6][0];
+        if (rmc_data->ew == 'W')
+        {
+            rmc_data->longitude = -rmc_data->longitude;
+        }
+    }
+
+    if (field_count > 7)
+    {
+        // 速度（节） (字段7)
+        rmc_data->speed = atof(field[7]);
+    }
+
+    if (field_count > 8)
+    {
+        // 地面航向角 (字段8)
+        rmc_data->course = atof(field[8]);
+    }
+
+    if (field_count > 9)
+    {
+        // 日期 (字段9)
+        if (strlen(field[9]) >= 6)
+        {
+            rmc_data->day = (field[9][0] - '0') * 10 + (field[9][1] - '0');
+            rmc_data->month = (field[9][2] - '0') * 10 + (field[9][3] - '0');
+            rmc_data->year = 2000 + (field[9][4] - '0') * 10 + (field[9][5] - '0');
+        }
+    }
+
+    if (field_count > 10)
+    {
+        // 磁偏角 (字段10)
+        rmc_data->mag_var = atof(field[10]);
+    }
+
+    if (field_count > 11)
+    {
+        // 磁偏角方向 (字段11)
+        rmc_data->mag_dir = field[11][0];
+    }
+
+    if (field_count > 12)
+    {
+        // 模式指示 (字段12)
+        rmc_data->mode = field[12][0];
+    }
+
+    // 检查是否有效
+    rmc_data->valid = (rmc_data->status == 'A');
 }
 
-// 解析GPGGA语句
-void NMEA_Parse_GGA(char **fields)
+// 修改函数定义，添加参数类型和输出参数
+void GPS_Message_Inputer(char *message, RMC_Data *rmc_data)
 {
-    // 解析定位状态
-    if (fields[6] && *fields[6])
-    {
-        gps_data.status = fields[6][0] - '0';
-        if (gps_data.status > 0)
-            gps_data.valid = 1;
-        else
-            gps_data.valid = 0;
-    }
-
-    // 解析卫星数量
-    if (fields[7] && *fields[7])
-        gps_data.satellites = atoi(fields[7]);
-
-    // 解析海拔高度
-    if (fields[9] && *fields[9])
-        gps_data.altitude = atof(fields[9]);
-
-    // 解析纬度
-    if (fields[2] && *fields[2])
-    {
-        gps_data.latitude = NMEA_Deg_To_Decimal(fields[2]);
-        // 南北半球
-        if (fields[3][0] == 'S')
-            gps_data.latitude = -gps_data.latitude;
-    }
-
-    // 解析经度
-    if (fields[4] && *fields[4])
-    {
-        gps_data.longitude = NMEA_Deg_To_Decimal(fields[4]);
-        // 东西半球
-        if (fields[5][0] == 'W')
-            gps_data.longitude = -gps_data.longitude;
-    }
-
-    // 解析时间
-    if (fields[1] && strlen(fields[1]) >= 6)
-    {
-        gps_data.hour = (fields[1][0] - '0') * 10 + (fields[1][1] - '0');
-        gps_data.minute = (fields[1][2] - '0') * 10 + (fields[1][3] - '0');
-        gps_data.second = (fields[1][4] - '0') * 10 + (fields[1][5] - '0');
-    }
+    // 直接调用parse_rmc处理消息并更新传入的rmc_data
+    parse_rmc(message, rmc_data);
 }
 
-// GPS信号解析主函数
-char GPS_Parse(char *gps_str)
-{
-    char *fields[20]; // 用于存储分割后的字段
-    char *checksum_field;
-    uint8_t calculated_checksum;
-    int str_len;
+//算法部分写完辣！！！！！！！ 10/3/2025 16:47
+// Ciallo～(∠・ω< )⌒★
+// Ciallo～(∠・ω< )⌒★
+// Ciallo～(∠・ω< )⌒★
+// Ciallo～(∠・ω< )⌒★
+// Ciallo～(∠・ω< )⌒★            
+// Ciallo～(∠・ω< )⌒★
+// Ciallo～(∠・ω< )⌒★
+// Ciallo～(∠・ω< )⌒★
+// Ciallo～(∠・ω< )⌒★
+// Ciallo～(∠・ω< )⌒★
 
-    // 检查有效性
-    if (!gps_str || gps_str[0] != '$')
-        return 0;
 
-    // 查找校验和位置
-    checksum_field = strchr(gps_str, '*');
-    if (!checksum_field) // 没有校验和
-        return 0;
+// 测试部分
+// 打印RMC数据
+// void print_rmc_data(const RMC_Data *data) 
+// {
+//     printf("===== RMC数据解析结果 =====\n");
+//     printf("时间: %02d:%02d:%05.2f UTC\n", data->hour, data->minute, data->second);
+//     printf("日期: %04d-%02d-%02d\n", data->year, data->month, data->day);
+//     printf("定位状态: %c (%s)\n", data->status, data->status == 'A' ? "有效" : "无效");
+//     printf("纬度: %.6f° %c\n", fabs(data->latitude), data->ns);
+//     printf("经度: %.6f° %c\n", fabs(data->longitude), data->ew);
+//     printf("速度: %.2f节 (%.2f公里/小时)\n", data->speed, data->speed * 1.852);
+//     printf("航向角: %.1f°\n", data->course);
+//     printf("磁偏角: %.1f° %c\n", data->mag_var, data->mag_dir);
+//     printf("模式指示: %c\n", data->mode);
+//     printf("==========================\n");
+// }
 
-    str_len = checksum_field - gps_str - 1;
+// void test_rmc_parser(void) 
+// {
+//     const char *test_sentence = "$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,003.1,W*6A\r\n";
+//     RMC_Data rmc_data;
 
-    // 计算校验和
-    calculated_checksum = NMEA_Checksum(gps_str + 1, str_len);
+//     parse_rmc(test_sentence, &rmc_data);
+//     print_rmc_data(&rmc_data);
+// }
 
-    // 验证校验和
-    int checksum_read = 0;
-    if (checksum_field[1] >= '0' && checksum_field[1] <= '9')
-        checksum_read = (checksum_field[1] - '0') << 4;
-    else if (checksum_field[1] >= 'A' && checksum_field[1] <= 'F')
-        checksum_read = (checksum_field[1] - 'A' + 10) << 4;
+// int main() 
+// {
+//     RMC_Data rmc_data;
+//     char message[128];
+    
+//     scanf("%s", message);
+//     GPS_Message_Inputer(message, &rmc_data);  // 传递rmc_data的地址
+//     print_rmc_data(&rmc_data);
 
-    if (checksum_field[2] >= '0' && checksum_field[2] <= '9')
-        checksum_read |= (checksum_field[2] - '0');
-    else if (checksum_field[2] >= 'A' && checksum_field[2] <= 'F')
-        checksum_read |= (checksum_field[2] - 'A' + 10);
-
-    if (calculated_checksum != checksum_read)
-        return 0;
-
-    // 分割语句
-    *checksum_field = '\0'; // 替换*为\0以便分割
-    NMEA_Split(gps_str, fields, 20);
-
-    // 判断语句类型并解析
-    if (strstr(fields[0], "RMC"))
-    {
-        NMEA_Parse_RMC(fields);
-        return 1;
-    }
-    else if (strstr(fields[0], "GGA"))
-    {
-        NMEA_Parse_GGA(fields);
-        return 2;
-    }
-
-    return 0;
-}
-
-void GPS_Config()
-{
-    // 初始化GPS数据结构
-    memset(&gps_data, 0, sizeof(GPS_Data_t));
-
-    // 这里可添加GPS模块的初始化配置
-    // 例如：设置波特率、输出频率、开启/关闭特定NMEA语句等
-}
+//     scanf("%s", message);
+//     GPS_Message_Inputer(message, &rmc_data);  // 传递rmc_data的地址
+//     print_rmc_data(&rmc_data);
+//     return 0;
+// }
