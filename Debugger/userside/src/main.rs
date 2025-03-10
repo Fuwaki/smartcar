@@ -1,10 +1,6 @@
 use esp32_nimble::{uuid128, BLEAdvertisementData, BLEDevice, NimbleProperties};
 use esp_idf_hal::{
-    gpio::{Gpio0, Input, InputPin},
-    peripherals,
-    uart::{self, Uart, UartDriver},
-    units::Hertz,
-    usb_serial::{config::Config, UsbSerialDriver},
+    can::CanDriver, gpio::{Gpio0, Input, InputPin}, peripherals, uart::{self, Uart, UartDriver}, units::Hertz, usb_serial::{config::Config, UsbSerialDriver}
 };
 fn bytes_to_hex(bytes: &[u8]) -> String {
     bytes.iter()
@@ -37,6 +33,7 @@ fn main() -> anyhow::Result<()> {
             .parity_even()
             .baudrate(Hertz(115200)),
     )
+    
     .unwrap();
     let stc = UartDriver::new(
         peripherals.uart1,

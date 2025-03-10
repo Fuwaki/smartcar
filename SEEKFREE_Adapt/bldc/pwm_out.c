@@ -282,6 +282,7 @@ void pwm_out_duty_update(uint16 duty)
 
     temp_h = (duty >> 8) & 0xFF;
     temp_l = (uint8)duty;
+	//字节拆分 轮流写入
     
     PWMA_CCR1H = temp_h;
     PWMA_CCR1L = temp_l;
@@ -311,12 +312,12 @@ void pwm_out_init(void)
 	PWM_C_L_PIN = 0;
     
     // 初始化低边为推挽输出
-    gpio_mode(P2_0, GPO_PP);
-    gpio_mode(P2_1, GPO_PP);
-    gpio_mode(P2_2, GPO_PP);
-    gpio_mode(P2_3, GPO_PP);
-    gpio_mode(P2_4, GPO_PP);
-    gpio_mode(P2_5, GPO_PP);
+    gpio_mode(P5_4, GPO_PP);
+    gpio_mode(P1_3, GPO_PP);
+    gpio_mode(P1_7, GPO_PP);
+    gpio_mode(P1_6, GPO_PP);
+    gpio_mode(P1_5, GPO_PP);
+    gpio_mode(P1_4, GPO_PP);
     
 
 	PWMA_CCER1  = 0;
@@ -327,19 +328,22 @@ void pwm_out_init(void)
 	PWMA_IER    = 0;
     
     // 设置PWM引脚
-    PWMA_PS     = 0x55;
+    PWMA_PS     = 0x00;			//00000000  配置pwm
     
-    PWMA_CCMR1  = 0x78;		// 通道模式配置, PWM模式2, 预装载允许
+    PWMA_CCMR2  = 0x78;		// 通道模式配置, PWM模式2, 预装载允许
+	//CCMR pwm模式
+	//Capture Compare Register
 	PWMA_CCR1H  = 0;
     PWMA_CCR1L  = 0;
+	//Capture Compare Enable Register
 	PWMA_CCER1 |= 0x03;		// 开启比较输出, 低电平有效
     
-	PWMA_CCMR2  = 0x78;		// 通道模式配置, PWM模式1, 预装载允许
+	PWMA_CCMR3  = 0x78;		// 通道模式配置, PWM模式1, 预装载允许
 	PWMA_CCR2H  = 0;
     PWMA_CCR2L  = 0;
 	PWMA_CCER1 |= 0x30;		// 开启比较输出, 低电平有效
     
-    PWMA_CCMR3  = 0x78;		// 通道模式配置, PWM模式1, 预装载允许
+    PWMA_CCMR4  = 0x78;		// 通道模式配置, PWM模式1, 预装载允许
 	PWMA_CCR3H  = 0;
     PWMA_CCR3L  = 0;
 	PWMA_CCER2 |= 0x03;		// 开启比较输出, 低电平有效
