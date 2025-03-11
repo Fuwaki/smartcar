@@ -7,24 +7,6 @@
 #include <math.h>
 #include "Gyroscope.h"
 
-// ICM42688-P¼Ä´æÆ÷µØÖ·¶¨Òå
-#define ICM42688_WHOAMI           0x75
-#define ICM42688_PWR_MGMT0        0x4E
-#define ICM42688_GYRO_CONFIG0     0x4F
-#define ICM42688_ACCEL_CONFIG0    0x50
-#define ICM42688_GYRO_DATA_X1     0x25
-#define ICM42688_GYRO_DATA_X0     0x26
-#define ICM42688_GYRO_DATA_Y1     0x27
-#define ICM42688_GYRO_DATA_Y0     0x28
-#define ICM42688_GYRO_DATA_Z1     0x29
-#define ICM42688_GYRO_DATA_Z0     0x2A
-#define ICM42688_ACCEL_DATA_X1    0x1F
-#define ICM42688_ACCEL_DATA_X0    0x20
-#define ICM42688_ACCEL_DATA_Y1    0x21
-#define ICM42688_ACCEL_DATA_Y0    0x22
-#define ICM42688_ACCEL_DATA_Z1    0x23
-#define ICM42688_ACCEL_DATA_Z0    0x24
-
 
 void Delay500ms(void)	//@35.000MHz
 {

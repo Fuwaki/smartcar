@@ -349,6 +349,16 @@
               <FileType>5</FileType>
               <FilePath>.\Gyroscope.h</FilePath>
             </File>
+            <File>
+              <FileName>SPI_MultiDevice.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\SPI_MultiDevice.c</FilePath>
+            </File>
+            <File>
+              <FileName>SPI_MultiDevice.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\SPI_MultiDevice.h</FilePath>
+            </File>
           </Files>
         </Group>
       </Groups>
