@@ -7,7 +7,7 @@ typedef unsigned long int u32;
 
 #define FOSC 35000000L  //系统时钟35MHz
 #define PWM_PSC (35-1) //35分频，时钟周期1us
-#define PWM_PERIOD 200 //周期200us
+#define PWM_PERIOD 50 //周期50us
 #define PWM_DUTY 150 //占空100us
 #define _duty_Cal(num) ((u16)((PWM_PERIOD/100)*num)) //占空比计算
 #define PWM_DTime 35 //死区1us

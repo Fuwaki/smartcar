@@ -14,6 +14,7 @@ static unsigned char icm42688_slave_id = 0xFF;
 int ICM42688_SPI_Init(void)
 {
     spi_slave_config_t slave_config;
+    unsigned char who_am_i;
     
     // 配置SPI从设备参数
     slave_config.cs_port = 1;           // 假设片选连接到P1口
@@ -23,13 +24,15 @@ int ICM42688_SPI_Init(void)
     
     // 注册SPI从设备
     icm42688_slave_id = SPI_RegisterSlave(&slave_config);
-    if(icm42688_slave_id == 0xFF) {
+    if(icm42688_slave_id == 0xFF)
+    {
         return -1; // 注册失败
     }
     
     // 读取WHO_AM_I寄存器确认设备ID
-    unsigned char who_am_i = ICM42688_ReadReg(ICM42688_WHOAMI);
-    if(who_am_i != 0x47) {  // ICM-42688的WHO_AM_I值应为0x47
+    who_am_i = ICM42688_ReadReg(ICM42688_WHOAMI);
+    if(who_am_i != 0x47)  // ICM-42688的WHO_AM_I值应为0x47
+    {
         return -2; // 设备ID不匹配
     }
     
@@ -77,8 +80,11 @@ int ICM42688_ReadSensorData(icm426888_data_t *data)
     int raw_accel_x, raw_accel_y, raw_accel_z;
     int raw_gyro_x, raw_gyro_y, raw_gyro_z;
     float accel_scale, gyro_scale;
+    unsigned char temp_buffer[2];
+    int raw_temp;
     
-    if(data == NULL) {
+    if(data == NULL)
+    {
         return -1;
     }
     
@@ -107,11 +113,10 @@ int ICM42688_ReadSensorData(icm426888_data_t *data)
     data->gyro_z = raw_gyro_z * gyro_scale;
     
     // 读取温度数据
-    unsigned char temp_buffer[2];
     SPI_ReadMultiRegisters(icm42688_slave_id, 0x1D, temp_buffer, 2);
-    int raw_temp = ((int)temp_buffer[0] << 8) | temp_buffer[1];
+    raw_temp = ((int)temp_buffer[0] << 8) | temp_buffer[1];
     
-    // 温度转换（根据数据手册）
+    // 温度转换
     data->temperature = (raw_temp / 132.48f) + 25.0f;
     
     return 0;

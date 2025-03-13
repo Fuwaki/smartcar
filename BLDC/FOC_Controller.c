@@ -85,7 +85,7 @@ void velocityOpenloop(double target_velocity) //finally...
 {
     /* 使用早前设置的voltage_power_supply的1/3作为Uq值，这个值会直接影响输出力矩
     最大只能设置为Uq = voltage_power_supply/2，否则ua,ub,uc会超出供电电压限幅 */
-    Uq = voltage_power_supply/3;
+    Uq = voltage_power_supply/2;
 
     Shaft_Angle = _normalizeAngle(Shaft_Angle + target_velocity); //开环控制，软件++
     OutPutter(Uq, 0.0, Shaft_Angle); //输出电压

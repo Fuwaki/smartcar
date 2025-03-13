@@ -26,6 +26,14 @@ typedef struct
     int valid;        // 数据是否有效
 } RMC_Data;
 
+struct NaturePosition
+{
+    double offsetX;
+    double offsetY;
+    double x;
+    double y;
+};
+
 // 将NMEA格式的经纬度转换为标准的十进制度
 double nmea_to_decimal(double val)
 {
@@ -179,6 +187,22 @@ void GPS_Message_Inputer(char *message, RMC_Data *rmc_data)
 {
     // 直接调用parse_rmc处理消息并更新传入的rmc_data
     parse_rmc(message, rmc_data);
+}
+
+void Init_offset(struct NaturePosition *naturePosition, RMC_Data *rmc_data)
+{
+    // 初始化偏移量
+    naturePosition->offsetX = rmc_data->latitude;
+    naturePosition->offsetY = rmc_data->longitude;
+    naturePosition->x = 0;
+    naturePosition->y = 0;
+}
+
+void GPS_Calculate(struct NaturePosition *naturePosition, RMC_Data *rmc_data)
+{
+    // 计算当前位置
+    naturePosition->x = rmc_data->latitude - naturePosition->offsetX;
+    naturePosition->y = rmc_data->longitude - naturePosition->offsetY;
 }
 
 //算法部分写完辣！！！！！！！ 10/3/2025 16:47

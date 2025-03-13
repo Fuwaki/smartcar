@@ -20,6 +20,16 @@
         char mode;        // 模式指示，A=自动，D=差分，E=估算，N=数据无效
         int valid;        // 数据是否有效
     } RMC_Data;
+
+    struct NaturePosition
+    {
+        double offsetX;
+        double offsetY;
+        double x;
+        double y;
+    };
+    
+
     double nmea_to_decimal(double val);
     void parse_rmc(char *sentence, RMC_Data *rmc_data);
     void GPS_Message_Inputer(char *message, RMC_Data *rmc_data);

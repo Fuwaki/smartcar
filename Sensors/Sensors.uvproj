@@ -359,6 +359,16 @@
               <FileType>5</FileType>
               <FilePath>.\SPI_MultiDevice.h</FilePath>
             </File>
+            <File>
+              <FileName>Encoder.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Encoder.c</FilePath>
+            </File>
+            <File>
+              <FileName>Encoder.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\Encoder.h</FilePath>
+            </File>
           </Files>
         </Group>
       </Groups>

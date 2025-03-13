@@ -18,12 +18,12 @@ void Delay500ms(void)	//@35.000MHz
 	while (i) i--;
 }
 
-float fast_sqrt(float x) // ËÙ¶È¸ü¿ìµÄÆ½·½¸ù¼ÆËã
+float fast_sqrt(float x) // é€Ÿåº¦æ›´å¿«çš„å¹³æ–¹æ ¹è®¡ç®—
 {
 	float halfx = 0.5f * x;
 	float y = x;
 	long i = *(long*) & y;
-    //0x5f3759dfÊÇÒ»¸öÆ½·½¸ùµ¹ÊıËÙËã·¨
+    //0x5f3759dfæ˜¯ä¸€ä¸ªå¹³æ–¹æ ¹å€’æ•°é€Ÿç®—æ³•
 	i = 0x5f3759df - (i >> 1);
 	y = *(float*) & i;
 	y = y * (1.5f - (halfx * y * y));
@@ -31,12 +31,12 @@ float fast_sqrt(float x) // ËÙ¶È¸ü¿ìµÄÆ½·½¸ù¼ÆËã
 }
 
 /**
- * @brief ³õÊ¼»¯¿¨¶ûÂüÂË²¨Æ÷
- * @param filter ÂË²¨Æ÷½á¹¹ÌåÖ¸Õë
- * @param Q ¹ı³ÌÔëÉùĞ­·½²î
- * @param R ²âÁ¿ÔëÉùĞ­·½²î
- * @param P_initial ³õÊ¼¹À¼ÆÎó²îĞ­·½²î
- * @param x_initial ³õÊ¼×´Ì¬¹À¼Æ
+ * @brief åˆå§‹åŒ–å¡å°”æ›¼æ»¤æ³¢å™¨
+ * @param filter æ»¤æ³¢å™¨ç»“æ„ä½“æŒ‡é’ˆ
+ * @param Q è¿‡ç¨‹å™ªå£°åæ–¹å·®
+ * @param R æµ‹é‡å™ªå£°åæ–¹å·®
+ * @param P_initial åˆå§‹ä¼°è®¡è¯¯å·®åæ–¹å·®
+ * @param x_initial åˆå§‹çŠ¶æ€ä¼°è®¡
  */
 void kalman_init(kalman_filter_t *filter, float Q, float R, float P_initial, float x_initial) 
 {
@@ -48,18 +48,18 @@ void kalman_init(kalman_filter_t *filter, float Q, float R, float P_initial, flo
 }
 
 /**
- * @brief ¿¨¶ûÂüÂË²¨¸üĞÂ²½Öè
- * @param filter ÂË²¨Æ÷½á¹¹ÌåÖ¸Õë
- * @param measurement µ±Ç°²âÁ¿Öµ
- * @return ÂË²¨ºóµÄ¹À¼ÆÖµ
+ * @brief å¡å°”æ›¼æ»¤æ³¢æ›´æ–°æ­¥éª¤
+ * @param filter æ»¤æ³¢å™¨ç»“æ„ä½“æŒ‡é’ˆ
+ * @param measurement å½“å‰æµ‹é‡å€¼
+ * @return æ»¤æ³¢åçš„ä¼°è®¡å€¼
  */
 float kalman_update(kalman_filter_t *filter, float measurement) 
 {
-    // Ô¤²â²½Öè
-    // x = x (×´Ì¬Ô¤²â£¬¼ò»¯Ä£ĞÍÏÂ±£³Ö²»±ä)
+    // é¢„æµ‹æ­¥éª¤
+    // x = x (çŠ¶æ€é¢„æµ‹ï¼Œç®€åŒ–æ¨¡å‹ä¸‹ä¿æŒä¸å˜)
     filter->P = filter->P + filter->Q;
     
-    // ¸üĞÂ²½Öè
+    // æ›´æ–°æ­¥éª¤
     filter->K = filter->P / (filter->P + filter->R);
     filter->x = filter->x + filter->K * (measurement - filter->x);
     filter->P = (1 - filter->K) * filter->P;
@@ -68,45 +68,45 @@ float kalman_update(kalman_filter_t *filter, float measurement)
 }
 
 /**
- * @brief ¶ÔÍÓÂİÒÇºÍ¼ÓËÙ¶ÈÊı¾İÓ¦ÓÃ¿¨¶ûÂüÂË²¨
- * @param raw_data Ô­Ê¼´«¸ĞÆ÷Êı¾İ
- * @param filtered_data ÂË²¨ºóµÄÊı¾İ
- * @param kf_accel_x,kf_accel_y,kf_accel_z ¼ÓËÙ¶ÈÊı¾İµÄÂË²¨Æ÷
- * @param kf_gyro_x,kf_gyro_y,kf_gyro_z ÍÓÂİÒÇÊı¾İµÄÂË²¨Æ÷
+ * @brief å¯¹é™€èºä»ªå’ŒåŠ é€Ÿåº¦æ•°æ®åº”ç”¨å¡å°”æ›¼æ»¤æ³¢
+ * @param raw_data åŸå§‹ä¼ æ„Ÿå™¨æ•°æ®
+ * @param filtered_data æ»¤æ³¢åçš„æ•°æ®
+ * @param kf_accel_x,kf_accel_y,kf_accel_z åŠ é€Ÿåº¦æ•°æ®çš„æ»¤æ³¢å™¨
+ * @param kf_gyro_x,kf_gyro_y,kf_gyro_z é™€èºä»ªæ•°æ®çš„æ»¤æ³¢å™¨
  */
 void apply_kalman_filter(icm426888_data_t *raw_data, icm426888_data_t *filtered_data, 
                         kalman_filter_t *kf_accel_x, kalman_filter_t *kf_accel_y, kalman_filter_t *kf_accel_z,
                         kalman_filter_t *kf_gyro_x, kalman_filter_t *kf_gyro_y, kalman_filter_t *kf_gyro_z) 
 {
-    // ¸üĞÂ¼ÓËÙ¶ÈÊı¾İ
+    // æ›´æ–°åŠ é€Ÿåº¦æ•°æ®
     filtered_data->accel_x = kalman_update(kf_accel_x, raw_data->accel_x);
     filtered_data->accel_y = kalman_update(kf_accel_y, raw_data->accel_y);
     filtered_data->accel_z = kalman_update(kf_accel_z, raw_data->accel_z);
     
-    // ¸üĞÂÍÓÂİÒÇÊı¾İ
+    // æ›´æ–°é™€èºä»ªæ•°æ®
     filtered_data->gyro_x = kalman_update(kf_gyro_x, raw_data->gyro_x);
     filtered_data->gyro_y = kalman_update(kf_gyro_y, raw_data->gyro_y);
     filtered_data->gyro_z = kalman_update(kf_gyro_z, raw_data->gyro_z);
     
-    // ÎÂ¶ÈÊı¾İÍ¨³£²»ĞèÒªÂË²¨£¬Ö±½Ó´«µİ
+    // æ¸©åº¦æ•°æ®é€šå¸¸ä¸éœ€è¦æ»¤æ³¢ï¼Œç›´æ¥ä¼ é€’
     filtered_data->temperature = raw_data->temperature;
 }
 
 /**
- * @brief ³õÊ¼»¯ËùÓĞÍÓÂİÒÇÊı¾İµÄ¿¨¶ûÂüÂË²¨Æ÷
- * @param kf_accel_x,kf_accel_y,kf_accel_z ¼ÓËÙ¶ÈÊı¾İµÄÂË²¨Æ÷
- * @param kf_gyro_x,kf_gyro_y,kf_gyro_z ÍÓÂİÒÇÊı¾İµÄÂË²¨Æ÷
+ * @brief åˆå§‹åŒ–æ‰€æœ‰é™€èºä»ªæ•°æ®çš„å¡å°”æ›¼æ»¤æ³¢å™¨
+ * @param kf_accel_x,kf_accel_y,kf_accel_z åŠ é€Ÿåº¦æ•°æ®çš„æ»¤æ³¢å™¨
+ * @param kf_gyro_x,kf_gyro_y,kf_gyro_z é™€èºä»ªæ•°æ®çš„æ»¤æ³¢å™¨
  */
 void init_gyro_kalman_filters(kalman_filter_t *kf_accel_x, kalman_filter_t *kf_accel_y, kalman_filter_t *kf_accel_z,
                             kalman_filter_t *kf_gyro_x, kalman_filter_t *kf_gyro_y, kalman_filter_t *kf_gyro_z)
 {
-    // ³õÊ¼»¯¼ÓËÙ¶È¼ÆÂË²¨Æ÷
-    // ²ÎÊı¿É¸ù¾İÊµ¼ÊÓ¦ÓÃµ÷Õû£ºQ(¹ı³ÌÔëÉù), R(²âÁ¿ÔëÉù), ³õÊ¼P, ³õÊ¼x
+    // åˆå§‹åŒ–åŠ é€Ÿåº¦è®¡æ»¤æ³¢å™¨
+    // å‚æ•°å¯æ ¹æ®å®é™…åº”ç”¨è°ƒæ•´ï¼šQ(è¿‡ç¨‹å™ªå£°), R(æµ‹é‡å™ªå£°), åˆå§‹P, åˆå§‹x
     kalman_init(kf_accel_x, 0.01f, 0.1f, 1.0f, 0.0f);
     kalman_init(kf_accel_y, 0.01f, 0.1f, 1.0f, 0.0f);
     kalman_init(kf_accel_z, 0.01f, 0.1f, 1.0f, 0.0f);
     
-    // ³õÊ¼»¯ÍÓÂİÒÇÂË²¨Æ÷
+    // åˆå§‹åŒ–é™€èºä»ªæ»¤æ³¢å™¨
     kalman_init(kf_gyro_x, 0.003f, 0.03f, 1.0f, 0.0f);
     kalman_init(kf_gyro_y, 0.003f, 0.03f, 1.0f, 0.0f);
     kalman_init(kf_gyro_z, 0.003f, 0.03f, 1.0f, 0.0f);
@@ -134,7 +134,7 @@ int icm426888_parse_sip_data(const char *sip_payload, unsigned int payload_len, 
         return -2; // Invalid header - should start with "ICM"
     }
 
-    // Ê¹ÓÃ³Ë·¨´úÌæÎ»ÒÆÉµ±Ækeil
+    // ä½¿ç”¨ä¹˜æ³•ä»£æ›¿ä½ç§»
     raw_accel_x = ((unsigned char)sip_payload[3] * 256) + (unsigned char)sip_payload[4];
     raw_accel_y = ((unsigned char)sip_payload[5] * 256) + (unsigned char)sip_payload[6];
     raw_accel_z = ((unsigned char)sip_payload[7] * 256) + (unsigned char)sip_payload[8];
@@ -145,8 +145,8 @@ int icm426888_parse_sip_data(const char *sip_payload, unsigned int payload_len, 
     
     raw_temp = sip_payload[15];
     
-    accel_scale = 16.0f / 32768.0f * 1000.0f; // ×ª»»Îª mg
-    gyro_scale = 2000.0f / 32768.0f;          // ×ª»»Îª degrees/s
+    accel_scale = 16.0f / 32768.0f * 1000.0f; // è½¬æ¢ä¸º mg
+    gyro_scale = 2000.0f / 32768.0f;          // è½¬æ¢ä¸º degrees/s
     
     sensor_data->accel_x = raw_accel_x * accel_scale;
     sensor_data->accel_y = raw_accel_y * accel_scale;
@@ -156,92 +156,91 @@ int icm426888_parse_sip_data(const char *sip_payload, unsigned int payload_len, 
     sensor_data->gyro_y = raw_gyro_y * gyro_scale;
     sensor_data->gyro_z = raw_gyro_z * gyro_scale;
     
-
     sensor_data->temperature = (float)raw_temp + 25.0f;
     
     return 0; // Success
 }
 
-// Ciallo¡«(¡Ï9§9¦Ø< )¡Ğ¡ï     
-// Ciallo¡«(¡Ï9§9¦Ø< )¡Ğ¡ï     
-// Ciallo¡«(¡Ï9§9¦Ø< )¡Ğ¡ï     
+// Cialloï½(âˆ ï¿½9ï¿½9Ï‰< )âŒ’â˜…     
+// Cialloï½(âˆ ï¿½9ï¿½9Ï‰< )âŒ’â˜…     
+// Cialloï½(âˆ ï¿½9ï¿½9Ï‰< )âŒ’â˜…     
 
 
 // void test_icm426888_parser(void)
 // {
-//     // Ä£ÄâµÄSIPÊı¾İ°ü£¨Êµ¼ÊÓ¦ÓÃÖĞ£¬ÕâĞ©Êı¾İ½«´ÓÍ¨ĞÅ½Ó¿Ú»ñÈ¡£©
-//     // ¸ñÊ½: [ICM±êÊ¶·û(3)][accel_x(2)][accel_y(2)][accel_z(2)][gyro_x(2)][gyro_y(2)][gyro_z(2)][temp(1)]
+//     // æ¨¡æ‹Ÿçš„SIPæ•°æ®åŒ…ï¼ˆå®é™…åº”ç”¨ä¸­ï¼Œè¿™äº›æ•°æ®å°†ä»é€šä¿¡æ¥å£è·å–ï¼‰
+//     // æ ¼å¼: [ICMæ ‡è¯†ç¬¦(3)][accel_x(2)][accel_y(2)][accel_z(2)][gyro_x(2)][gyro_y(2)][gyro_z(2)][temp(1)]
 //     unsigned char test_sip_data[16] = {
-//         0x49, 0x43, 0x4D,             // "ICM" ±êÊ¶·û
+//         0x49, 0x43, 0x4D,             // "ICM" æ ‡è¯†ç¬¦
 //         0x01, 0x23,                   // accel_x raw data (291)
 //         0x45, 0x67,                   // accel_y raw data (17767)
 //         0x89, 0xAB,                   // accel_z raw data (-30293)
 //         0xCD, 0xEF,                   // gyro_x raw data (-12817)
 //         0x02, 0x46,                   // gyro_y raw data (582)
 //         0x8A, 0xBC,                   // gyro_z raw data (-30020)
-//         0x15                         // temp raw data (21¡ãC)
+//         0x15                         // temp raw data (21Â°C)
 //     };
     
-//     // ÉùÃ÷´«¸ĞÆ÷Êı¾İ½á¹¹Ìå
+//     // å£°æ˜ä¼ æ„Ÿå™¨æ•°æ®ç»“æ„ä½“
 //     icm426888_data_t sensor_data;
 //     int result;
     
-//     // µ÷ÓÃ½âÎöº¯Êı
+//     // è°ƒç”¨è§£æå‡½æ•°
 //     result = icm426888_parse_sip_data((char*)test_sip_data, 16, &sensor_data);
     
-//     // ¼ì²é½á¹û
+//     // æ£€æŸ¥ç»“æœ
 //     if (result == 0) {
-//         // ´òÓ¡½âÎöµÄÊı¾İ£¨Êµ¼ÊÓ¦ÓÃÖĞ¿ÉÒÔ½øĞĞÆäËû´¦Àí£©
-//         printf("¼ÓËÙ¶ÈÊı¾İ (mg):\n");
+//         // æ‰“å°è§£æçš„æ•°æ®ï¼ˆå®é™…åº”ç”¨ä¸­å¯ä»¥è¿›è¡Œå…¶ä»–å¤„ç†ï¼‰
+//         printf("åŠ é€Ÿåº¦æ•°æ® (mg):\n");
 //         printf("  X: %.2f\n", sensor_data.accel_x);
 //         printf("  Y: %.2f\n", sensor_data.accel_y);
 //         printf("  Z: %.2f\n", sensor_data.accel_z);
         
-//         printf("ÍÓÂİÒÇÊı¾İ (degrees/s):\n");
+//         printf("é™€èºä»ªæ•°æ® (degrees/s):\n");
 //         printf("  X: %.2f\n", sensor_data.gyro_x);
 //         printf("  Y: %.2f\n", sensor_data.gyro_y);
 //         printf("  Z: %.2f\n", sensor_data.gyro_z);
         
-//         printf("ÎÂ¶È: %.1f¡ãC\n", sensor_data.temperature);
+//         printf("æ¸©åº¦: %.1fÂ°C\n", sensor_data.temperature);
         
-//         // ÔÚÊµ¼ÊÓ¦ÓÃÖĞ£¬Äú¿ÉÄÜ»áÊ¹ÓÃÕâĞ©Êı¾İÀ´¿ØÖÆÉè±¸»ò½øĞĞ½øÒ»²½¼ÆËã
-//         // ÀıÈç£¬¼ÆËã·½Î»¡¢¼ì²âÔË¶¯µÈ
+//         // åœ¨å®é™…åº”ç”¨ä¸­ï¼Œæ‚¨å¯èƒ½ä¼šä½¿ç”¨è¿™äº›æ•°æ®æ¥æ§åˆ¶è®¾å¤‡æˆ–è¿›è¡Œè¿›ä¸€æ­¥è®¡ç®—
+//         // ä¾‹å¦‚ï¼Œè®¡ç®—æ–¹ä½ã€æ£€æµ‹è¿åŠ¨ç­‰
 //     }
 //     else {
-//         printf("½âÎöSIPÊı¾İÊ§°Ü£¬´íÎó´úÂë: %d\n", result);
+//         printf("è§£æSIPæ•°æ®å¤±è´¥ï¼Œé”™è¯¯ä»£ç : %d\n", result);
 //     }
 // }
 
 // /**
-//  * @brief Êµ¼ÊÓ¦ÓÃÊ¾Àı£º´ÓUART½ÓÊÕSIPÊı¾İ²¢½âÎö
-//  * ´Ëº¯Êı¼ÙÉèÄúµÄÏµÍ³ÓĞUART½ÓÊÕ¹¦ÄÜ
+//  * @brief å®é™…åº”ç”¨ç¤ºä¾‹ï¼šä»UARTæ¥æ”¶SIPæ•°æ®å¹¶è§£æ
+//  * æ­¤å‡½æ•°å‡è®¾æ‚¨çš„ç³»ç»Ÿæœ‰UARTæ¥æ”¶åŠŸèƒ½
 //  */
 // void process_uart_gyro_data(void)
 // {
-//     unsigned char sip_buffer[32]; // »º³åÇø£¬¸ù¾İĞèÒªµ÷Õû´óĞ¡
+//     unsigned char sip_buffer[32]; // ç¼“å†²åŒºï¼Œæ ¹æ®éœ€è¦è°ƒæ•´å¤§å°
 //     unsigned int received_bytes = 0;
 //     icm426888_data_t sensor_data;
     
-//     // ÕâÀïÓ¦¸ÃÊÇÄúµÄ½ÓÊÕUARTÊı¾İµÄ´úÂë
-//     // ÀıÈç£ºreceived_bytes = uart_receive_data(sip_buffer, 32);
+//     // è¿™é‡Œåº”è¯¥æ˜¯æ‚¨çš„æ¥æ”¶UARTæ•°æ®çš„ä»£ç 
+//     // ä¾‹å¦‚ï¼šreceived_bytes = uart_receive_data(sip_buffer, 32);
     
-//     if (received_bytes >= 16) { // È·±£½ÓÊÕµ½×ã¹»µÄÊı¾İ
+//     if (received_bytes >= 16) { // ç¡®ä¿æ¥æ”¶åˆ°è¶³å¤Ÿçš„æ•°æ®
 //         if (icm426888_parse_sip_data((char*)sip_buffer, received_bytes, &sensor_data) == 0) {
-//             // Ê¹ÓÃ½âÎöºóµÄ´«¸ĞÆ÷Êı¾İ
-//             // ÀıÈç£º¼ÆËãÉè±¸Çã½Ç
+//             // ä½¿ç”¨è§£æåçš„ä¼ æ„Ÿå™¨æ•°æ®
+//             // ä¾‹å¦‚ï¼šè®¡ç®—è®¾å¤‡å€¾è§’
 //             float pitch = fast_sqrt(sensor_data.accel_x * sensor_data.accel_x + 
 //                                     sensor_data.accel_z * sensor_data.accel_z);
-//             // ÓÃÓÚÔË¶¯¿ØÖÆ¡¢×´Ì¬¼à²âµÈ
+//             // ç”¨äºè¿åŠ¨æ§åˆ¶ã€çŠ¶æ€ç›‘æµ‹ç­‰
 //         }
 //     }
 // }
 
 // int main()
 // {
-//     // ²âÊÔ½âÎöº¯Êı
+//     // æµ‹è¯•è§£æå‡½æ•°
 //     test_icm426888_parser();
     
-//     // Êµ¼ÊÓ¦ÓÃÊ¾Àı£º´¦ÀíUART½ÓÊÕµÄSIPÊı¾İ
+//     // å®é™…åº”ç”¨ç¤ºä¾‹ï¼šå¤„ç†UARTæ¥æ”¶çš„SIPæ•°æ®
 //     process_uart_gyro_data();
     
 //     return 0;
