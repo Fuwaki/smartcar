@@ -119,7 +119,7 @@ void board_init(void)
 	EAXFR = 1;				// 使能访问XFR
 	CKCON = 0x00;			// 设置外部数据总线为最快
 	WTST = 0;               // 设置程序代码等待参数，赋值为0可将CPU执行程序的速度设置为最快
-	SET_P54_RESRT;			// 使P54为复位引脚
+	// SET_P54_RESRT;			// 使P54为复位引脚
 	P_SW2 = 0x80;			// 开启特殊地址访问
 
 #if (1 == EXTERNAL_CRYSTA_ENABLE)

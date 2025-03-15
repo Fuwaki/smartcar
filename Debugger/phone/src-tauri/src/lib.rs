@@ -3,6 +3,7 @@
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rus t!{}", name, if cfg!(mobile) { " (mobile)" } else { "" })
+    
 }
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {

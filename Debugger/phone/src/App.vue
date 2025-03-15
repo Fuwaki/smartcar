@@ -2,10 +2,14 @@
 import { reactive, ref } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { GridLayout, GridItem } from 'grid-layout-plus'
-
-
+// get address by scanning for devices and selecting the desired one
+let address = "24:EC:4A:02:57:96"
 const greetMsg = ref("");
 const name = ref("");
+const status = ref("");
+
+
+
 
 async function greet() {
   // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -38,18 +42,19 @@ const layout = reactive([
 <template>
   <main class="container">
     <div>qwq</div>
+    <div>{{ status }}</div>
+    <button @click="">connect</button>
     <form class="row" @submit.prevent="greet">
       <input id="greet-input" v-model="name" placeholder="Enter a name..." />
       <button type="submit">Greet</button>
     </form>
     <p>{{ greetMsg }}</p>
     <GridLayout v-model:layout="layout" :row-height="30">
-    <template #item="{ item }">
-      <!-- <span class="text">{{ `${item.i}${item.static ? '- Static' : ''}` }}</span> -->
-      <div>王尧！
-      </div>
-    </template>
-  </GridLayout>
+      <template #item="{ item }">
+        <!-- <span class="text">{{ `${item.i}${item.static ? '- Static' : ''}` }}</span> -->
+        <div>{{ name }}</div>
+      </template>
+    </GridLayout>
   </main>
 </template>
 
@@ -84,6 +89,4 @@ const layout = reactive([
   font-size: 24px;
   text-align: center;
 }
-
-
 </style>

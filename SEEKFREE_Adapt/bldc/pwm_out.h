@@ -23,15 +23,19 @@
 
 #include "common.h"
 
-#define PWM_A_H_PIN     P54
-#define PWM_A_L_PIN     P13
+//这个地方用于手动控制 所以应该不应该对应到pwm模块的N或者P
+//这里是实际的上下桥 
+//PWM2
+#define PWM_A_H_PIN     P13
+#define PWM_A_L_PIN     P54
 
+//PWM3
+#define PWM_B_H_PIN     P15
+#define PWM_B_L_PIN     P14
+//PWN4
+#define PWM_C_H_PIN     P17
+#define PWM_C_L_PIN     P16
 
-#define PWM_B_H_PIN     P17
-#define PWM_B_L_PIN     P16
-
-#define PWM_C_H_PIN     P15
-#define PWM_C_L_PIN     P14
 
 
 extern uint8 g_use_complementary;
