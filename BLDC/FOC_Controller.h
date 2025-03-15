@@ -8,4 +8,5 @@
     void velocityOpenloop(double target_velocity);
     void positionCloseLoop(double target_position);
     void speedCloseLoop(double target_speed);
+    extern double Ua, Ub, Uc;
 #endif

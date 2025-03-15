@@ -7,10 +7,10 @@ typedef unsigned long int u32;
 
 #define FOSC 35000000L  //系统时钟35MHz
 #define PWM_PSC (35-1) //35分频，时钟周期1us
-#define PWM_PERIOD 50 //周期50us
-#define PWM_DUTY 150 //占空100us
-#define _duty_Cal(num) ((u16)((PWM_PERIOD/100)*num)) //占空比计算
-#define PWM_DTime 35 //死区1us
+#define PWM_PERIOD 100 //us
+#define PWM_DUTY 50 //us
+#define _duty_Cal(num) ((u16)((PWM_PERIOD*num)/100)) //占空比计算
+#define PWM_DTime 18 //死区1/2us
 #define PWM_TIMER_PERIOD 200 
 
 float timestamp = 0;
@@ -40,10 +40,8 @@ void PWM_Init()
     PWMA_CCER2 &= 0x0F;                       // 保留通道3配置，清除通道4配置
     PWMA_CCMR4 = 0x68;                        // 设置 CC4 CC4N为 PWMA 输出模式，PWM模式1
     PWMA_CCER2 |= 0x50;                       // 使能 CC4 CC4N通道(位置4和位置6)
-	
-	PWMA_CCR1H = (u16)(PWM_DUTY >> 8);	// 设置初始占空
-	PWMA_CCR1L = (u16)(PWM_DUTY); 
 
+	// 不再设置PWM1的占空比，因为我们不使用它
     PWMA_CCR2H = (u16)(PWM_DUTY >> 8);
     PWMA_CCR2L = (u16)(PWM_DUTY); 
 
@@ -58,7 +56,11 @@ void PWM_Init()
 	
 	PWMA_DTR = PWM_DTime; // 插入死区时间
 	
-    PWMA_ENO = 0xfc; //如果想全部使用请用0xFF; 0xcf
+    // 修改ENO寄存器设置，允许PWM2P/N、PWM3P/N和PWM4P/N输出
+    // 0xFC对应二进制 1111 1100，允许CH2P/N、CH3P/N和CH4P/N输出
+    // 0xA8对应二进制 1010 1000，允许CH2P/N、CH3P/N输出，CH4P/N输出禁止
+    PWMA_ENO = 0xFC;
+    // PWMA_ENO = 0xA8;
 
 	PWMA_BKR = 0x80; // 使能主输出
 	
@@ -75,19 +77,15 @@ void Set_PWM_Duty(unsigned char channel, unsigned char duty)
 
     switch(channel)
     {
-    // case 0:
-    //     PWMA_CCR1H = (u16)(_duty_Cal(duty) >> 8);
-    //     PWMA_CCR1L = (u16)(_duty_Cal(duty));
-    //     break;
-    case 0:
+    case 0:  // 通道2
         PWMA_CCR2H = (u16)(_duty_Cal(duty) >> 8);
         PWMA_CCR2L = (u16)(_duty_Cal(duty));
         break;
-    case 1:
+    case 1:  // 通道3
         PWMA_CCR3H = (u16)(_duty_Cal(duty) >> 8);
         PWMA_CCR3L = (u16)(_duty_Cal(duty));
         break;
-    case 2:
+    case 2:  // 通道4
         PWMA_CCR4H = (u16)(_duty_Cal(duty) >> 8);
         PWMA_CCR4L = (u16)(_duty_Cal(duty));
         break;
