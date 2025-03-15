@@ -1,0 +1,13 @@
+[connection]
+
+[[usb_device]]
+vid = "303a"
+pid = "1001"
+
+[[usb_device]]
+vid = "1a86"
+pid = "7522"
+
+[flash]
+size = "8MB"
+frequency = "80MHz"
