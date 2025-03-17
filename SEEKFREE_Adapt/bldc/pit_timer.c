@@ -317,7 +317,7 @@ void pit_motor_control()
         {
             // 如果引脚一直是一个状态，且超过了 BLDC_STALL_TIME_OUT ms 则认为堵转了
             if (stall_time_out_check++ > (10 * 200)) // 10KHZ，0.1ms计数一次
-            {g_use_complementary
+            {
                 stall_time_out_check = 0;
                 motor.run_flag = MOTOR_STOP_STALL;
             }

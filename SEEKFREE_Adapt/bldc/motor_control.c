@@ -303,7 +303,7 @@ void motor_power_on_beep(uint16 volume)
     PWM_C_L_PIN = 0;
 	pwm_out_duty_update(motor.duty_register);
 	pwm_init(PWMA_CH1P_P20, frequency_spectrum[1], beep_duty);
-	PWMA_ENO = 1<<0;
+	PWMA_ENO = 1<<2;
 	delay_ms(MUSIC_DELAY_MS);
 	
 	// B上桥PWM C下桥常开
@@ -314,7 +314,7 @@ void motor_power_on_beep(uint16 volume)
     PWM_C_H_PIN = 0;
     PWM_C_L_PIN = 1;
 	pwm_init(PWMA_CH2P_P22, frequency_spectrum[2], beep_duty);
-	PWMA_ENO = 1<<2;
+	PWMA_ENO = 1<<4;
 	delay_ms(MUSIC_DELAY_MS);
 	
 	// C上桥PWM A下桥常开
@@ -325,7 +325,7 @@ void motor_power_on_beep(uint16 volume)
     PWM_C_H_PIN = 0;
     PWM_C_L_PIN = 0;
 	pwm_init(PWMA_CH3P_P24, frequency_spectrum[3], beep_duty);
-	PWMA_ENO = 1<<4;
+	PWMA_ENO = 1<<6;
 	delay_ms(MUSIC_DELAY_MS);
 	
 }

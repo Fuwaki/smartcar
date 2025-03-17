@@ -10,7 +10,8 @@ typedef unsigned long int u32;
 #define PWM_PERIOD 100 //us
 #define PWM_DUTY 50 //us
 #define _duty_Cal(num) ((u16)((PWM_PERIOD*num)/100)) //占空比计算
-#define PWM_DTime 18 //死区1/2us
+#define PWM_DTime 35 * 8// TODO: 
+//FIXME 
 #define PWM_TIMER_PERIOD 200 
 
 float timestamp = 0;

@@ -127,9 +127,6 @@ void main()
     gpio_mode(P1_5, GPO_PP);
     gpio_mode(P1_4, GPO_PP);
 
-    P42 = 0;
-    pwm_close_output();
-    a();
 
     // download_flag = 0;
 

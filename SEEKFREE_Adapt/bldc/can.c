@@ -2,7 +2,7 @@
 #include <common.h>
 typedef unsigned char u8;
 typedef unsigned int u16;
-// canµÄËùÓĞ¼Ä´æÆ÷ĞèÒª¼ä½Ó»ñÈ¡
+// cançš„æ‰€æœ‰å¯„å­˜å™¨éœ€è¦é—´æ¥è·å–
 void can_set_reg(u8 addr, u8 dat)
 {
     CANAR = addr;
@@ -27,15 +27,15 @@ void can_read_rx_fifo(u8 *array)
     array[2] = can_get_reg(RX_BUF2);
     array[3] = can_get_reg(RX_BUF3);
 }
-// stc Éú³ÉµÄÉèÖÃ²¨ÌØÂÊ
+// stc ç”Ÿæˆçš„è®¾ç½®æ³¢ç‰¹ç‡
 void can_set_baudrate(void) // 125Kbps@30MHz
 {
-    can_set_reg(MR, 0x04);   // Ê¹ÄÜResetÄ£Ê½
+    can_set_reg(MR, 0x04);   // ä½¿èƒ½Resetæ¨¡å¼
     can_set_reg(BTR0, 0x04); // SJW(0), BRP(4)
     can_set_reg(BTR1, 0x6f); // SAM(0), TSG2(6), TSG1(15)
-    can_set_reg(MR, 0x00);   // ÍË³öResetÄ£Ê½
+    can_set_reg(MR, 0x00);   // é€€å‡ºResetæ¨¡å¼
 }
-// ·¢ËÍ·â×°ºÃµÄÊı¾İ°ü ³¤¶ÈÒ»¶¨ÒªÊÇ4µÄ±¶Êı
+// å‘é€å°è£…å¥½çš„æ•°æ®åŒ… é•¿åº¦ä¸€å®šè¦æ˜¯4çš„å€æ•°
 void can_send_pack(u8 *dat, u8 len)
 {
     unsigned short i;
@@ -46,27 +46,27 @@ void can_send_pack(u8 *dat, u8 len)
         can_set_reg(TX_BUF2, dat[i + 2]);
         can_set_reg(TX_BUF3, dat[i + 3]);
     }
-    can_set_reg(CMR, 0x04); // ·¢Æğ·¢ËÍÇëÇó
+    can_set_reg(CMR, 0x04); // å‘èµ·å‘é€è¯·æ±‚
 }
-// ±ê×¼Ö¡µÄĞÅÏ¢³¤¶È¶¼ÊÇ8
+// æ ‡å‡†å¸§çš„ä¿¡æ¯é•¿åº¦éƒ½æ˜¯8
 void can_init()
 {
-    // TODO: ÉèÖÃ²¨ÌØÂÊ
+    // TODO: è®¾ç½®æ³¢ç‰¹ç‡
     can_set_baudrate();
 
-    // ÇĞ»»Òı½Åµ½p00ºÍp01
+    // åˆ‡æ¢å¼•è„šåˆ°p00å’Œp01
     CAN_S1 = 0;
     CAN_S0 = 0;
-    CANICR = 0x02; // ÆôÓÃCANÖĞ¶Ï
-    CANEN = 1;     // ÆôÓÃCANÄ£¿é
+    CANICR = 0x02; // å¯ç”¨CANä¸­æ–­
+    CANEN = 1;     // å¯ç”¨CANæ¨¡å—
 }
-// ·µ»ØµÄsize¾ÍÊÇÊı¾İµÄsize ²»°üº¬Í· Çë±£Ö¤dat×ã¹»´ó
+// è¿”å›çš„sizeå°±æ˜¯æ•°æ®çš„size ä¸åŒ…å«å¤´ è¯·ä¿è¯datè¶³å¤Ÿå¤§
 enum CAN_FRAME_TYPE can_recv_msg(u8 *dat, u8 *size)
 {
     u8 len = 0;
     short i;
     can_read_rx_fifo(dat);
-    len = (dat[0] & 0xf) - 1; // ÎÒÖ»ÒªµÍ¶ËµÄËÄÎ» ¶øÇÒÒÑ¾­¶Á¹ıÒ»¸ö×Ö½ÚÁË
+    len = (dat[0] & 0xf) - 1; // æˆ‘åªè¦ä½ç«¯çš„å››ä½ è€Œä¸”å·²ç»è¯»è¿‡ä¸€ä¸ªå­—èŠ‚äº†
     *size = len + 1;
     for (i = 0; i < len + 4; i += 4)
     {
@@ -74,32 +74,32 @@ enum CAN_FRAME_TYPE can_recv_msg(u8 *dat, u8 *size)
     }
     return dat[0] & (1 << 6) ? CAN_REMOTE_FRAME : CAN_DATA_FRAME;
 }
-// Ê¹ÓÃ±ê×¼Ö¡¾ÍºÃ
+// ä½¿ç”¨æ ‡å‡†å¸§å°±å¥½
 void can_interrupt() interrupt 28
 {
     u8 isr;
     isr = can_get_reg(ISR);
     if ((isr) & (1 << 2) == (1 << 2))
     {
-        // ·¢ËÍÍê³ÉÖĞ¶Ï
-        // ÏìÓ¦ÖĞ¶Ï
+        // å‘é€å®Œæˆä¸­æ–­
+        // å“åº”ä¸­æ–­
         CANAR = ISR;
         CANDR = 0x04;
     }
     if ((isr) & (1 << 3) == (1 << 3))
     {
-        // ĞÅÏ¢½ÓÊÜÖĞ¶Ï
-        // ÏìÓ¦ÖĞ¶Ï
+        // ä¿¡æ¯æ¥å—ä¸­æ–­
+        // å“åº”ä¸­æ–­
         CANAR = ISR;
         CANDR = 0x08;
-        // ¿ÉÒÔ´¦ÀíÊı¾İÁË
+        // å¯ä»¥å¤„ç†æ•°æ®äº†
     }
 }
 
-// ·¢ËÍÔ¶³ÌÖ¡
+// å‘é€è¿œç¨‹å¸§
 void can_send_remote_frame(u16 canid)
 {
-    // Êı¾İ³¤¶ÈÎª0 µ«ĞèÒªÉèÖÃremote±êÖ¾
+    // æ•°æ®é•¿åº¦ä¸º0 ä½†éœ€è¦è®¾ç½®remoteæ ‡å¿—
     u8 buffer[4] = {0};
     buffer[0] = 1 << 6;
     canid = canid << 5;
@@ -108,28 +108,28 @@ void can_send_remote_frame(u16 canid)
     can_send_pack(buffer, 4);
 }
 /*
-canÊı¾İÖ¡
-Ç°Èı¸ö×Ö½ÚÊÇĞÅÏ¢£¬ºó8¸ö×Ö½ÚÊÇÊı¾İ
+canæ•°æ®å¸§
+å‰ä¸‰ä¸ªå­—èŠ‚æ˜¯ä¿¡æ¯ï¼Œå8ä¸ªå­—èŠ‚æ˜¯æ•°æ®
 */
-// ·¢ËÍÏûÏ¢ È·±£lengthĞ¡ÓÚµÈÓÚ8
+// å‘é€æ¶ˆæ¯ ç¡®ä¿lengthå°äºç­‰äº8
 void can_send_msg(u16 canid, u8 *dat, u8 len)
 {
     short i;
-    u8 buffer[16] = {0}; // ²»¿ÉÄÜ±È16´ó
+    u8 buffer[16] = {0}; // ä¸å¯èƒ½æ¯”16å¤§
     for (i = 0; i < len; i++)
     {
         buffer[2 + i] = dat[i];
     }
-    // ±ê×¼Ö¡µÚÒ»¸ö×Ö½ÚÖ±½Ó¾ÍÊÇÊı¾İ³¤¶È¾ÍºÃ
+    // æ ‡å‡†å¸§ç¬¬ä¸€ä¸ªå­—èŠ‚ç›´æ¥å°±æ˜¯æ•°æ®é•¿åº¦å°±å¥½
     buffer[0] = len;
-    // È»ºóÊÇcanid
+    // ç„¶åæ˜¯canid
     canid = canid << 5;
     buffer[1] = (u8)(canid >> 8);
     buffer[2] = (u8)canid;
-    // ·¢ËÍ£¡?
+    // å‘é€ï¼?
     can_send_pack(buffer, len + 3);
 }
-// ´ÓÊı¾İ°üÖĞÌáÈ¡id
+// ä»æ•°æ®åŒ…ä¸­æå–id
 u16 can_extract_id(u8 *dat)
 {
     u16 canid;
@@ -137,9 +137,9 @@ u16 can_extract_id(u8 *dat)
     return canid;
 }
 
-// ¹ØÓÚÒ£¿ØÖ¡
+// å…³äºé¥æ§å¸§
 /*
-01 ÉèÖÃ×ªËÙ
-00 »ñµÃ×ªËÙ
-10 »ñµÃµçÁ÷
+01 è®¾ç½®è½¬é€Ÿ
+00 è·å¾—è½¬é€Ÿ
+10 è·å¾—ç”µæµ
 */

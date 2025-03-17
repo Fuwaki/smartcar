@@ -1,15 +1,9 @@
 use anyhow::Ok;
-use embedded_graphics::{
-    mono_font::{ascii::FONT_6X10, MonoTextStyleBuilder},
-    pixelcolor::BinaryColor,
-    prelude::*,
-    text::{Baseline, Text},
-};
-use embedded_nrf24l01::NRF24L01;
 use esp_idf_hal::{
-    gpio::{Gpio0, Gpio21},
-    i2c::{APBTickType, I2cDriver},
+    gpio::{Gpio0, Gpio21, InputPin, OutputPin},
+    i2c::{APBTickType, I2c, I2cDriver},
     modem::Modem,
+    peripheral::Peripheral,
     peripherals,
     spi::{
         config::{Config, DriverConfig},
@@ -21,15 +15,11 @@ use esp_idf_hal::{
 };
 use esp_idf_svc::{
     timer,
-    wifi::{AccessPointConfiguration, AsyncWifi, Configuration, EspWifi},
-};
-use ssd1306::{
-    mode::DisplayConfig,
-    prelude::DisplayRotation,
-    size::{DisplaySize128x32, DisplaySize128x64},
-    I2CDisplayInterface, Ssd1306,
+    wifi::{AccessPointConfiguration, AsyncWifi, EspWifi},
 };
 mod kcp_conn;
+mod nrf24;
+mod monitor;
 fn bytes_to_hex(bytes: &[u8]) -> String {
     bytes
         .iter()
@@ -37,7 +27,6 @@ fn bytes_to_hex(bytes: &[u8]) -> String {
         .collect::<Vec<_>>()
         .join(" ") // 用空格连接
 }
-use std::{format, mem, net::UdpSocket};
 async fn create_wifi(
     sysloop: &esp_idf_svc::eventloop::EspEventLoop<esp_idf_svc::eventloop::System>,
     nvs: esp_idf_svc::nvs::EspNvsPartition<esp_idf_svc::nvs::NvsDefault>,
@@ -63,30 +52,7 @@ async fn create_wifi(
 
     Ok(wifi)
 }
-struct a{
 
-}
-impl a{
-    fn new()->Self{
-        Self {  }
-    }
-}
-impl embedded_hal::digital::OutputPin for a{
-    fn set_state(&mut self, state: embedded_hal::digital::PinState) -> Result<(), Self::Error> {
-        match state {
-            embedded_hal::digital::PinState::Low => self.set_low(),
-            embedded_hal::digital::PinState::High => self.set_high(),
-        }
-    }
-    
-    fn set_low(&mut self) -> Result<(), Self::Error> {
-        todo!()
-    }
-    
-    fn set_high(&mut self) -> Result<(), Self::Error> {
-        todo!()
-    }
-}
 
 fn main() -> anyhow::Result<()> {
     esp_idf_svc::sys::link_patches();
@@ -94,44 +60,15 @@ fn main() -> anyhow::Result<()> {
     let peripherals = peripherals::Peripherals::take().unwrap();
     let sysloop = esp_idf_svc::eventloop::EspSystemEventLoop::take()?;
 
-    let nrf_spi = SpiDeviceDriver::new_single(
-        peripherals.spi2,
-        peripherals.pins.gpio12,
-        peripherals.pins.gpio13,
-        Some(peripherals.pins.gpio9),
-        None::<Gpio0>,
-        &DriverConfig::default(),
-        &esp_idf_hal::spi::config::Config::default(),
-    )?;
-
-    let mut nrf24 = NRF24L01::new(a::new(),nrf_spi).unwrap();
-    
-
-    // let oled_i2c = I2cDriver::new(
-    //     peripherals.i2c1,
-    //     peripherals.pins.gpio18,
-    //     peripherals.pins.gpio8,
-    //     &esp_idf_hal::i2c::config::Config::default().scl_enable_pullup(false).sda_enable_pullup(false).baudrate(Hertz(400_000)),
+    // let nrf_spi = SpiDeviceDriver::new_single(
+    //     peripherals.spi2,
+    //     peripherals.pins.gpio12,
+    //     peripherals.pins.gpio13,
+    //     Some(peripherals.pins.gpio9),
+    //     None::<Gpio0>,
+    //     &DriverConfig::default(),
+    //     &esp_idf_hal::spi::config::Config::default(),
     // )?;
-    // let interface = I2CDisplayInterface::new(oled_i2c);
-    // let mut display = Ssd1306::new(interface, DisplaySize128x32, DisplayRotation::Rotate0)
-    //     .into_buffered_graphics_mode();
-
-    // display.init().unwrap();
-    // let text_style = MonoTextStyleBuilder::new()
-    //     .font(&FONT_6X10)
-    //     .text_color(BinaryColor::On)
-    //     .build();
-
-    // Text::with_baseline("Hello world!", Point::zero(), text_style, Baseline::Top)
-    //     .draw(&mut display)
-    //     .unwrap();
-
-    // Text::with_baseline("Hello Rust!", Point::new(0, 16), text_style, Baseline::Top)
-    //     .draw(&mut display)
-    //     .unwrap();
-
-    // display.flush().unwrap();
 
     // let wifi = block_on(create_wifi(
     //     &sysloop,
