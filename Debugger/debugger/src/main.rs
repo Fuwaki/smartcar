@@ -1,25 +1,17 @@
-use anyhow::Ok;
-use esp_idf_hal::{
-    gpio::{Gpio0, Gpio21, InputPin, OutputPin},
-    i2c::{APBTickType, I2c, I2cDriver},
-    modem::Modem,
-    peripheral::Peripheral,
-    peripherals,
-    spi::{
-        config::{Config, DriverConfig},
-        SpiBusDriver, SpiDeviceDriver, SpiDriver,
-    },
-    task::{block_on, embassy_sync},
-    uart::{self, UartDriver},
-    units::Hertz,
-};
+use std::{collections::HashMap, pin::Pin, usize};
+
+use anyhow::{anyhow, Ok};
+use embedded_hal::digital::OutputPin;
+use esp_idf_hal::{modem::Modem, peripherals};
 use esp_idf_svc::{
     timer,
     wifi::{AccessPointConfiguration, AsyncWifi, EspWifi},
 };
+use nrf24::Nrf24Conn;
+use serde::{Deserialize, Serialize};
 mod kcp_conn;
 mod nrf24;
-mod monitor;
+// mod monitor;
 fn bytes_to_hex(bytes: &[u8]) -> String {
     bytes
         .iter()
@@ -52,24 +44,99 @@ async fn create_wifi(
 
     Ok(wifi)
 }
+#[derive(Serialize,Deserialize, Debug)]
+struct Package{
+    info:String,
+    status:bool,
+    data:HashMap<String,String>,
+    operate:String,
+    parameter:Option<Vec<String>>
+}
+#[derive(PartialEq, Eq)]
+enum AppStatus {
+    DebugBridge,
+    TransparentSerial,
+}
+struct App {
+    info_map: HashMap<String, (String, bool)>, //value的
+    write_lock: usize,
+    state: AppStatus,
+}
+impl App {
+    fn recv_remote(&mut self) {}
+    fn recv_client(&mut self) {}
+    fn dispatch(&mut self) {}
+    #[cfg(feature = "master")]
+    fn sync(&mut self) {
+        self.recv_remote();
+        self.recv_client();
+        self.dispatch();
+    }
+    #[cfg(feature = "slave")]
+    fn sync(&mut self) {}
+    fn new() -> Self {
+        let map = HashMap::from([
+            ("force_x".to_string(), ("".to_string(), false)),
+            ("force_y".to_string(), ("".to_string(), false)),
+            ("force_z".to_string(), ("".to_string(), false)),
+        ]);
+        Self {
+            info_map: map,
+            write_lock: usize::MAX,
+            state: AppStatus::DebugBridge,
+        }
+    }
+    #[cfg(feature = "master")]
+    fn init_debugger_bridge(&mut self) -> Result<(), anyhow::Error> {
+        Ok(())
+    }
+    #[cfg(feature = "master")]
+    fn init_transparent_serial(&mut self) -> Result<(), anyhow::Error> {
+        Ok(())
+    }
+    fn transparent_serial_update(&mut self)->Result<(),anyhow::Error>{
+        loop{
 
+        }
+    }
+    fn set_state(&mut self, state: AppStatus) -> Result<(), anyhow::Error> {
+        if self.state == state {
+            return Ok(());
+        }
+        match state {
+            AppStatus::DebugBridge => self.init_debugger_bridge(),
+            AppStatus::TransparentSerial => self.init_transparent_serial(),
+        }
+    }
 
+    fn run(&mut self) -> Result<(), anyhow::Error> {
+        loop {
+            match self.state {
+                AppStatus::DebugBridge => todo!(),
+                AppStatus::TransparentSerial =>self.transparent_serial_update()?,
+            }
+        }
+        Err(anyhow!("error"))
+    }
+}
 fn main() -> anyhow::Result<()> {
     esp_idf_svc::sys::link_patches();
     esp_idf_svc::log::EspLogger::initialize_default();
     let peripherals = peripherals::Peripherals::take().unwrap();
     let sysloop = esp_idf_svc::eventloop::EspSystemEventLoop::take()?;
 
-    // let nrf_spi = SpiDeviceDriver::new_single(
-    //     peripherals.spi2,
-    //     peripherals.pins.gpio12,
-    //     peripherals.pins.gpio13,
-    //     Some(peripherals.pins.gpio9),
-    //     None::<Gpio0>,
-    //     &DriverConfig::default(),
-    //     &esp_idf_hal::spi::config::Config::default(),
-    // )?;
+    let mut nrf = Nrf24Conn::new_esp(
+        peripherals.spi2,
+        peripherals.pins.gpio12,
+        peripherals.pins.gpio13,
+        peripherals.pins.gpio9,
+        peripherals.pins.gpio21,
+        peripherals.pins.gpio14,
+    )?;
+    nrf.setup(nrf24::ROLE::SLAVE).unwrap();
 
+    let mut app = App::new();
+    app.run()?;
     // let wifi = block_on(create_wifi(
     //     &sysloop,
     //     esp_idf_svc::nvs::EspDefaultNvsPartition::take()?,
@@ -79,7 +146,6 @@ fn main() -> anyhow::Result<()> {
     // mem::forget(wifi);
     // let socket = UdpSocket::bind("127.0.0.1:34254")?;
     //第一个参数是连接标识符
-
     Ok(())
 }
 // fn main() -> anyhow::Result<()> {

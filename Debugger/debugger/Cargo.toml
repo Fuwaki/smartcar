@@ -1,5 +1,5 @@
 [package]
-name = "userside"
+name = "debugger"
 version = "0.1.0"
 authors = ["fuwaki <tiny.fly@outlook.com>"]
 edition = "2021"
@@ -7,7 +7,7 @@ resolver = "2"
 rust-version = "1.77"
 
 [[bin]]
-name = "userside"
+name = "debugger"
 harness = false # do not use the built in cargo test harness -> resolve rust-analyzer errors
 
 [profile.release]
@@ -18,7 +18,9 @@ debug = true    # Symbols are nice and they don't increase the size on Flash
 opt-level = "z"
 
 [features]
-default = []
+default = ["master"]
+master=[]
+slave=[]
 
 experimental = ["esp-idf-svc/experimental"]
 
@@ -41,8 +43,8 @@ esp-idf-hal = "0.45.2"
 rf24-rs = "0.2.0"
 embedded-hal = "1.0.0"
 thiserror = "2.0.12"
-
-
+serde = "1.0.219"
 
 [build-dependencies]
 embuild = "0.33"
+
