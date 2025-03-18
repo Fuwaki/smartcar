@@ -73,12 +73,8 @@ void Inits()
 void main()
 {
 	Inits();
-<<<<<<< HEAD
-	
-=======
 	Delay100us();
 	UART_SendByte('S');
->>>>>>> refs/remotes/origin/main
 	while(1)
 	{
 		// if(UART_Available())
