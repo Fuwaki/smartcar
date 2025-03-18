@@ -1,9 +1,11 @@
 #include <stdio.h>
-// #include <AI8051U.H>
+#include <AI8051U.H>
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
+#include "uart.h"
 
+unsigned char receive_buffer[64];
 // RMC数据结构体
 typedef struct
 {
@@ -33,6 +35,8 @@ struct NaturePosition
     double x;
     double y;
 };
+
+RMC_Data rmc_data;
 
 // 将NMEA格式的经纬度转换为标准的十进制度
 double nmea_to_decimal(double val)
@@ -203,6 +207,24 @@ void GPS_Calculate(struct NaturePosition *naturePosition, RMC_Data *rmc_data)
     // 计算当前位置
     naturePosition->x = rmc_data->latitude - naturePosition->offsetX;
     naturePosition->y = rmc_data->longitude - naturePosition->offsetY;
+}
+
+void GPS_Message_Updater()
+{
+    if(UART_Available())
+    {
+        unsigned char len = UART_Read(receive_buffer, 32);
+        if (len > 0)
+        {
+            GPS_Message_Inputer(receive_buffer, &rmc_data);
+        }
+    }
+    else
+    {
+        UART_SendByte('N'); // 无数据
+        UART_SendByte('\r');
+        UART_SendByte('\n');
+    }
 }
 
 //算法部分写完辣！！！！！！！ 10/3/2025 16:47

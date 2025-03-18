@@ -161,10 +161,6 @@ int icm426888_parse_sip_data(const char *sip_payload, unsigned int payload_len, 
     return 0; // Success
 }
 
-// Ciallo～(∠�9�9ω< )⌒★     
-// Ciallo～(∠�9�9ω< )⌒★     
-// Ciallo～(∠�9�9ω< )⌒★     
-
 
 // void test_icm426888_parser(void)
 // {

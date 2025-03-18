@@ -1,16 +1,21 @@
 #include <AI8051U.H>
+#include <math.h>
+#include "Timer.h"
 #include <intrins.h>
 
-// 定义中断标志位
-volatile unsigned char PWMA_IntFlag = 0;
+sbit ENCODER_PULSE = P1 ^ 2; // 编码器脉冲信号 - PWMA通道2捕获引脚
+sbit ENCODER_DIR = P1 ^ 0;   // 编码器方向信号 1为正转，0为反转
+sbit ENCODER_ZERO = P0 ^ 1;  // 编码器零点信号 Z相
 
-sbit ENCODER_ZERO = P1 ^ 0;  // 编码器零点信号 Z相
-unsigned char current_A = 0; // 编码器A相信号
-unsigned char current_B = 0; // 编码器B相信号
+// 编码器常量定义
+#define PWM_PSC 1                                // PWM预分频系数
+#define ENCODER_LINES 1024                       // 编码器线数
+#define ANGLE_PER_PULSE (180.0f / ENCODER_LINES) // 每个脉冲的角度，除以2是因为上升沿和下降沿都会计数
 
-// 添加变量来记录上一次的编码器状态
-unsigned char last_A = 0;
-unsigned char last_B = 0;
+// unsigned char ENABLE_ZERO_DETECT = 1; // 是否启用零点检测
+float timestamp_previous = 0; // 上一个时间戳
+static int lastCount = 0;
+static unsigned long totalPulses = 0; // 用于记录总脉冲数
 
 struct EncoderData
 {
@@ -43,49 +48,61 @@ void Encoder_InterruptEnable(unsigned char intType)
     PPWMA = 1;
 }
 
+void Encoder_InterruptDisable(unsigned char intType)
+{
+    PWMA_IER &= ~intType; // 禁用指定的中断
+}
+
+float _normalizeAngle(float angle)
+{
+    float a = fmod(angle, 360.0f);
+    return a >= 0 ? a : (a + 360.0f);
+}
+
 void Encoder_Init()
 {
+    PWMA_PSCRH = (int)(PWM_PSC >> 8); // 设置PWM预分频系数
+    PWMA_PSCRL = (int)(PWM_PSC);
+
     PWMA_ENO = 0x00; // 禁用所有PWM输出
 
-    PWMA_CCMR1 = 0x41; // 设置通道1为输入捕获模式(0x01)，并启用输入滤波(0x40)
-    PWMA_CCMR2 = 0x41; // 设置通道2为输入捕获模式(0x01)，并启用输入滤波(0x40)
+    //PWMA_CCMR1 = 0x01; // 不再设置通道1为输入捕获模式
+    PWMA_CCMR2 = 0x01; // 设置通道2为输入捕获模式(0x01)，如果想启用输入滤波就+(0x40)
 
-    // 设置双向捕获模式：同时捕获上升沿和下降沿
-    // 0x33 = 0011 0011b，其中:
-    // - 位0和4：使能通道1和通道2的捕获功能
-    // - 位1和5：使能通道1和通道2的下降沿捕获
-    // - 位3和7：使能通道1和通道2的上升沿捕获
-    PWMA_CCER1 = 0x33; // 使能通道1和2的双向(上升沿和下降沿)捕获
+    // 只设置通道2捕获模式：只捕获上升沿和下降沿
+    // 0x30 = 0011 0000b，其中:
+    // - 位4：使能通道2的捕获功能
+    // - 位5：使能通道2的下降沿捕获
+    // - 位7：使能通道2的上升沿捕获（注：原代码注释可能有误，应该是位6或位7）
+    PWMA_CCER1 = 0x30; // 仅使能通道2的双向(上升沿和下降沿)捕获
 
     PWMA_CNTRH = 0;
     PWMA_CNTRL = 0;
 
-    PWMA_CCR1H = 0;
-    PWMA_CCR1L = 0;
-    PWMA_CCR2H = 0;
-    PWMA_CCR2L = 0;
-
-    PWMA_PSCRH = 0;
-    PWMA_PSCRL = 0;
+    // 不再初始化通道1捕获寄存器
+    //PWMA_CCR1H = 0;
+    //PWMA_CCR1L = 0;
+    
+    PWMA_CCR2H = 0; // 初始化通道2捕获寄存器高位
+    PWMA_CCR2L = 0; // 初始化通道2捕获寄存器低位
 
     // 清除中断标志
     PWMA_SR1 = 0;
     PWMA_SR2 = 0;
 
     Encoder_InterruptEnable(0x01); // 使能更新中断
-    Encoder_InterruptEnable(0x02); // 使能通道1捕获中断
+    //Encoder_InterruptEnable(0x02); // 不再使能通道1捕获中断
     Encoder_InterruptEnable(0x04); // 使能通道2捕获中断
 
     // 启动定时器
     PWMA_CR1 = 0x01; // 使能PWM定时器
 
-    // 清除内部中断标志
-    PWMA_IntFlag = 0;
-
     // 初始化编码器数据
     encoder.direction = 0;
     encoder.position = 0;
     encoder.speed = 0;
+
+    timestamp_previous = timestamp;
 }
 
 /*读取编码器计数值*/
@@ -125,43 +142,60 @@ void Encoder_Clear(unsigned char channel)
         PWMA_CCR2L = 0;
         break;
     default:
-        // 无效通道，不执行任何操作
         break;
     }
+    PWMA_CNTRH = 0;
+    PWMA_CNTRL = 0;
 }
 
-/**
- * 检测编码器是否处于零点位置
- * @return: 如果在零点位置返回1，否则返回0
- */
 void Encoder_DetectZero(void)
 {
     if (ENCODER_ZERO == 0)
     {
-        // 在检测到零点信号时重置计数器
-        Encoder_Clear(1);
-        Encoder_Clear(2);
+        Encoder_Clear(2); // 清零通道2 (之前是通道1)
         encoder.position = 0;
     }
 }
 
 // 更新编码器位置和速度
-void Encoder_Update(void)
+void Encoder_Update()
 {
-    static int lastCount = 0;
     // 获取当前计数值
-    int currentCount = Encoder_Read(1); // 读取通道1的计数值
-    // 计算位置
-    encoder.position += (currentCount - lastCount) * encoder.direction * 0.01f; 
+    int currentCount = Encoder_Read(2); // 读取通道2的计数值 (之前是通道1)
+    int deltaPulses = currentCount - lastCount;
+
+    // 处理溢出情况
+    if (deltaPulses > 32767)
+    {
+        deltaPulses -= 65536;
+    }
+    else if (deltaPulses < -32767)
+    {
+        deltaPulses += 65536;
+    }
+
+    // 更新总脉冲数
+    // totalPulses += (deltaPulses > 0) ? deltaPulses : -deltaPulses; lmaoing
+    totalPulses += fabs(deltaPulses);
+
+    // 计算位置(1或-1)表示正反转
+    encoder.position += deltaPulses * encoder.direction * ANGLE_PER_PULSE;
+
+    _normalizeAngle(encoder.position); // 规范化角度值
+
+    // 检测零点
     Encoder_DetectZero();
+
+    // 假设更新周期是固定的，可以在这里计算速度
+    // 如果中断频率是1ms
+    // encoder.speed = deltaPulses * encoder.direction * ANGLE_PER_PULSE * 1000; // 角度/秒
+    encoder.speed = encoder.position/(timestamp - timestamp_previous); //dtheta/dt
+
     // 更新上次计数值
     lastCount = currentCount;
+    timestamp_previous = timestamp;
 }
 
-void Encoder_InterruptDisable(unsigned char intType)
-{
-    PWMA_IER &= ~intType; // 禁用指定的中断
-}
 
 void PWMA_Interrupt() interrupt PWMA_VECTOR
 {
@@ -169,57 +203,21 @@ void PWMA_Interrupt() interrupt PWMA_VECTOR
     if (PWMA_SR1 & 0x01) // 更新中断
     {
         PWMA_SR1 &= ~0x01; // 清除中断标志
-        current_A = (P3 & 0x01) ? 1 : 0; // 读取P3.0状态
-        current_B = (P3 & 0x02) ? 1 : 0; // 读取P3.1状态
 
-        // 使用四状态检测法判断旋转方向
-        if (last_A == 0 && last_B == 0)
-        {
-            if (current_A == 1 && current_B == 0)
-                encoder.direction = 1; // 顺时针
-            else if (current_A == 0 && current_B == 1)
-                encoder.direction = -1; // 逆时针
-        }
-        else if (last_A == 1 && last_B == 0)
-        {
-            if (current_A == 1 && current_B == 1)
-                encoder.direction = 1; // 顺时针
-            else if (current_A == 0 && current_B == 0)
-                encoder.direction = -1; // 逆时针
-        }
-        else if (last_A == 1 && last_B == 1)
-        {
-            if (current_A == 0 && current_B == 1)
-                encoder.direction = 1; // 顺时针
-            else if (current_A == 1 && current_B == 0)
-                encoder.direction = -1; // 逆时针
-        }
-        else if (last_A == 0 && last_B == 1)
-        {
-            if (current_A == 0 && current_B == 0)
-                encoder.direction = 1; // 顺时针
-            else if (current_A == 1 && current_B == 1)
-                encoder.direction = -1; // 逆时针
-        }
-        // 更新上一次的状态
-        last_A = current_A;
-        last_B = current_B;
-        
-        // 更新编码器位置和速度
+        encoder.direction = ENCODER_DIR ? 1 : -1; // bro别看错了
+
         Encoder_Update();
-
-        PWMA_IntFlag = 1;
     }
 
-    // // 检查捕获比较通道1中断
-    // if (PWMA_SR1 & 0x02)
-    // {
-    //     PWMA_SR1 &= ~0x02;  // 清除中断标志
-    // }
-
-    // // 检查捕获比较通道2中断
-    // if (PWMA_SR1 & 0x04)
-    // {
-    //     PWMA_SR1 &= ~0x04;  // 清除中断标志
-    // }
+    // 处理通道2捕获中断 - 用于计数脉冲
+    if (PWMA_SR1 & 0x04)  // 捕获比较通道2中断
+    {
+        PWMA_SR1 &= ~0x04;  // 清除中断标志
+    }
 }
+
+//Ciallo～(∠・ω< )⌒★!!!
+//Ciallo～(∠・ω< )⌒★!!!
+//Ciallo～(∠・ω< )⌒★!!!
+
+//Fuwaki u damn boy!!!
