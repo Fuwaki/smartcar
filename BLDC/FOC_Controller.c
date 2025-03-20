@@ -68,8 +68,7 @@ void OutPutter(double Uq, double Ud, double angle_el) // Ud暂时不知道2333,�
 {
     angle_el = _normalizeAngle(angle_el); // 物理上，而不是理论上
 
-    /* Park变换 - 修正实现 */
-    // 标准Park逆变换公式
+    // Park变换: 旋转坐标系(d-q)到静止坐标系(alpha-beta)
     Ualpha = Ud * cos(angle_el) - Uq * sin(angle_el);
     Ubeta = Ud * sin(angle_el) + Uq * cos(angle_el);
 
@@ -85,7 +84,7 @@ void velocityOpenloop(double target_velocity) // finally...
 {
     /* 使用早前设置的voltage_power_supply的1/3作为Uq值，这个值会直接影响输出力矩
     最大只能设置为Uq = voltage_power_supply/2，否则ua,ub,uc会超出供电电压限幅 */
-            Uq = voltage_power_supply / 2;
+    Uq = voltage_power_supply / 2.001f;
 
     Shaft_Angle = _normalizeAngle(Shaft_Angle + target_velocity); // 开环控制，软件++
     OutPutter(Uq, 0.0, Shaft_Angle);                              // 输出电压

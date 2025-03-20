@@ -40,6 +40,7 @@ void Inits()
 	// P_SW2 |= 0x80;       // 解锁特殊功能寄存器
 	WTST = 0x00; // 设置程序代码等待参数，等待时间为0个时钟，CPU执行程序速度最快
 
+	P0M0 = 0x00; P0M1 = 0x00;
     P1M0 = 0xff; P1M1 = 0x00; 
 
 	// 特别注意：修改P3口模式配置，保证P3.1(TX)为推挽输出
@@ -54,6 +55,7 @@ void Inits()
     PWM_Init();
 	Timer0_Init();
     Uart3Init();
+	ES3 = 1;
 	// Timer1_Init();
 }
 
@@ -66,11 +68,14 @@ void main()
     {
 		focData[0] = (float)Ua; // 添加显式类型转换
 		focData[1] = (float)Ub; // 添加显式类型转换
-		focData[2] = (float)Uc; // 添加显式类型转换
-		VOFA_SendFloats(focData, 3);
+		focData[2] = (float)Uc;
+		VOFA_SendFloat(focData); // 修改为float类型，与focData数组匹配
+		
+		// Uart3SendStr("Hello World!\0");
 
-        velocityOpenloop(.001f);
-		Delay1000ms();
+        velocityOpenloop(.01f);
+		// Delay1000ms();
+		// Delay100us();
     }
     
 }

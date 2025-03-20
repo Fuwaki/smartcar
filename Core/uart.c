@@ -1,7 +1,7 @@
 #include <STC32G.H>
 #include <intrins.h>
 #include "AR_PF.h"
-#define FOSC 11059200UL // 定义为无符号长整型,避免计算溢出
+#define FOSC 35000000UL // 定义为无符号长整型,避免计算溢出
 #define BRT (65536 - (FOSC / 115200 + 2) / 4)
 // 加 2 操作是为了让 Keil 编译器
 // 自动实现四舍五入运算
@@ -106,7 +106,7 @@ void main()
         }
         // c='A';
 
-        Uart3SendStr(c);
+        Uart3SendStr("Hello World!\0");
         // c[0]++;
         Delay1000ms();
     }

@@ -1,24 +1,12 @@
 #include <stdarg.h>
 #include <string.h>
 
-typedef unsigned char   uint8  ;	//  8 bits 
-typedef unsigned int  	uint16 ;	// 16 bits 
-typedef unsigned long  	uint32 ;	// 32 bits 
-								
-								
-typedef signed char     int8   ;	//  8 bits 
-typedef signed int      int16  ;	// 16 bits 
-typedef signed long     int32  ;	// 32 bits 
-								
-								
-typedef volatile int8   vint8  ;	//  8 bits 
-typedef volatile int16  vint16 ;	// 16 bits 
-typedef volatile int32  vint32 ;	// 32 bits 
-								
-								
-typedef volatile uint8  vuint8 ;	//  8 bits 
-typedef volatile uint16 vuint16;	// 16 bits 
-typedef volatile uint32 vuint32;	// 32 bits 
+typedef unsigned char uint8;
+typedef unsigned short uint16;
+typedef unsigned long uint32;
+typedef signed char int8;
+typedef signed short int16;
+typedef signed long int32;
 
 unsigned char number_conversion_ascii(uint32 dat, int8 *p, uint8 neg_type, uint8 radix)
 {
