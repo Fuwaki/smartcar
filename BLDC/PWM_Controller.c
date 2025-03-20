@@ -7,10 +7,10 @@ typedef unsigned long int u32;
 
 #define FOSC 35000000L  //系统时钟35MHz
 #define PWM_PSC (35-1) //35分频，时钟周期1us
-#define PWM_PERIOD 100 //us
-#define PWM_DUTY 50 //us
+#define PWM_PERIOD 50 //us
+#define PWM_DUTY 25 //us
 #define _duty_Cal(num) ((u16)((PWM_PERIOD*num)/100)) //占空比计算
-#define PWM_DTime 35 * 8// TODO: 
+#define PWM_DTime 35 * 1// TODO: 
 //FIXME 
 #define PWM_TIMER_PERIOD 200 
 
@@ -106,15 +106,6 @@ void Timer0_Init()
     TR0 = 1;
 }
 
-void Timer1_Init()
-{
-    TMOD |= 0x10;
-    TH1 = 0xFF;
-    TL1 = 0x00; 
-    ET1 = 1;
-    TR1 = 1;
-    dt = 0;
-}
 
 void Timer0_ISR(void) interrupt 1
 {
@@ -140,9 +131,4 @@ void Timer0_ISR(void) interrupt 1
     // {
         /*put ur code here!*/
     // }
-}
-
-void Timer1_ISR(void) interrupt 3
-{
-    //place ur code when you want to use second timer!
 }

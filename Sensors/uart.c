@@ -44,7 +44,7 @@ void UART_SendStr(char *p)			// 发送字符串函数
 {
 	while (*p)									// 字符串结束标志‘\0’前循环
 	{
-		UART_SendByte(*p++);						// 逐个发送字符串的字符
+		UART_SendByte(*(p++));						// 逐个发送字符串的字符
 	}
 }
 

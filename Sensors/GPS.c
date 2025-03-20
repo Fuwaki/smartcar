@@ -217,13 +217,12 @@ void GPS_Message_Updater()
         if (len > 0)
         {
             GPS_Message_Inputer(receive_buffer, &rmc_data);
+            UART_SendStr("GPS数据更新成功!\0");
         }
     }
     else
     {
         UART_SendByte('N'); // 无数据
-        UART_SendByte('\r');
-        UART_SendByte('\n');
     }
 }
 

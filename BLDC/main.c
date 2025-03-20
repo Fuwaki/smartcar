@@ -5,7 +5,11 @@
 #include "PID_Controller.h"
 #include "Lowpass_Filter.h"
 #include "Observer.h"
+#include "uart_Debug.h"
+#include "AR_PF.h"
 #include "ADC.h"
+
+float focData[3]; // 修改为float类型，与VOFA_SendFloats函数参数匹配
 
 void Delay100us(void)
 {
@@ -18,6 +22,17 @@ void Delay100us(void)
 	while (i) i--;
 }
 
+void Delay1000ms(void)	//@35.000MHz
+{
+	unsigned long edata i;
+
+	_nop_();
+	_nop_();
+	i = 8749998UL;
+	while (i) i--;
+}
+
+
 void Inits()
 {
 	EAXFR = 1; // 使能访问 XFR
@@ -28,29 +43,34 @@ void Inits()
     P1M0 = 0xff; P1M1 = 0x00; 
 
 	// 特别注意：修改P3口模式配置，保证P3.1(TX)为推挽输出
-	P2M1 = 0x00; P2M0 = 0xFF;		//设置P2口为准双向口模式 //00：准双向口 01：推挽输出 10：高阻输入 11：开漏输出
-	P3M1 = 0x00; P3M0 = 0x02;		//设置P3.1为推挽输出(TX)，其余为准双向口模式
-	P4M1 = 0x00; P4M0 = 0x00;		//设置P4口为准双向口模式 //00：准双向口 01：推挽输出 10：高阻输入 11：开漏输出
-    P5M0 = 0x10; P5M1 = 0x10; 
-	P6M1 = 0x00;P6M0 = 0x00;		//设置P6口为准双向口模式 //00：准双向口 01：推挽输出 10：高阻输入 11：开漏输出
-	P7M1 = 0x00;P7M0 = 0x00;		//设置P7口为准双向口模式 //00：准双向口 01：推挽输出 10：高阻输入 11：开漏输出
+	P2M1 = 0x00; P2M0 = 0xFF;
+	P3M1 = 0x00; P3M0 = 0x02;
+	P4M1 = 0x00; P4M0 = 0x00;
+    P5M0 = 0x10; P5M1 = 0x10;
+	P6M1 = 0x00;P6M0 = 0x00;
+	P7M1 = 0x00;P7M0 = 0x00;
 
 	ADC_Init();
     PWM_Init();
 	Timer0_Init();
+    Uart3Init();
 	// Timer1_Init();
 }
 
 void main()
 {
-    unsigned int count = 0;
-    
     Inits();
     Delay100us();
 
     while(1)
     {
+		focData[0] = (float)Ua; // 添加显式类型转换
+		focData[1] = (float)Ub; // 添加显式类型转换
+		focData[2] = (float)Uc; // 添加显式类型转换
+		VOFA_SendFloats(focData, 3);
+
         velocityOpenloop(.001f);
+		Delay1000ms();
     }
     
 }

@@ -38,12 +38,26 @@ struct info
 // TODO:换成sat函数以抑制高频抖动
 float sign(float input)
 {
+    }
+
+// 简单实现arctan2函数
+float arctan2(float y, float x)
+{
+    // 简单的四象限反正切实现
+    if (x > 0) {
+        return atan(y / x);
+    } else if (x < 0 && y >= 0) {
+        return atan(y / x) + PI;
+    } else if (x < 0 && y < 0) {
+        return atan(y / x) - PI;
+    } else if (x == 0 && y > 0) {
+        return PI / 2;
+    } else if (x == 0 && y < 0) {
+        return -PI / 2;
+    }
+    return 0; // x==0 && y==0
 }
 
-float arctan2(float,float)
-{
-    // arctan2函数未实现 //还是得泰勒公式!!!!!!!!!!
-}
 // 绝对坐标系下的电压电流
 struct info Update_Observer(float Ix, float Iy, float Ux, float Uy)
 {
