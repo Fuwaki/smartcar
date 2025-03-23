@@ -3,29 +3,41 @@
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
-#include "uart.h"
+#include "GPS_uart.h"
 
 unsigned char receive_buffer[64];
-// RMCæ•°æ®ç»“æ„ä½“
+unsigned char set_rate_10hz[] = {0xF1, 0xD9, 0x06, 0x42, 0x14, 0x00, 0x00, 0x0A, 0x05,
+                                 0x00, 0x64, 0x00, 0x00, 0x00, 0x60, 0xEA, 0x00, 0x00, 0xD0, 0x07, 0x00, 0x00,
+                                 0xC8, 0x00, 0x00, 0x00, 0xB8, 0xED};
+
+unsigned char cmd_gga[] = {0xF1, 0xD9, 0x06, 0x01, 0x03, 0x00, 0xF0, 0x00, 0x00, 0xFA, 0x0F};
+unsigned char cmd_gll[] = {0xF1, 0xD9, 0x06, 0x01, 0x03, 0x00, 0xF0, 0x01, 0x00, 0xFB, 0x11};
+unsigned char cmd_gsa[] = {0xF1, 0xD9, 0x06, 0x01, 0x03, 0x00, 0xF0, 0x02, 0x00, 0xFC, 0x13};
+unsigned char cmd_gsv[] = {0xF1, 0xD9, 0x06, 0x01, 0x03, 0x00, 0xF0, 0x04, 0x00, 0xFE, 0x17};
+unsigned char cmd_vtg[] = {0xF1, 0xD9, 0x06, 0x01, 0x03, 0x00, 0xF0, 0x06, 0x00, 0x00, 0x1B};
+unsigned char cmd_zda[] = {0xF1, 0xD9, 0x06, 0x01, 0x03, 0x00, 0xF0, 0x07, 0x00, 0x01, 0x1D};
+unsigned char cmd_gst[] = {0xF1, 0xD9, 0x06, 0x01, 0x03, 0x00, 0xF0, 0x20, 0x00, 0x1A, 0x4F};
+
+// RMCÊı¾İ½á¹¹Ìå
 typedef struct
 {
-    int hour;         // æ—¶
-    int minute;       // åˆ†
-    float second;     // ç§’
-    char status;      // å®šä½çŠ¶æ€ï¼ŒA=æœ‰æ•ˆï¼ŒV=æ— æ•ˆ
-    double latitude;  // çº¬åº¦(åº¦)
-    char ns;          // çº¬åº¦æ–¹å‘ï¼ŒN=åŒ—åŠçƒï¼ŒS=å—åŠçƒ
-    double longitude; // ç»åº¦(åº¦)
-    char ew;          // ç»åº¦æ–¹å‘ï¼ŒE=ä¸œç»ï¼ŒW=è¥¿ç»
-    float speed;      // åœ°é¢é€Ÿåº¦(èŠ‚)
-    float course;     // åœ°é¢èˆªå‘è§’(åº¦)
-    int day;          // æ—¥
-    int month;        // æœˆ
-    int year;         // å¹´
-    float mag_var;    // ç£åè§’
-    char mag_dir;     // ç£åè§’æ–¹å‘ï¼ŒE=ä¸œï¼ŒW=è¥¿
-    char mode;        // æ¨¡å¼æŒ‡ç¤ºï¼ŒA=è‡ªåŠ¨ï¼ŒD=å·®åˆ†ï¼ŒE=ä¼°ç®—ï¼ŒN=æ•°æ®æ— æ•ˆ
-    int valid;        // æ•°æ®æ˜¯å¦æœ‰æ•ˆ
+    int hour;         // Ê±
+    int minute;       // ·Ö
+    float second;     // Ãë
+    char status;      // ¶¨Î»×´Ì¬£¬A=ÓĞĞ§£¬V=ÎŞĞ§
+    double latitude;  // Î³¶È(¶È)
+    char ns;          // Î³¶È·½Ïò£¬N=±±°ëÇò£¬S=ÄÏ°ëÇò
+    double longitude; // ¾­¶È(¶È)
+    char ew;          // ¾­¶È·½Ïò£¬E=¶«¾­£¬W=Î÷¾­
+    float speed;      // µØÃæËÙ¶È(½Ú)
+    float course;     // µØÃæº½Ïò½Ç(¶È)
+    int day;          // ÈÕ
+    int month;        // ÔÂ
+    int year;         // Äê
+    float mag_var;    // ´ÅÆ«½Ç
+    char mag_dir;     // ´ÅÆ«½Ç·½Ïò£¬E=¶«£¬W=Î÷
+    char mode;        // Ä£Ê½Ö¸Ê¾£¬A=×Ô¶¯£¬D=²î·Ö£¬E=¹ÀËã£¬N=Êı¾İÎŞĞ§
+    int valid;        // Êı¾İÊÇ·ñÓĞĞ§
 } RMC_Data;
 
 struct NaturePosition
@@ -37,8 +49,9 @@ struct NaturePosition
 };
 
 RMC_Data rmc_data;
+struct NaturePosition naturePosition;
 
-// å°†NMEAæ ¼å¼çš„ç»çº¬åº¦è½¬æ¢ä¸ºæ ‡å‡†çš„åè¿›åˆ¶åº¦
+// ½«NMEA¸ñÊ½µÄ¾­Î³¶È×ª»»Îª±ê×¼µÄÊ®½øÖÆ¶È
 double nmea_to_decimal(double val)
 {
     int degrees;
@@ -48,47 +61,47 @@ double nmea_to_decimal(double val)
     return degrees + minutes / 60.0;
 }
 
-// è§£æRMCè¯­å¥
+// ½âÎöRMCÓï¾ä
 void parse_rmc(char *sentence, RMC_Data *rmc_data)
 {
     char buffer[128];
-    char *field[15]; // ç”¨äºå­˜å‚¨åˆ†å‰²åçš„å­—æ®µ
+    char *field[15]; // ÓÃÓÚ´æ´¢·Ö¸îºóµÄ×Ö¶Î
     int field_count = 0;
     int i = 0;
     char *ptr;
 
-    // åˆå§‹åŒ–æ•°æ®
+    // ³õÊ¼»¯Êı¾İ
     for (i = 0; i < sizeof(RMC_Data); i++)
         ((char *)rmc_data)[i] = 0;
     rmc_data->valid = 0;
 
-    // å¤åˆ¶è¯­å¥ä»¥ä¾¿è¿›è¡Œå¤„ç†
+    // ¸´ÖÆÓï¾äÒÔ±ã½øĞĞ´¦Àí
     i = 0;
     while (sentence[i] != 0 && i < 127)
     {
         buffer[i] = sentence[i];
         i++;
     }
-    buffer[i] = 0; // ç¡®ä¿å­—ç¬¦ä¸²ç»“æŸ
+    buffer[i] = 0; // È·±£×Ö·û´®½áÊø
 
-    // æ‰‹åŠ¨åˆ†å‰²å­—ç¬¦ä¸²
+    // ÊÖ¶¯·Ö¸î×Ö·û´®
     ptr = buffer;
-    field[0] = ptr; // ç¬¬ä¸€ä¸ªå­—æ®µ
+    field[0] = ptr; // µÚÒ»¸ö×Ö¶Î
     field_count = 1;
 
     for (i = 0; buffer[i] != 0 && field_count < 15; i++)
     {
         if (buffer[i] == ',' || buffer[i] == '*')
         {
-            buffer[i] = 0;                         // å°†åˆ†éš”ç¬¦æ›¿æ¢ä¸ºå­—ç¬¦ä¸²ç»“æŸç¬¦
-            field[field_count++] = &buffer[i + 1]; // è®°å½•ä¸‹ä¸€ä¸ªå­—æ®µçš„èµ·å§‹ä½ç½®
+            buffer[i] = 0;                         // ½«·Ö¸ô·ûÌæ»»Îª×Ö·û´®½áÊø·û
+            field[field_count++] = &buffer[i + 1]; // ¼ÇÂ¼ÏÂÒ»¸ö×Ö¶ÎµÄÆğÊ¼Î»ÖÃ
         }
     }
 
-    // è§£æå„å­—æ®µ
+    // ½âÎö¸÷×Ö¶Î
     if (field_count > 1)
     {
-        // UTCæ—¶é—´ (å­—æ®µ1)
+        // UTCÊ±¼ä (×Ö¶Î1)
         if (strlen(field[1]) >= 6)
         {
             rmc_data->hour = (field[1][0] - '0') * 10 + (field[1][1] - '0');
@@ -99,13 +112,13 @@ void parse_rmc(char *sentence, RMC_Data *rmc_data)
 
     if (field_count > 2)
     {
-        // å®šä½çŠ¶æ€ (å­—æ®µ2)
+        // ¶¨Î»×´Ì¬ (×Ö¶Î2)
         rmc_data->status = field[2][0];
     }
 
     if (field_count > 3)
     {
-        // çº¬åº¦ (å­—æ®µ3)
+        // Î³¶È (×Ö¶Î3)
         if (strlen(field[3]) > 0)
         {
             rmc_data->latitude = nmea_to_decimal(atof(field[3]));
@@ -114,7 +127,7 @@ void parse_rmc(char *sentence, RMC_Data *rmc_data)
 
     if (field_count > 4)
     {
-        // å—åŒ—åŠçƒ (å­—æ®µ4)
+        // ÄÏ±±°ëÇò (×Ö¶Î4)
         rmc_data->ns = field[4][0];
         if (rmc_data->ns == 'S')
         {
@@ -124,7 +137,7 @@ void parse_rmc(char *sentence, RMC_Data *rmc_data)
 
     if (field_count > 5)
     {
-        // ç»åº¦ (å­—æ®µ5)
+        // ¾­¶È (×Ö¶Î5)
         if (strlen(field[5]) > 0)
         {
             rmc_data->longitude = nmea_to_decimal(atof(field[5]));
@@ -133,7 +146,7 @@ void parse_rmc(char *sentence, RMC_Data *rmc_data)
 
     if (field_count > 6)
     {
-        // ä¸œè¥¿åŠçƒ (å­—æ®µ6)
+        // ¶«Î÷°ëÇò (×Ö¶Î6)
         rmc_data->ew = field[6][0];
         if (rmc_data->ew == 'W')
         {
@@ -143,19 +156,19 @@ void parse_rmc(char *sentence, RMC_Data *rmc_data)
 
     if (field_count > 7)
     {
-        // é€Ÿåº¦ï¼ˆèŠ‚ï¼‰ (å­—æ®µ7)
+        // ËÙ¶È£¨½Ú£© (×Ö¶Î7)
         rmc_data->speed = atof(field[7]);
     }
 
     if (field_count > 8)
     {
-        // åœ°é¢èˆªå‘è§’ (å­—æ®µ8)
+        // µØÃæº½Ïò½Ç (×Ö¶Î8)
         rmc_data->course = atof(field[8]);
     }
 
     if (field_count > 9)
     {
-        // æ—¥æœŸ (å­—æ®µ9)
+        // ÈÕÆÚ (×Ö¶Î9)
         if (strlen(field[9]) >= 6)
         {
             rmc_data->day = (field[9][0] - '0') * 10 + (field[9][1] - '0');
@@ -166,116 +179,134 @@ void parse_rmc(char *sentence, RMC_Data *rmc_data)
 
     if (field_count > 10)
     {
-        // ç£åè§’ (å­—æ®µ10)
+        // ´ÅÆ«½Ç (×Ö¶Î10)
         rmc_data->mag_var = atof(field[10]);
     }
 
     if (field_count > 11)
     {
-        // ç£åè§’æ–¹å‘ (å­—æ®µ11)
+        // ´ÅÆ«½Ç·½Ïò (×Ö¶Î11)
         rmc_data->mag_dir = field[11][0];
     }
 
     if (field_count > 12)
     {
-        // æ¨¡å¼æŒ‡ç¤º (å­—æ®µ12)
+        // Ä£Ê½Ö¸Ê¾ (×Ö¶Î12)
         rmc_data->mode = field[12][0];
     }
 
-    // æ£€æŸ¥æ˜¯å¦æœ‰æ•ˆ
+    // ¼ì²éÊÇ·ñÓĞĞ§
     rmc_data->valid = (rmc_data->status == 'A');
-}
-
-// ä¿®æ”¹å‡½æ•°å®šä¹‰ï¼Œæ·»åŠ å‚æ•°ç±»å‹å’Œè¾“å‡ºå‚æ•°
-void GPS_Message_Inputer(char *message, RMC_Data *rmc_data)
-{
-    // ç›´æ¥è°ƒç”¨parse_rmcå¤„ç†æ¶ˆæ¯å¹¶æ›´æ–°ä¼ å…¥çš„rmc_data
-    parse_rmc(message, rmc_data);
-}
-
-void Init_offset(struct NaturePosition *naturePosition, RMC_Data *rmc_data)
-{
-    // åˆå§‹åŒ–åç§»é‡
-    naturePosition->offsetX = rmc_data->latitude;
-    naturePosition->offsetY = rmc_data->longitude;
-    naturePosition->x = 0;
-    naturePosition->y = 0;
 }
 
 void GPS_Calculate(struct NaturePosition *naturePosition, RMC_Data *rmc_data)
 {
-    // è®¡ç®—å½“å‰ä½ç½®
+    // ¼ÆËãµ±Ç°Î»ÖÃ
     naturePosition->x = rmc_data->latitude - naturePosition->offsetX;
     naturePosition->y = rmc_data->longitude - naturePosition->offsetY;
 }
 
+// ĞŞ¸Äº¯Êı¶¨Òå£¬Ìí¼Ó²ÎÊıÀàĞÍºÍÊä³ö²ÎÊı
+void GPS_Message_Inputer(char *message, RMC_Data *rmc_data , struct NaturePosition *naturePosition)
+{
+    // Ö±½Óµ÷ÓÃparse_rmc´¦ÀíÏûÏ¢²¢¸üĞÂ´«ÈëµÄrmc_data
+    parse_rmc(message, rmc_data);
+    GPS_Calculate(naturePosition, rmc_data);
+}
+
+void UART_SendCommand(unsigned char *cmd, unsigned char length)
+{
+    unsigned char i;
+    for(i = 0; i < length; i++)
+    {
+        GPS_UART_SendByte(cmd[i]);
+    }
+}
+
+void Init_GPS_Setting()
+{
+    UART_SendCommand(set_rate_10hz, sizeof(set_rate_10hz));
+    UART_SendCommand(cmd_gga, sizeof(cmd_gga));
+    UART_SendCommand(cmd_gll, sizeof(cmd_gll));
+    UART_SendCommand(cmd_gsa, sizeof(cmd_gsa));
+    UART_SendCommand(cmd_gsv, sizeof(cmd_gsv));
+    UART_SendCommand(cmd_vtg, sizeof(cmd_vtg));
+    UART_SendCommand(cmd_zda, sizeof(cmd_zda));
+    UART_SendCommand(cmd_gst, sizeof(cmd_gst));
+}
+
+// ĞŞ¸ÄInit_GPSº¯Êı£¬Ê¹ÓÃĞÂµÄÃüÁî·¢ËÍº¯Êı
+void Init_GPS(struct NaturePosition *naturePosition, RMC_Data *rmc_data)
+{
+    // ³õÊ¼»¯Æ«ÒÆÁ¿
+    naturePosition->offsetX = rmc_data->latitude;
+    naturePosition->offsetY = rmc_data->longitude;
+    naturePosition->x = 0;
+    naturePosition->y = 0;
+
+    // ³õÊ¼»¯GPSÉèÖÃ
+    Init_GPS_Setting();
+    GPS_UART_SendStr("GPS³õÊ¼»¯³É¹¦!\0");
+}
+
 void GPS_Message_Updater()
 {
-    if(UART_Available())
+    if (GPS_UART_Available())
     {
-        unsigned char len = UART_Read(receive_buffer, 32);
+        unsigned char len = GPS_UART_Read(receive_buffer, 32);
         if (len > 0)
         {
-            GPS_Message_Inputer(receive_buffer, &rmc_data);
-            UART_SendStr("GPSæ•°æ®æ›´æ–°æˆåŠŸ!\0");
+            GPS_Message_Inputer(receive_buffer, &rmc_data, &naturePosition);
+            // UART_SendStr("GPSÊı¾İ¸üĞÂ³É¹¦!\0");
         }
     }
     else
     {
-        UART_SendByte('N'); // æ— æ•°æ®
+        GPS_UART_SendByte('N'); // ÎŞÊı¾İ
     }
 }
 
-//ç®—æ³•éƒ¨åˆ†å†™å®Œè¾£ï¼ï¼ï¼ï¼ï¼ï¼ï¼ 10/3/2025 16:47
-// Cialloï½(âˆ ãƒ»Ï‰< )âŒ’â˜…
-// Cialloï½(âˆ ãƒ»Ï‰< )âŒ’â˜…
-// Cialloï½(âˆ ãƒ»Ï‰< )âŒ’â˜…
-// Cialloï½(âˆ ãƒ»Ï‰< )âŒ’â˜…
-// Cialloï½(âˆ ãƒ»Ï‰< )âŒ’â˜…            
-// Cialloï½(âˆ ãƒ»Ï‰< )âŒ’â˜…
-// Cialloï½(âˆ ãƒ»Ï‰< )âŒ’â˜…
-// Cialloï½(âˆ ãƒ»Ï‰< )âŒ’â˜…
-// Cialloï½(âˆ ãƒ»Ï‰< )âŒ’â˜…
-// Cialloï½(âˆ ãƒ»Ï‰< )âŒ’â˜…
+// Ëã·¨²¿·ÖĞ´ÍêÀ±£¡£¡£¡£¡£¡£¡£¡ 10/3/2025 16:47
+// Ö®ºóÒª²âÊÔÒ»ÏÂÕâ¸öËã·¨
 
-
-// æµ‹è¯•éƒ¨åˆ†
-// æ‰“å°RMCæ•°æ®
-// void print_rmc_data(const RMC_Data *data) 
+// // ²âÊÔ²¿·Ö
+// // ´òÓ¡RMCÊı¾İ
+// void print_rmc_data(const RMC_Data *data)
 // {
-//     printf("===== RMCæ•°æ®è§£æç»“æœ =====\n");
-//     printf("æ—¶é—´: %02d:%02d:%05.2f UTC\n", data->hour, data->minute, data->second);
-//     printf("æ—¥æœŸ: %04d-%02d-%02d\n", data->year, data->month, data->day);
-//     printf("å®šä½çŠ¶æ€: %c (%s)\n", data->status, data->status == 'A' ? "æœ‰æ•ˆ" : "æ— æ•ˆ");
-//     printf("çº¬åº¦: %.6fÂ° %c\n", fabs(data->latitude), data->ns);
-//     printf("ç»åº¦: %.6fÂ° %c\n", fabs(data->longitude), data->ew);
-//     printf("é€Ÿåº¦: %.2fèŠ‚ (%.2få…¬é‡Œ/å°æ—¶)\n", data->speed, data->speed * 1.852);
-//     printf("èˆªå‘è§’: %.1fÂ°\n", data->course);
-//     printf("ç£åè§’: %.1fÂ° %c\n", data->mag_var, data->mag_dir);
-//     printf("æ¨¡å¼æŒ‡ç¤º: %c\n", data->mode);
+//     printf("===== RMCÊı¾İ½âÎö½á¹û =====\n");
+//     printf("Ê±¼ä: %02d:%02d:%05.2f UTC\n", data->hour, data->minute, data->second);
+//     printf("ÈÕÆÚ: %04d-%02d-%02d\n", data->year, data->month, data->day);
+//     printf("¶¨Î»×´Ì¬: %c (%s)\n", data->status, data->status == 'A' ? "ÓĞĞ§" : "ÎŞĞ§");
+//     printf("Î³¶È: %.6f¡ã %c\n", fabs(data->latitude), data->ns);
+//     printf("¾­¶È: %.6f¡ã %c\n", fabs(data->longitude), data->ew);
+//     printf("ËÙ¶È: %.2f½Ú (%.2f¹«Àï/Ğ¡Ê±)\n", data->speed, data->speed * 1.852);
+//     printf("º½Ïò½Ç: %.1f¡ã\n", data->course);
+//     printf("´ÅÆ«½Ç: %.1f¡ã %c\n", data->mag_var, data->mag_dir);
+//     printf("Ä£Ê½Ö¸Ê¾: %c\n", data->mode);
 //     printf("==========================\n");
 // }
 
-// void test_rmc_parser(void) 
+// void test_rmc_parser(void)
 // {
-//     const char *test_sentence = "$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,003.1,W*6A\r\n";
+//     const char *test_sentence = "$GNRMC,153630.000,A,2754.15158,N,11255.09901,E,0.627,336.31,220325,,,A*4E";
 //     RMC_Data rmc_data;
 
 //     parse_rmc(test_sentence, &rmc_data);
 //     print_rmc_data(&rmc_data);
 // }
 
-// int main() 
+// int main()
 // {
 //     RMC_Data rmc_data;
 //     char message[128];
-    
+
 //     scanf("%s", message);
-//     GPS_Message_Inputer(message, &rmc_data);  // ä¼ é€’rmc_dataçš„åœ°å€
+//     GPS_Message_Inputer(message, &rmc_data);  // ´«µİrmc_dataµÄµØÖ·
 //     print_rmc_data(&rmc_data);
 
 //     scanf("%s", message);
-//     GPS_Message_Inputer(message, &rmc_data);  // ä¼ é€’rmc_dataçš„åœ°å€
+//     GPS_Message_Inputer(message, &rmc_data);  // ´«µİrmc_dataµÄµØÖ·
 //     print_rmc_data(&rmc_data);
+//     test_rmc_parser();
 //     return 0;
 // }

@@ -28,9 +28,15 @@
         double x;
         double y;
     };
+
+    extern RMC_Data rmc_data;
+    extern struct NaturePosition naturePosition;
     
 
     double nmea_to_decimal(double val);
     void parse_rmc(char *sentence, RMC_Data *rmc_data);
-    void GPS_Message_Inputer(char *message, RMC_Data *rmc_data);
+    void GPS_Message_Inputer(char *message, RMC_Data *rmc_data, struct NaturePosition *naturePosition);
+    void GPS_Calculate(struct NaturePosition *naturePosition, RMC_Data *rmc_data);
+    void GPS_Message_Updater();
+    void Init_GPS(struct NaturePosition *naturePosition, RMC_Data *rmc_data);
 #endif

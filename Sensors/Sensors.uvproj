@@ -399,6 +399,16 @@
               <FileType>5</FileType>
               <FilePath>.\Fusion.h</FilePath>
             </File>
+            <File>
+              <FileName>GPS_uart.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\GPS_uart.c</FilePath>
+            </File>
+            <File>
+              <FileName>GPS_uart.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\GPS_uart.h</FilePath>
+            </File>
           </Files>
         </Group>
       </Groups>

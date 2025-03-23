@@ -10,18 +10,19 @@
 #include "Timer.h"
 #include "uart.h"
 #include "Gyroscope.h"
-//ÏÈĞ´¸öÕâÑùµÄº¯Êı¶ªÕâ
+#include "GPS_uart.h"
+//å…ˆå†™ä¸ªè¿™æ ·çš„å‡½æ•°ä¸¢è¿™
 // void SPI_SEND(char *str){
 
 // }
 // void Construct_Data_Frame(struct Posture p){
-// 	//ÒªºÍºËĞÄ°åµÄÊı¾İ½ÓÊÜµÄ½âÎö´úÂëÏàÆ¥Åä
+// 	//è¦å’Œæ ¸å¿ƒæ¿çš„æ•°æ®æ¥å—çš„è§£æä»£ç ç›¸åŒ¹é…
 // 	char *s = "";
 // 	SPI_SEND(s);
 // }
 
 unsigned char receive_buffer0d00[32];
-const char* s="qwq\0";
+unsigned char receive_buffer0d01[32];
 char temp = 0;
 
 void Delay100us(void)	//@40.000MHz
@@ -61,9 +62,11 @@ void Inits()
 	P5M1 = 0x00;P5M0 = 0x00;
 	P6M1 = 0x00;P6M0 = 0x00;
 	P7M1 = 0x00;P7M0 = 0x00;
+	
 
 	Encoder_Init();
 	UART_Init();
+	GPS_UART_Init();
 	Timer0_Init();
 	// Encoder_InterruptEnable(0x01);
 	// ICM42688_SPI_Init();
@@ -77,18 +80,16 @@ void main()
 	UART_SendByte('S');
 	while(1)
 	{
-		// if(UART_Available())
-		// {
-		// 	unsigned char received_len;
-		// 	received_len = UART_Read(receive_buffer0d00, 32);
-		// 	if(received_len > 0)
-		// 	{
-		// 		receive_buffer0d00[received_len] = '\0';  // Ìí¼Ó×Ö·û´®½áÊø·û£¬ĞŞ¸´È±ÉÙµÄ·ÖºÅ
-		// 		// ÕâÀï²»ĞèÒªÔÙ´Îµ÷ÓÃUART_Read£¬ÒòÎªÒÑ¾­ÔÚÇ°Ãæµ÷ÓÃ¹ıÁË
-		// 		// ¿ÉÒÔÖ±½ÓÊ¹ÓÃreceive_buffer0d00ÖĞµÄÊı¾İ
-		// 		UART_SendStr(receive_buffer0d00);  // ÀıÈç·¢ËÍµÚÒ»¸ö×Ö·û
-		// 	}
-		// }
-		// Delay1000ms();
+		if(UART_Available())
+		{
+			unsigned char received_len;
+			received_len = UART_Read(receive_buffer0d00, 32);
+			if(received_len > 0)
+			{
+				receive_buffer0d00[received_len] = '\0';  // æ·»åŠ å­—ç¬¦ä¸²ç»“æŸç¬¦
+				// é€šè¿‡ä¸²å£å‘é€æ¥æ”¶åˆ°çš„æ•°æ®
+				UART_SendStr(receive_buffer0d00);
+			}
+		}
 	}
 }

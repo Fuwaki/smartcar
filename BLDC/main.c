@@ -61,6 +61,11 @@ void Inits()
 
 void main()
 {
+	double i;
+	int a;
+	i=1.0;
+
+
     Inits();
     Delay100us();
 
@@ -71,9 +76,14 @@ void main()
 		focData[2] = (float)Uc;
 		VOFA_SendFloat(focData); // 修改为float类型，与focData数组匹配
 		
-		// Uart3SendStr("Hello World!\0");
-
-        velocityOpenloop(.01f);
+		// // Uart3SendStr("Hello World!\0");
+		// a++;
+		// if (a%1000==0&&i<200.0)
+		// {
+		// 	i+=0.5;
+		// }
+		
+        velocityOpenloop(.3);
 		// Delay1000ms();
 		// Delay100us();
     }

@@ -14,6 +14,7 @@ sbit ENCODER_ZERO = P0 ^ 1;  // 编码器零点信号 Z相
 
 // unsigned char ENABLE_ZERO_DETECT = 1; // 是否启用零点检测
 float timestamp_previous = 0; // 上一个时间戳
+static int lastPosition = 0;
 static int lastCount = 0;
 static unsigned long totalPulses = 0; // 用于记录总脉冲数
 
@@ -102,6 +103,7 @@ void Encoder_Init()
     encoder.position = 0;
     encoder.speed = 0;
 
+    lastPosition = encoder.position;
     timestamp_previous = timestamp;
 }
 
@@ -153,6 +155,7 @@ void Encoder_DetectZero(void)
     if (ENCODER_ZERO == 0)
     {
         Encoder_Clear(2); // 清零通道2 (之前是通道1)
+        lastPosition = 0;
         encoder.position = 0;
     }
 }
@@ -189,11 +192,12 @@ void Encoder_Update()
     // 假设更新周期是固定的，可以在这里计算速度
     // 如果中断频率是1ms
     // encoder.speed = deltaPulses * encoder.direction * ANGLE_PER_PULSE * 1000; // 角度/秒
-    encoder.speed = encoder.position/(timestamp - timestamp_previous); //dtheta/dt
+    encoder.speed = (encoder.position - lastPosition)/(timestamp - timestamp_previous); //dtheta/dt
 
     // 更新上次计数值
     lastCount = currentCount;
     timestamp_previous = timestamp;
+    lastPosition = encoder.position;
 }
 
 

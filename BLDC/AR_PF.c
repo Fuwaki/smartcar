@@ -92,12 +92,12 @@ unsigned long UZ_sprintf(char *buff, const char *format, ...)
         {
             switch (*++format)
             {
-            case 'a': // Ê®Áù½øÖÆp¼ÆÊı·¨Êä³ö¸¡µãÊı ÔİÎ´ÊµÏÖ
+            case 'a': // åå…­è¿›åˆ¶pè®¡æ•°æ³•è¾“å‡ºæµ®ç‚¹æ•° æš‚æœªå®ç°
             {
             }
             break;
 
-            case 'c': // Ò»¸ö×Ö·û
+            case 'c': // ä¸€ä¸ªå­—ç¬¦
             {
                 int8 ch = (int8)va_arg(arg, uint32);
                 *buff = ch;
@@ -107,7 +107,7 @@ unsigned long UZ_sprintf(char *buff, const char *format, ...)
             break;
 
             case 'd':
-            case 'i': // ÓĞ·ûºÅÊ®½øÖÆÕûÊı
+            case 'i': // æœ‰ç¬¦å·åè¿›åˆ¶æ•´æ•°
             {
                 int8 vstr[33];
                 int32 ival = (int32)va_arg(arg, int32);
@@ -125,8 +125,8 @@ unsigned long UZ_sprintf(char *buff, const char *format, ...)
             }
             break;
 
-            case 'f': // ¸¡µãÊı£¬Êä³öĞ¡ÊıµãºóÁùÎ»  ²»ÄÜÖ¸¶¨Êä³ö¾«¶È
-            case 'F': // ¸¡µãÊı£¬Êä³öĞ¡ÊıµãºóÁùÎ»  ²»ÄÜÖ¸¶¨Êä³ö¾«¶È
+            case 'f': // æµ®ç‚¹æ•°ï¼Œè¾“å‡ºå°æ•°ç‚¹åå…­ä½  ä¸èƒ½æŒ‡å®šè¾“å‡ºç²¾åº¦
+            case 'F': // æµ®ç‚¹æ•°ï¼Œè¾“å‡ºå°æ•°ç‚¹åå…­ä½  ä¸èƒ½æŒ‡å®šè¾“å‡ºç²¾åº¦
             {
                 int8 vstr[33];
                 double ival = (double)va_arg(arg, double);
@@ -169,7 +169,7 @@ unsigned long UZ_sprintf(char *buff, const char *format, ...)
                 break;
             }
 
-            case 'u': // ÎŞ·ûºÅÊ®½øÖÆÕûÊı
+            case 'u': // æ— ç¬¦å·åè¿›åˆ¶æ•´æ•°
             {
                 int8 vstr[33];
                 uint32 ival = (uint32)va_arg(arg, uint32);
@@ -182,7 +182,7 @@ unsigned long UZ_sprintf(char *buff, const char *format, ...)
             }
             break;
 
-            case 'o': // ÎŞ·ûºÅ°Ë½øÖÆÕûÊı
+            case 'o': // æ— ç¬¦å·å…«è¿›åˆ¶æ•´æ•°
             {
                 int8 vstr[33];
                 uint32 ival = (uint32)va_arg(arg, uint32);
@@ -195,8 +195,8 @@ unsigned long UZ_sprintf(char *buff, const char *format, ...)
             }
             break;
 
-            case 'x': // ÎŞ·ûºÅÊ®Áù½øÖÆÕûÊı
-            case 'X': // ÎŞ·ûºÅÊ®Áù½øÖÆÕûÊı
+            case 'x': // æ— ç¬¦å·åå…­è¿›åˆ¶æ•´æ•°
+            case 'X': // æ— ç¬¦å·åå…­è¿›åˆ¶æ•´æ•°
             {
                 int8 vstr[33];
                 uint32 ival = (uint32)va_arg(arg, uint32);
@@ -209,7 +209,7 @@ unsigned long UZ_sprintf(char *buff, const char *format, ...)
             }
             break;
 
-            case 's': // ×Ö·û´®
+            case 's': // å­—ç¬¦ä¸²
             {
                 int8 *pc = va_arg(arg, int8 *);
                 while (*pc)
@@ -222,7 +222,7 @@ unsigned long UZ_sprintf(char *buff, const char *format, ...)
             }
             break;
 
-            case 'p': // ÒÔ16½øÖÆĞÎÊ½Êä³öÖ¸Õë
+            case 'p': // ä»¥16è¿›åˆ¶å½¢å¼è¾“å‡ºæŒ‡é’ˆ
             {
                 int8 vstr[33];
                 uint32 ival = (uint32)va_arg(arg, uint32);
@@ -236,7 +236,7 @@ unsigned long UZ_sprintf(char *buff, const char *format, ...)
             }
             break;
 
-            case '%': // Êä³ö×Ö·û%
+            case '%': // è¾“å‡ºå­—ç¬¦%
             {
                 *buff = '%';
                 buff++;
