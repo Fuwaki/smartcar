@@ -5,11 +5,10 @@
 #include <stdio.h>
 #include "GPS.h"
 #include "Encoder.h"
-#include "ICM42688_SPI.h"
 #include "SPI_MultiDevice.h"
+#include "Gyroscope.h"
 #include "Timer.h"
 #include "uart.h"
-#include "Gyroscope.h"
 #include "GPS_uart.h"
 //先写个这样的函数丢这
 // void SPI_SEND(char *str){
@@ -65,11 +64,12 @@ void Inits()
 	
 
 	Encoder_Init();
+	Timer0_Init();
 	UART_Init();
 	GPS_UART_Init();
-	Timer0_Init();
-	// Encoder_InterruptEnable(0x01);
-	// ICM42688_SPI_Init();
+	Init_GPS(&naturePosition, &rmc_data);
+	SPI_Init();
+	ICM42688_Init(ICM42688_SLAVE_ID);
 }
 
 
@@ -80,6 +80,8 @@ void main()
 	UART_SendByte('S');
 	while(1)
 	{
+		Gyro_Updater();
+		GPS_Message_Updater();
 		if(UART_Available())
 		{
 			unsigned char received_len;

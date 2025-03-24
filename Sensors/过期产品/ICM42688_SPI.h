@@ -20,6 +20,8 @@
 #define ICM42688_ACCEL_DATA_Y0    0x22
 #define ICM42688_ACCEL_DATA_Z1    0x23
 #define ICM42688_ACCEL_DATA_Z0    0x24
+#define ICM42688_TEMP_DATA1       0x1D
+#define ICM42688_TEMP_DATA0       0x1E
 
 // 初始化ICM-42688陀螺仪SPI接口
 int ICM42688_SPI_Init(void);
@@ -31,6 +33,6 @@ unsigned char ICM42688_ReadReg(unsigned char);
 void ICM42688_WriteReg(unsigned char, unsigned char);
 
 // 从ICM-42688读取原始传感器数据
-int ICM42688_ReadSensorData(icm426888_data_t *);
+int ICM42688_ReadSensorData(icm42688_data_t *);
 
 #endif // __ICM42688_SPI_H__

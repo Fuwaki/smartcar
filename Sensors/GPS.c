@@ -4,8 +4,9 @@
 #include <stdlib.h>
 #include <math.h>
 #include "GPS_uart.h"
+#include "GPS.h"
 
-unsigned char receive_buffer[64];
+unsigned char gps_receive_buffer[64];
 unsigned char set_rate_10hz[] = {0xF1, 0xD9, 0x06, 0x42, 0x14, 0x00, 0x00, 0x0A, 0x05,
                                  0x00, 0x64, 0x00, 0x00, 0x00, 0x60, 0xEA, 0x00, 0x00, 0xD0, 0x07, 0x00, 0x00,
                                  0xC8, 0x00, 0x00, 0x00, 0xB8, 0xED};
@@ -18,38 +19,8 @@ unsigned char cmd_vtg[] = {0xF1, 0xD9, 0x06, 0x01, 0x03, 0x00, 0xF0, 0x06, 0x00,
 unsigned char cmd_zda[] = {0xF1, 0xD9, 0x06, 0x01, 0x03, 0x00, 0xF0, 0x07, 0x00, 0x01, 0x1D};
 unsigned char cmd_gst[] = {0xF1, 0xD9, 0x06, 0x01, 0x03, 0x00, 0xF0, 0x20, 0x00, 0x1A, 0x4F};
 
-// RMC数据结构体
-typedef struct
-{
-    int hour;         // 时
-    int minute;       // 分
-    float second;     // 秒
-    char status;      // 定位状态，A=有效，V=无效
-    double latitude;  // 纬度(度)
-    char ns;          // 纬度方向，N=北半球，S=南半球
-    double longitude; // 经度(度)
-    char ew;          // 经度方向，E=东经，W=西经
-    float speed;      // 地面速度(节)
-    float course;     // 地面航向角(度)
-    int day;          // 日
-    int month;        // 月
-    int year;         // 年
-    float mag_var;    // 磁偏角
-    char mag_dir;     // 磁偏角方向，E=东，W=西
-    char mode;        // 模式指示，A=自动，D=差分，E=估算，N=数据无效
-    int valid;        // 数据是否有效
-} RMC_Data;
-
-struct NaturePosition
-{
-    double offsetX;
-    double offsetY;
-    double x;
-    double y;
-};
-
 RMC_Data rmc_data;
-struct NaturePosition naturePosition;
+NaturePosition naturePosition;
 
 // 将NMEA格式的经纬度转换为标准的十进制度
 double nmea_to_decimal(double val)
@@ -199,7 +170,7 @@ void parse_rmc(char *sentence, RMC_Data *rmc_data)
     rmc_data->valid = (rmc_data->status == 'A');
 }
 
-void GPS_Calculate(struct NaturePosition *naturePosition, RMC_Data *rmc_data)
+void GPS_Calculate(NaturePosition *naturePosition, RMC_Data *rmc_data)
 {
     // 计算当前位置
     naturePosition->x = rmc_data->latitude - naturePosition->offsetX;
@@ -207,7 +178,7 @@ void GPS_Calculate(struct NaturePosition *naturePosition, RMC_Data *rmc_data)
 }
 
 // 修改函数定义，添加参数类型和输出参数
-void GPS_Message_Inputer(char *message, RMC_Data *rmc_data , struct NaturePosition *naturePosition)
+void GPS_Message_Inputer(char *message, RMC_Data *rmc_data , NaturePosition *naturePosition)
 {
     // 直接调用parse_rmc处理消息并更新传入的rmc_data
     parse_rmc(message, rmc_data);
@@ -236,7 +207,7 @@ void Init_GPS_Setting()
 }
 
 // 修改Init_GPS函数，使用新的命令发送函数
-void Init_GPS(struct NaturePosition *naturePosition, RMC_Data *rmc_data)
+void Init_GPS(NaturePosition *naturePosition, RMC_Data *rmc_data)
 {
     // 初始化偏移量
     naturePosition->offsetX = rmc_data->latitude;
@@ -253,10 +224,10 @@ void GPS_Message_Updater()
 {
     if (GPS_UART_Available())
     {
-        unsigned char len = GPS_UART_Read(receive_buffer, 32);
+        unsigned char len = GPS_UART_Read(gps_receive_buffer, 32);
         if (len > 0)
         {
-            GPS_Message_Inputer(receive_buffer, &rmc_data, &naturePosition);
+            GPS_Message_Inputer(gps_receive_buffer, &rmc_data, &naturePosition);
             // UART_SendStr("GPS数据更新成功!\0");
         }
     }

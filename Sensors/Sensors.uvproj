@@ -53,7 +53,7 @@
           <DebugInformation>1</DebugInformation>
           <BrowseInformation>1</BrowseInformation>
           <ListingPath>.\Listings\</ListingPath>
-          <HexFormatSelection>1</HexFormatSelection>
+          <HexFormatSelection>0</HexFormatSelection>
           <Merge32K>0</Merge32K>
           <CreateBatchFile>0</CreateBatchFile>
           <BeforeCompile>
@@ -118,7 +118,7 @@
         </DllOption>
         <DebugOption>
           <OPTHX>
-            <HexSelection>1</HexSelection>
+            <HexSelection>0</HexSelection>
             <HexRangeLowAddress>0</HexRangeLowAddress>
             <HexRangeHighAddress>0</HexRangeHighAddress>
             <HexOffset>0</HexOffset>
@@ -340,16 +340,6 @@
               <FilePath>.\GPS.h</FilePath>
             </File>
             <File>
-              <FileName>Gyroscope.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\Gyroscope.c</FilePath>
-            </File>
-            <File>
-              <FileName>Gyroscope.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>.\Gyroscope.h</FilePath>
-            </File>
-            <File>
               <FileName>SPI_MultiDevice.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\SPI_MultiDevice.c</FilePath>
@@ -408,6 +398,16 @@
               <FileName>GPS_uart.h</FileName>
               <FileType>5</FileType>
               <FilePath>.\GPS_uart.h</FilePath>
+            </File>
+            <File>
+              <FileName>Gyroscope.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Gyroscope.c</FilePath>
+            </File>
+            <File>
+              <FileName>Gyroscope.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\Gyroscope.h</FilePath>
             </File>
           </Files>
         </Group>

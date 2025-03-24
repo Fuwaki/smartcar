@@ -37,8 +37,8 @@ int ICM42688_SPI_Init(void)
     }
     
     // 配置陀螺仪
-    // 退出睡眠模式，启用加速度计和陀螺仪
-    ICM42688_WriteReg(ICM42688_PWR_MGMT0, 0x0F);
+    // 退出睡眠模式，启用加速度计、陀螺仪和温度传感器
+    ICM42688_WriteReg(ICM42688_PWR_MGMT0, 0x1F);
     
     // 配置陀螺仪量程(±2000dps)和ODR(1kHz)
     ICM42688_WriteReg(ICM42688_GYRO_CONFIG0, 0x06);
@@ -77,13 +77,13 @@ void ICM42688_WriteReg(unsigned char reg_addr, unsigned char value)
 int ICM42688_ReadSensorData(icm42688_data_t *data)
 {
     unsigned char buffer[12];
+    unsigned char temp_buffer[2];
     int raw_accel_x, raw_accel_y, raw_accel_z;
     int raw_gyro_x, raw_gyro_y, raw_gyro_z;
-    float accel_scale, gyro_scale;
-    unsigned char temp_buffer[2];
     int raw_temp;
+    float accel_scale, gyro_scale;
     
-    if(data == NULL)
+    if(data == 0)
     {
         return -1;
     }
@@ -91,33 +91,33 @@ int ICM42688_ReadSensorData(icm42688_data_t *data)
     // 从ICM-42688连续读取12个字节的传感器数据
     SPI_ReadMultiRegisters(icm42688_slave_id, ICM42688_ACCEL_DATA_X1, buffer, 12);
     
-    // 合并传感器数据（16位有符号）- 使用强制类型转换避免语法错误
-    raw_accel_x = ((int)(buffer[0]) << 8) | buffer[1];
-    raw_accel_y = ((int)(buffer[2]) << 8) | buffer[3];
-    raw_accel_z = ((int)(buffer[4]) << 8) | buffer[5];
-    raw_gyro_x = ((int)(buffer[6]) << 8) | buffer[7];
-    raw_gyro_y = ((int)(buffer[8]) << 8) | buffer[9];
-    raw_gyro_z = ((int)(buffer[10]) << 8) | buffer[11];
+    // 合并传感器数据（16位有符号）- 避免使用强制类型转换
+    raw_accel_x = (buffer[0] << 8) | buffer[1];
+    raw_accel_y = (buffer[2] << 8) | buffer[3];
+    raw_accel_z = (buffer[4] << 8) | buffer[5];
+    raw_gyro_x = (buffer[6] << 8) | buffer[7];
+    raw_gyro_y = (buffer[8] << 8) | buffer[9];
+    raw_gyro_z = (buffer[10] << 8) | buffer[11];
     
     // 根据配置的量程计算转换因子
-    accel_scale = 16.0f / 32768.0f * 1000.0f; // 转换为 mg (±16g量程)
-    gyro_scale = 2000.0f / 32768.0f;          // 转换为 degrees/s (±2000dps量程)
+    accel_scale = 16.0 / 32768.0 * 1000.0; // 转换为 mg (±16g量程)
+    gyro_scale = 2000.0 / 32768.0;         // 转换为 degrees/s (±2000dps量程)
     
-    // 转换为物理量 - 使用结构体变量直接访问而不是通过指针
-    (*data).accel_x = raw_accel_x * accel_scale;
-    (*data).accel_y = raw_accel_y * accel_scale;
-    (*data).accel_z = raw_accel_z * accel_scale;
+    // 转换为物理量 - 使用C51兼容的指针访问方式
+    data->accel_x = raw_accel_x * accel_scale;
+    data->accel_y = raw_accel_y * accel_scale;
+    data->accel_z = raw_accel_z * accel_scale;
     
-    (*data).gyro_x = raw_gyro_x * gyro_scale;
-    (*data).gyro_y = raw_gyro_y * gyro_scale;
-    (*data).gyro_z = raw_gyro_z * gyro_scale;
+    data->gyro_x = raw_gyro_x * gyro_scale;
+    data->gyro_y = raw_gyro_y * gyro_scale;
+    data->gyro_z = raw_gyro_z * gyro_scale;
     
     // 读取温度数据
     SPI_ReadMultiRegisters(icm42688_slave_id, ICM42688_TEMP_DATA1, temp_buffer, 2);
-    raw_temp = ((int)(temp_buffer[0]) << 8) | temp_buffer[1];
+    raw_temp = (temp_buffer[0] << 8) | temp_buffer[1];
     
     // 温度转换
-    (*data).temperature = (raw_temp / 132.48f) + 25.0f;
+    data->temperature = (raw_temp / 132.48) + 25.0;
     
     return 0;
 }

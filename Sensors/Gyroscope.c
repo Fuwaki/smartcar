@@ -1,20 +1,20 @@
-#include <AI8051U.H>
 #include <intrins.h>
-#include <stdio.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <math.h>
 #include "Gyroscope.h"
+#include "SPI_MultiDevice.h"
+#include <stdio.h>
 
+// 当前配置的陀螺仪和加速度计范围
+static gyro_range_t current_gyro_range = GYRO_RANGE_2000_DPS;
+static accel_range_t current_accel_range = ACCEL_RANGE_16G;
 
-void Delay500ms(void)	//@35.000MHz
+void Delay1ms(void)	//@40.000MHz
 {
 	unsigned long edata i;
 
 	_nop_();
 	_nop_();
-	i = 4374998UL;
+	_nop_();
+	i = 9998UL;
 	while (i) i--;
 }
 
@@ -30,6 +30,234 @@ float fast_sqrt(float x) // 速度更快的平方根计算
 	return y;
 }
 
+// 读取ICM42688-P寄存器
+unsigned char ICM42688_ReadRegister(unsigned char slave_id, unsigned char reg_addr)
+{
+    return SPI_ReadRegister(slave_id, reg_addr | ICM42688_READ_FLAG);
+}
+
+// 写入ICM42688-P寄存器
+void ICM42688_WriteRegister(unsigned char slave_id, unsigned char reg_addr, unsigned char value)
+{
+    SPI_WriteRegister(slave_id, reg_addr, value);
+}
+
+// 读取多个寄存器
+void ICM42688_ReadMultiRegisters(unsigned char slave_id, unsigned char start_addr,
+                                 unsigned char *buffer, unsigned int count)
+{
+    SPI_ReadMultiRegisters(slave_id, start_addr | ICM42688_READ_FLAG, buffer, count);
+}
+
+// 初始化ICM42688-P传感器
+unsigned char ICM42688_Init(unsigned char slave_id)
+{
+    unsigned char who_am_i;
+
+    // 软件复位
+    ICM42688_Reset(slave_id);
+
+    // 检查设备ID
+    who_am_i = ICM42688_ReadRegister(slave_id, ICM42688_WHO_AM_I);
+    if (who_am_i != ICM42688_WHO_AM_I_VALUE)
+    {
+        return 1; // 初始化失败，设备ID不匹配
+    }
+
+    // 配置电源管理，使能加速度计和陀螺仪，低噪声模式
+    ICM42688_WriteRegister(slave_id, ICM42688_PWR_MGMT0,
+                           ICM42688_PWR_MGMT0_ACCEL_MODE_LN | ICM42688_PWR_MGMT0_GYRO_MODE_LN);
+
+    // 等待传感器启动（按需调整延迟时间）
+    Delay1ms();
+
+    // 设置默认范围
+    ICM42688_SetGyroRange(slave_id, GYRO_RANGE_2000_DPS);
+    ICM42688_SetAccelRange(slave_id, ACCEL_RANGE_16G);
+
+    return 0; // 初始化成功
+}
+
+// 设置陀螺仪量程
+void ICM42688_SetGyroRange(unsigned char slave_id, gyro_range_t range)
+{
+    unsigned char config;
+
+    if (range > GYRO_RANGE_15_625_DPS)
+    {
+        range = GYRO_RANGE_2000_DPS; // 非法范围，设为默认值
+    }
+
+    config = ICM42688_ReadRegister(slave_id, ICM42688_GYRO_CONFIG0);
+    config = (config & 0xF8) | (range & 0x07); // 保留高5位，修改低3位
+    ICM42688_WriteRegister(slave_id, ICM42688_GYRO_CONFIG0, config);
+
+    current_gyro_range = range;
+}
+
+// 设置加速度计量程
+void ICM42688_SetAccelRange(unsigned char slave_id, accel_range_t range)
+{
+    unsigned char config;
+
+    if (range > ACCEL_RANGE_2G)
+    {
+        range = ACCEL_RANGE_16G; // 非法范围，设为默认值
+    }
+
+    config = ICM42688_ReadRegister(slave_id, ICM42688_ACCEL_CONFIG0);
+    config = (config & 0xFC) | (range & 0x03); // 保留高6位，修改低2位
+    ICM42688_WriteRegister(slave_id, ICM42688_ACCEL_CONFIG0, config);
+
+    current_accel_range = range;
+}
+
+// 读取传感器原始数据
+void ICM42688_ReadSensorData(unsigned char slave_id, icm42688_data_t *dataf) //为什么不要data？因为data已经被使用力！
+{
+    unsigned char buffer[14]; // 7个16位值：加速度(3)、温度、陀螺仪(3)
+
+    if (dataf == 0)
+    {
+        return;
+    }
+
+    // 一次性读取所有数据 (从ACCEL_DATA_X1到GYRO_DATA_Z0)
+    ICM42688_ReadMultiRegisters(slave_id, ICM42688_ACCEL_DATA_X1, buffer, 14);
+
+    // 合并高低字节（大端格式）
+    dataf->accel_x = (buffer[0] << 8) | buffer[1];
+    dataf->accel_y = (buffer[2] << 8) | buffer[3];
+    dataf->accel_z = (buffer[4] << 8) | buffer[5];
+
+    dataf->temp = (buffer[6] << 8) | buffer[7];
+
+    dataf->gyro_x = (buffer[8] << 8) | buffer[9];
+    dataf->gyro_y = (buffer[10] << 8) | buffer[11];
+    dataf->gyro_z = (buffer[12] << 8) | buffer[13];
+
+    /*如果你想用卡尔曼滤波器，就在这里插入卡尔曼滤波器的代码
+        Put you code here!
+    */
+    
+    // 计算转换后的物理单位数据
+    dataf->accel_x_g = ICM42688_AccelConvert(dataf->accel_x, current_accel_range);
+    dataf->accel_y_g = ICM42688_AccelConvert(dataf->accel_y, current_accel_range);
+    dataf->accel_z_g = ICM42688_AccelConvert(dataf->accel_z, current_accel_range);
+    
+    dataf->gyro_x_dps = ICM42688_GyroConvert(dataf->gyro_x, current_gyro_range);
+    dataf->gyro_y_dps = ICM42688_GyroConvert(dataf->gyro_y, current_gyro_range);
+    dataf->gyro_z_dps = ICM42688_GyroConvert(dataf->gyro_z, current_gyro_range);
+    
+    dataf->temp_c = ICM42688_GetTemperature(dataf->temp);
+}
+
+// 软件复位ICM42688-P
+void ICM42688_Reset(unsigned char slave_id)
+{
+    // 写入设备配置寄存器，设置软件复位位
+    ICM42688_WriteRegister(slave_id, ICM42688_DEVICE_CONFIG, 0x01);
+
+    // 等待复位完成（通常需要几毫秒）
+    Delay1ms();
+}
+
+// 检查传感器通信是否正常
+unsigned char ICM42688_TestConnection(unsigned char slave_id)
+{
+    unsigned char who_am_i = ICM42688_ReadRegister(slave_id, ICM42688_WHO_AM_I);
+    return (who_am_i == ICM42688_WHO_AM_I_VALUE) ? 0 : 1;
+}
+
+// 获取转换后的温度值（摄氏度）
+// 根据ICM42688规格书，温度转换公式为：
+// Temp(°C) = (RawTemp / 132.48) + 25
+float ICM42688_GetTemperature(int raw_temp)
+{
+    return (raw_temp / 132.48f) + 25.0f;
+}
+
+// 根据当前设置的范围转换陀螺仪原始数据为度/秒
+float ICM42688_GyroConvert(int raw_gyro, gyro_range_t range)
+{
+    float dps_per_lsb;
+
+    // 根据不同的量程范围确定每LSB对应的度/秒
+    switch (range)
+    {
+    case GYRO_RANGE_2000_DPS:
+        dps_per_lsb = 2000.0f / 32768.0f;
+        break;
+    case GYRO_RANGE_1000_DPS:
+        dps_per_lsb = 1000.0f / 32768.0f;
+        break;
+    case GYRO_RANGE_500_DPS:
+        dps_per_lsb = 500.0f / 32768.0f;
+        break;
+    case GYRO_RANGE_250_DPS:
+        dps_per_lsb = 250.0f / 32768.0f;
+        break;
+    case GYRO_RANGE_125_DPS:
+        dps_per_lsb = 125.0f / 32768.0f;
+        break;
+    case GYRO_RANGE_62_5_DPS:
+        dps_per_lsb = 62.5f / 32768.0f;
+        break;
+    case GYRO_RANGE_31_25_DPS:
+        dps_per_lsb = 31.25f / 32768.0f;
+        break;
+    case GYRO_RANGE_15_625_DPS:
+        dps_per_lsb = 15.625f / 32768.0f;
+        break;
+    default:
+        dps_per_lsb = 2000.0f / 32768.0f;
+        break;
+    }
+
+    return raw_gyro * dps_per_lsb;
+}
+
+// 根据当前设置的范围转换加速度计原始数据为G
+float ICM42688_AccelConvert(int raw_accel, accel_range_t range)
+{
+    float g_per_lsb;
+
+    // 根据不同的量程范围确定每LSB对应的G值
+    switch (range)
+    {
+    case ACCEL_RANGE_16G:
+        g_per_lsb = 16.0f / 32768.0f;
+        break;
+    case ACCEL_RANGE_8G:
+        g_per_lsb = 8.0f / 32768.0f;
+        break;
+    case ACCEL_RANGE_4G:
+        g_per_lsb = 4.0f / 32768.0f;
+        break;
+    case ACCEL_RANGE_2G:
+        g_per_lsb = 2.0f / 32768.0f;
+        break;
+    default:
+        g_per_lsb = 16.0f / 32768.0f;
+        break;
+    }
+
+    return raw_accel * g_per_lsb;
+}
+
+void Gyro_Updater()
+{
+    static icm42688_data_t sensor_data;
+    
+    // 读取传感器数据，会自动更新转换后的物理单位数据
+    ICM42688_ReadSensorData(ICM42688_SLAVE_ID, &sensor_data);  //卡尔曼滤波直接插入这里！！！
+    
+    // 在这里处理传感器数据
+    //比如说FK u;
+}
+
+
+#pragma region KalmanFilter// 卡尔曼滤波器结构体
 /**
  * @brief 初始化卡尔曼滤波器
  * @param filter 滤波器结构体指针
@@ -68,44 +296,19 @@ float kalman_update(kalman_filter_t *filter, float measurement)
 }
 
 /**
- * @brief 对陀螺仪和加速度数据应用卡尔曼滤波
- * @param raw_data 原始传感器数据
- * @param filtered_data 滤波后的数据
- * @param kf_accel_x,kf_accel_y,kf_accel_z 加速度数据的滤波器
- * @param kf_gyro_x,kf_gyro_y,kf_gyro_z 陀螺仪数据的滤波器
- */
-void apply_kalman_filter(icm426888_data_t *raw_data, icm426888_data_t *filtered_data, 
-                        kalman_filter_t *kf_accel_x, kalman_filter_t *kf_accel_y, kalman_filter_t *kf_accel_z,
-                        kalman_filter_t *kf_gyro_x, kalman_filter_t *kf_gyro_y, kalman_filter_t *kf_gyro_z) 
-{
-    // 更新加速度数据
-    filtered_data->accel_x = kalman_update(kf_accel_x, raw_data->accel_x);
-    filtered_data->accel_y = kalman_update(kf_accel_y, raw_data->accel_y);
-    filtered_data->accel_z = kalman_update(kf_accel_z, raw_data->accel_z);
-    
-    // 更新陀螺仪数据
-    filtered_data->gyro_x = kalman_update(kf_gyro_x, raw_data->gyro_x);
-    filtered_data->gyro_y = kalman_update(kf_gyro_y, raw_data->gyro_y);
-    filtered_data->gyro_z = kalman_update(kf_gyro_z, raw_data->gyro_z);
-    
-    // 温度数据通常不需要滤波，直接传递
-    filtered_data->temperature = raw_data->temperature;
-}
-
-/**
  * @brief 初始化所有陀螺仪数据的卡尔曼滤波器
  * @param kf_accel_x,kf_accel_y,kf_accel_z 加速度数据的滤波器
  * @param kf_gyro_x,kf_gyro_y,kf_gyro_z 陀螺仪数据的滤波器
  */
 void init_gyro_kalman_filters(kalman_filter_t *kf_accel_x, kalman_filter_t *kf_accel_y, kalman_filter_t *kf_accel_z,
-                            kalman_filter_t *kf_gyro_x, kalman_filter_t *kf_gyro_y, kalman_filter_t *kf_gyro_z)
+    kalman_filter_t *kf_gyro_x, kalman_filter_t *kf_gyro_y, kalman_filter_t *kf_gyro_z)
 {
     // 初始化加速度计滤波器
     // 参数可根据实际应用调整：Q(过程噪声), R(测量噪声), 初始P, 初始x
     kalman_init(kf_accel_x, 0.01f, 0.1f, 1.0f, 0.0f);
     kalman_init(kf_accel_y, 0.01f, 0.1f, 1.0f, 0.0f);
     kalman_init(kf_accel_z, 0.01f, 0.1f, 1.0f, 0.0f);
-    
+
     // 初始化陀螺仪滤波器
     kalman_init(kf_gyro_x, 0.003f, 0.03f, 1.0f, 0.0f);
     kalman_init(kf_gyro_y, 0.003f, 0.03f, 1.0f, 0.0f);
@@ -113,131 +316,33 @@ void init_gyro_kalman_filters(kalman_filter_t *kf_accel_x, kalman_filter_t *kf_a
 }
 
 /**
- * @brief Parse ICM-426888 data from SIP packet
- * @param sip_payload Pointer to SIP payload data
- * @param payload_len Length of the SIP payload
- * @param sensor_data Pointer to store the parsed sensor data
- * @return 0 if successful, negative error code otherwise
+ * @brief 对陀螺仪和加速度数据应用卡尔曼滤波
+ * @param raw_data 原始传感器数据
+ * @param filtered_data 滤波后的数据
+ * @param kf_accel_x,kf_accel_y,kf_accel_z 加速度数据的滤波器
+ * @param kf_gyro_x,kf_gyro_y,kf_gyro_z 陀螺仪数据的滤波器
  */
-int icm426888_parse_sip_data(const char *sip_payload, unsigned int payload_len, icm426888_data_t *sensor_data)
+void apply_kalman_filter(icm42688_data_t *raw_data, icm42688_data_t *filtered_data, 
+    kalman_filter_t *kf_accel_x, kalman_filter_t *kf_accel_y, kalman_filter_t *kf_accel_z,
+    kalman_filter_t *kf_gyro_x, kalman_filter_t *kf_gyro_y, kalman_filter_t *kf_gyro_z)
 {
-    int raw_accel_x, raw_accel_y, raw_accel_z;
-    int raw_gyro_x, raw_gyro_y, raw_gyro_z;
-    char raw_temp;
-    float accel_scale, gyro_scale; 
-    
-    if (sip_payload == NULL || sensor_data == NULL || payload_len < 16) {
-        return -1; // Invalid parameters
-    }
-    
-    if (sip_payload[0] != 0x49 || sip_payload[1] != 0x43 || sip_payload[2] != 0x4D) {
-        return -2; // Invalid header - should start with "ICM"
-    }
+    // 更新加速度数据
+    filtered_data->accel_x = kalman_update(kf_accel_x, raw_data->accel_x);
+    filtered_data->accel_y = kalman_update(kf_accel_y, raw_data->accel_y);
+    filtered_data->accel_z = kalman_update(kf_accel_z, raw_data->accel_z);
 
-    // 使用乘法代替位移
-    raw_accel_x = ((unsigned char)sip_payload[3] * 256) + (unsigned char)sip_payload[4];
-    raw_accel_y = ((unsigned char)sip_payload[5] * 256) + (unsigned char)sip_payload[6];
-    raw_accel_z = ((unsigned char)sip_payload[7] * 256) + (unsigned char)sip_payload[8];
-    
-    raw_gyro_x = ((unsigned char)sip_payload[9] * 256) + (unsigned char)sip_payload[10];
-    raw_gyro_y = ((unsigned char)sip_payload[11] * 256) + (unsigned char)sip_payload[12];
-    raw_gyro_z = ((unsigned char)sip_payload[13] * 256) + (unsigned char)sip_payload[14];
-    
-    raw_temp = sip_payload[15];
-    
-    accel_scale = 16.0f / 32768.0f * 1000.0f; // 转换为 mg
-    gyro_scale = 2000.0f / 32768.0f;          // 转换为 degrees/s
-    
-    sensor_data->accel_x = raw_accel_x * accel_scale;
-    sensor_data->accel_y = raw_accel_y * accel_scale;
-    sensor_data->accel_z = raw_accel_z * accel_scale;
-    
-    sensor_data->gyro_x = raw_gyro_x * gyro_scale;
-    sensor_data->gyro_y = raw_gyro_y * gyro_scale;
-    sensor_data->gyro_z = raw_gyro_z * gyro_scale;
-    
-    sensor_data->temperature = (float)raw_temp + 25.0f;
-    
-    return 0; // Success
+    // 更新陀螺仪数据
+    filtered_data->gyro_x = kalman_update(kf_gyro_x, raw_data->gyro_x);
+    filtered_data->gyro_y = kalman_update(kf_gyro_y, raw_data->gyro_y);
+    filtered_data->gyro_z = kalman_update(kf_gyro_z, raw_data->gyro_z);
+
+    // 温度数据通常不需要滤波，直接传递
+    filtered_data->temp = raw_data->temp;
 }
+#pragma endregion
 
-
-// void test_icm426888_parser(void)
-// {
-//     // 模拟的SIP数据包（实际应用中，这些数据将从通信接口获取）
-//     // 格式: [ICM标识符(3)][accel_x(2)][accel_y(2)][accel_z(2)][gyro_x(2)][gyro_y(2)][gyro_z(2)][temp(1)]
-//     unsigned char test_sip_data[16] = {
-//         0x49, 0x43, 0x4D,             // "ICM" 标识符
-//         0x01, 0x23,                   // accel_x raw data (291)
-//         0x45, 0x67,                   // accel_y raw data (17767)
-//         0x89, 0xAB,                   // accel_z raw data (-30293)
-//         0xCD, 0xEF,                   // gyro_x raw data (-12817)
-//         0x02, 0x46,                   // gyro_y raw data (582)
-//         0x8A, 0xBC,                   // gyro_z raw data (-30020)
-//         0x15                         // temp raw data (21°C)
-//     };
-    
-//     // 声明传感器数据结构体
-//     icm426888_data_t sensor_data;
-//     int result;
-    
-//     // 调用解析函数
-//     result = icm426888_parse_sip_data((char*)test_sip_data, 16, &sensor_data);
-    
-//     // 检查结果
-//     if (result == 0) {
-//         // 打印解析的数据（实际应用中可以进行其他处理）
-//         printf("加速度数据 (mg):\n");
-//         printf("  X: %.2f\n", sensor_data.accel_x);
-//         printf("  Y: %.2f\n", sensor_data.accel_y);
-//         printf("  Z: %.2f\n", sensor_data.accel_z);
-        
-//         printf("陀螺仪数据 (degrees/s):\n");
-//         printf("  X: %.2f\n", sensor_data.gyro_x);
-//         printf("  Y: %.2f\n", sensor_data.gyro_y);
-//         printf("  Z: %.2f\n", sensor_data.gyro_z);
-        
-//         printf("温度: %.1f°C\n", sensor_data.temperature);
-        
-//         // 在实际应用中，您可能会使用这些数据来控制设备或进行进一步计算
-//         // 例如，计算方位、检测运动等
-//     }
-//     else {
-//         printf("解析SIP数据失败，错误代码: %d\n", result);
-//     }
-// }
-
-// /**
-//  * @brief 实际应用示例：从UART接收SIP数据并解析
-//  * 此函数假设您的系统有UART接收功能
-//  */
-// void process_uart_gyro_data(void)
-// {
-//     unsigned char sip_buffer[32]; // 缓冲区，根据需要调整大小
-//     unsigned int received_bytes = 0;
-//     icm426888_data_t sensor_data;
-    
-//     // 这里应该是您的接收UART数据的代码
-//     // 例如：received_bytes = uart_receive_data(sip_buffer, 32);
-    
-//     if (received_bytes >= 16) { // 确保接收到足够的数据
-//         if (icm426888_parse_sip_data((char*)sip_buffer, received_bytes, &sensor_data) == 0) {
-//             // 使用解析后的传感器数据
-//             // 例如：计算设备倾角
-//             float pitch = fast_sqrt(sensor_data.accel_x * sensor_data.accel_x + 
-//                                     sensor_data.accel_z * sensor_data.accel_z);
-//             // 用于运动控制、状态监测等
-//         }
-//     }
-// }
-
-// int main()
-// {
-//     // 测试解析函数
-//     test_icm426888_parser();
-    
-//     // 实际应用示例：处理UART接收的SIP数据
-//     process_uart_gyro_data();
-    
-//     return 0;
-// }
+//huh, maybe that's shall be end.Fuwaki Ur shall be happy to see this.
+//I'm brain fucked by this code. I'm not sure if it's right or wrong. I'm not sure if it's useful or not.
+//I'm not sure if it's a good idea to use this code or not. I'm not sure if it's a good idea to use this code or not.
+//EDITED by UNIKOZERA!
+//Ciallo! I'm UNIKOZERA
