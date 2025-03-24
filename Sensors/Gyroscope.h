@@ -2,7 +2,7 @@
 #define __GYROSCOPE_H__
     #include <AI8051U.H>
     // ICM42688-P SPI从设备地址
-    #define ICM42688_SLAVE_ID           0x01 // 根据SPI设备配置调整
+    // #define ICM42688_SLAVE_ID           0x01 // 根据SPI设备配置调整
 
     // ICM42688-P 寄存器地址定义
     #define ICM42688_WHO_AM_I           0x75
@@ -93,22 +93,22 @@
 
     // 初始化ICM42688-P传感器
     // 返回：0-成功，1-失败
-    unsigned char ICM42688_Init(unsigned char slave_id);
+    unsigned char ICM42688_Init();
 
     // 设置陀螺仪量程
-    void ICM42688_SetGyroRange(unsigned char slave_id, gyro_range_t range);
+    void ICM42688_SetGyroRange(gyro_range_t range);
 
     // 设置加速度计量程
-    void ICM42688_SetAccelRange(unsigned char slave_id, accel_range_t range);
+    void ICM42688_SetAccelRange(accel_range_t range);
 
     // 读取传感器原始数据
-    void ICM42688_ReadSensorData(unsigned char slave_id, icm42688_data_t *dataf);
+    void ICM42688_ReadSensorData(icm42688_data_t *dataf);
 
     // 软件复位ICM42688-P
-    void ICM42688_Reset(unsigned char slave_id);
+    void ICM42688_Reset();
 
     // 检查传感器通信是否正常
-    unsigned char ICM42688_TestConnection(unsigned char slave_id);
+    unsigned char ICM42688_TestConnection();
 
     // 获取转换后的温度值（摄氏度）
     float ICM42688_GetTemperature(int raw_temp);

@@ -6,6 +6,7 @@
 // 当前配置的陀螺仪和加速度计范围
 static gyro_range_t current_gyro_range = GYRO_RANGE_2000_DPS;
 static accel_range_t current_accel_range = ACCEL_RANGE_16G;
+static unsigned char icm42688_spi_id = 0xFF;
 
 void Delay1ms(void)	//@40.000MHz
 {
@@ -50,70 +51,79 @@ void ICM42688_ReadMultiRegisters(unsigned char slave_id, unsigned char start_add
 }
 
 // 初始化ICM42688-P传感器
-unsigned char ICM42688_Init(unsigned char slave_id)
+unsigned char ICM42688_Init()
 {
     unsigned char who_am_i;
 
+    spi_slave_config_t icm42688_config;
+    icm42688_config.cs_port = 1;
+    icm42688_config.cs_pin = 6;
+    icm42688_config.mode = SPI_MODE3;   // ICM42688使用SPI模式3 (CPOL=1, CPHA=1)
+    icm42688_config.clock_div = 0x00;   // SPI时钟速率设置，根据需要调整
+
+    // 注册ICM42688-P为SPI从设备
+    icm42688_spi_id = SPI_RegisterSlave(&icm42688_config);
     // 软件复位
-    ICM42688_Reset(slave_id);
+    ICM42688_Reset(icm42688_spi_id);
 
     // 检查设备ID
-    who_am_i = ICM42688_ReadRegister(slave_id, ICM42688_WHO_AM_I);
+    who_am_i = ICM42688_ReadRegister(icm42688_spi_id, ICM42688_WHO_AM_I);
     if (who_am_i != ICM42688_WHO_AM_I_VALUE)
     {
         return 1; // 初始化失败，设备ID不匹配
     }
 
     // 配置电源管理，使能加速度计和陀螺仪，低噪声模式
-    ICM42688_WriteRegister(slave_id, ICM42688_PWR_MGMT0,
+    ICM42688_WriteRegister(icm42688_spi_id, ICM42688_PWR_MGMT0,
                            ICM42688_PWR_MGMT0_ACCEL_MODE_LN | ICM42688_PWR_MGMT0_GYRO_MODE_LN);
-
+    
     // 等待传感器启动（按需调整延迟时间）
     Delay1ms();
 
     // 设置默认范围
-    ICM42688_SetGyroRange(slave_id, GYRO_RANGE_2000_DPS);
-    ICM42688_SetAccelRange(slave_id, ACCEL_RANGE_16G);
+    //TODO: 选择合适的量程
+    ICM42688_SetGyroRange(GYRO_RANGE_15_625_DPS);     
+    ICM42688_SetAccelRange(ACCEL_RANGE_2G);
 
     return 0; // 初始化成功
 }
 
 // 设置陀螺仪量程
-void ICM42688_SetGyroRange(unsigned char slave_id, gyro_range_t range)
+void ICM42688_SetGyroRange(gyro_range_t range)
 {
     unsigned char config;
 
     if (range > GYRO_RANGE_15_625_DPS)
     {
-        range = GYRO_RANGE_2000_DPS; // 非法范围，设为默认值
+        range = GYRO_RANGE_15_625_DPS; // 非法范围，设为默认值
     }
 
-    config = ICM42688_ReadRegister(slave_id, ICM42688_GYRO_CONFIG0);
+    config = ICM42688_ReadRegister(icm42688_spi_id, ICM42688_GYRO_CONFIG0);
     config = (config & 0xF8) | (range & 0x07); // 保留高5位，修改低3位
-    ICM42688_WriteRegister(slave_id, ICM42688_GYRO_CONFIG0, config);
+    ICM42688_WriteRegister(icm42688_spi_id, ICM42688_GYRO_CONFIG0, config);
 
     current_gyro_range = range;
 }
 
 // 设置加速度计量程
-void ICM42688_SetAccelRange(unsigned char slave_id, accel_range_t range)
+void ICM42688_SetAccelRange(accel_range_t range)
 {
     unsigned char config;
 
     if (range > ACCEL_RANGE_2G)
     {
-        range = ACCEL_RANGE_16G; // 非法范围，设为默认值
+        range = ACCEL_RANGE_2G; // 非法范围，设为默认值
     }
 
-    config = ICM42688_ReadRegister(slave_id, ICM42688_ACCEL_CONFIG0);
+    config = ICM42688_ReadRegister(icm42688_spi_id, ICM42688_ACCEL_CONFIG0);
     config = (config & 0xFC) | (range & 0x03); // 保留高6位，修改低2位
-    ICM42688_WriteRegister(slave_id, ICM42688_ACCEL_CONFIG0, config);
+    ICM42688_WriteRegister(icm42688_spi_id, ICM42688_ACCEL_CONFIG0, config);
 
     current_accel_range = range;
 }
 
 // 读取传感器原始数据
-void ICM42688_ReadSensorData(unsigned char slave_id, icm42688_data_t *dataf) //为什么不要data？因为data已经被使用力！
+void ICM42688_ReadSensorData(icm42688_data_t *dataf)
 {
     unsigned char buffer[14]; // 7个16位值：加速度(3)、温度、陀螺仪(3)
 
@@ -123,7 +133,7 @@ void ICM42688_ReadSensorData(unsigned char slave_id, icm42688_data_t *dataf) //�
     }
 
     // 一次性读取所有数据 (从ACCEL_DATA_X1到GYRO_DATA_Z0)
-    ICM42688_ReadMultiRegisters(slave_id, ICM42688_ACCEL_DATA_X1, buffer, 14);
+    ICM42688_ReadMultiRegisters(icm42688_spi_id, ICM42688_ACCEL_DATA_X1, buffer, 14);
 
     // 合并高低字节（大端格式）
     dataf->accel_x = (buffer[0] << 8) | buffer[1];
@@ -153,19 +163,19 @@ void ICM42688_ReadSensorData(unsigned char slave_id, icm42688_data_t *dataf) //�
 }
 
 // 软件复位ICM42688-P
-void ICM42688_Reset(unsigned char slave_id)
+void ICM42688_Reset()
 {
     // 写入设备配置寄存器，设置软件复位位
-    ICM42688_WriteRegister(slave_id, ICM42688_DEVICE_CONFIG, 0x01);
+    ICM42688_WriteRegister(icm42688_spi_id , ICM42688_DEVICE_CONFIG, 0x01);
 
     // 等待复位完成（通常需要几毫秒）
     Delay1ms();
 }
 
 // 检查传感器通信是否正常
-unsigned char ICM42688_TestConnection(unsigned char slave_id)
+unsigned char ICM42688_TestConnection()
 {
-    unsigned char who_am_i = ICM42688_ReadRegister(slave_id, ICM42688_WHO_AM_I);
+    unsigned char who_am_i = ICM42688_ReadRegister(icm42688_spi_id, ICM42688_WHO_AM_I);
     return (who_am_i == ICM42688_WHO_AM_I_VALUE) ? 0 : 1;
 }
 
@@ -248,11 +258,29 @@ float ICM42688_AccelConvert(int raw_accel, accel_range_t range)
 void Gyro_Updater()
 {
     static icm42688_data_t sensor_data;
-    
-    // 读取传感器数据，会自动更新转换后的物理单位数据
-    ICM42688_ReadSensorData(ICM42688_SLAVE_ID, &sensor_data);  //卡尔曼滤波直接插入这里！！！
-    
     // 在这里处理传感器数据
+
+    // static icm42688_data_t filtered_data;
+    // static kalman_filter_t kf_accel_x, kf_accel_y, kf_accel_z;
+    // static kalman_filter_t kf_gyro_x, kf_gyro_y, kf_gyro_z;
+    // static unsigned char is_initialized = 0;
+    
+    // // 初始化卡尔曼滤波器（仅在第一次调用时）
+    // if (!is_initialized) {
+    //     init_gyro_kalman_filters(&kf_accel_x, &kf_accel_y, &kf_accel_z,
+    //                          &kf_gyro_x, &kf_gyro_y, &kf_gyro_z);
+    //     is_initialized = 1;
+    // }
+    
+    // 读取传感器数据
+    ICM42688_ReadSensorData(&sensor_data);
+    
+    // // 应用卡尔曼滤波
+    // apply_kalman_filter(&sensor_data, &filtered_data, 
+    //                     &kf_accel_x, &kf_accel_y, &kf_accel_z,
+    //                     &kf_gyro_x, &kf_gyro_y, &kf_gyro_z);
+    
+
     //比如说FK u;
 }
 
@@ -326,18 +354,18 @@ void apply_kalman_filter(icm42688_data_t *raw_data, icm42688_data_t *filtered_da
     kalman_filter_t *kf_accel_x, kalman_filter_t *kf_accel_y, kalman_filter_t *kf_accel_z,
     kalman_filter_t *kf_gyro_x, kalman_filter_t *kf_gyro_y, kalman_filter_t *kf_gyro_z)
 {
+    // 复制原始数据，以便处理转换后的值
+    *filtered_data = *raw_data;
+    
     // 更新加速度数据
-    filtered_data->accel_x = kalman_update(kf_accel_x, raw_data->accel_x);
-    filtered_data->accel_y = kalman_update(kf_accel_y, raw_data->accel_y);
-    filtered_data->accel_z = kalman_update(kf_accel_z, raw_data->accel_z);
+    filtered_data->accel_x_g = kalman_update(kf_accel_x, raw_data->accel_x_g);
+    filtered_data->accel_y_g = kalman_update(kf_accel_y, raw_data->accel_y_g);
+    filtered_data->accel_z_g = kalman_update(kf_accel_z, raw_data->accel_z_g);
 
     // 更新陀螺仪数据
-    filtered_data->gyro_x = kalman_update(kf_gyro_x, raw_data->gyro_x);
-    filtered_data->gyro_y = kalman_update(kf_gyro_y, raw_data->gyro_y);
-    filtered_data->gyro_z = kalman_update(kf_gyro_z, raw_data->gyro_z);
-
-    // 温度数据通常不需要滤波，直接传递
-    filtered_data->temp = raw_data->temp;
+    filtered_data->gyro_x_dps = kalman_update(kf_gyro_x, raw_data->gyro_x_dps);
+    filtered_data->gyro_y_dps = kalman_update(kf_gyro_y, raw_data->gyro_y_dps);
+    filtered_data->gyro_z_dps = kalman_update(kf_gyro_z, raw_data->gyro_z_dps);
 }
 #pragma endregion
 

@@ -69,9 +69,8 @@ void Inits()
 	GPS_UART_Init();
 	Init_GPS(&naturePosition, &rmc_data);
 	SPI_Init();
-	ICM42688_Init(ICM42688_SLAVE_ID);
+	ICM42688_Init();
 }
-
 
 void main()
 {

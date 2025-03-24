@@ -1,4 +1,5 @@
 #include "SPI_MultiDevice.h"
+#include <AI8051U.H>
 #include <intrins.h>
 #include <stdio.h>
 
@@ -7,7 +8,8 @@
 static spi_slave_config_t spi_slaves[MAX_SPI_SLAVES];
 static unsigned char slave_count = 0;
 static unsigned char current_slave = 0xFF; // 没有选中的从设备
-
+//那bro你应该单独封装gpio
+#define LMAO
 // 用于控制CS引脚
 static void SPI_SetPin(unsigned char port, unsigned char pin, bit value)
 {
@@ -85,7 +87,7 @@ unsigned char SPI_RegisterSlave(spi_slave_config_t *slave_config)
     {
         return 0xFF; // 达到最大设备数
     }
-
+    //CS PORT和CSPIN有啥区别
     // 复制配置
     spi_slaves[slave_count].cs_port = slave_config->cs_port;
     spi_slaves[slave_count].cs_pin = slave_config->cs_pin;
@@ -151,7 +153,6 @@ void SPI_SelectSlave(unsigned char slave_id)
 
     // 配置SPI为适合此从设备的模式和时钟
     SPCTL = (SPCTL & 0xF0) | (spi_slaves[slave_id].mode & 0x0C) | (spi_slaves[slave_id].clock_div & 0x03);
-
     // 选中从设备（CS拉低）
     SPI_SetPin(spi_slaves[slave_id].cs_port, spi_slaves[slave_id].cs_pin, 0);
     current_slave = slave_id;
@@ -205,7 +206,6 @@ void SPI_TransferBuffer(unsigned char *data_out, unsigned char *data_in, unsigne
 unsigned char SPI_ReadRegister(unsigned char slave_id, unsigned char reg_addr)
 {
     unsigned char result;
-
     SPI_SelectSlave(slave_id);
     SPI_TransferByte(reg_addr);
     result = SPI_TransferByte(0xFF); // 发送虚拟数据，读取返回值

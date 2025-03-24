@@ -7,10 +7,10 @@
 #define MAX_SPI_SLAVES 8
 
 // SPI模式定义
-#define SPI_MODE0 0x00 // CPOL=0, CPHA=0
-#define SPI_MODE1 0x04 // CPOL=0, CPHA=1
-#define SPI_MODE2 0x08 // CPOL=1, CPHA=0
-#define SPI_MODE3 0x0C // CPOL=1, CPHA=1
+#define SPI_MODE0 0x00 // CPOL=0, CPHA=0 - 空闲时时钟为低电平，数据在时钟上升沿采样
+#define SPI_MODE1 0x04 // CPOL=0, CPHA=1 - 空闲时时钟为低电平，数据在时钟下降沿采样
+#define SPI_MODE2 0x08 // CPOL=1, CPHA=0 - 空闲时时钟为高电平，数据在时钟下降沿采样
+#define SPI_MODE3 0x0C // CPOL=1, CPHA=1 - 空闲时时钟为高电平，数据在时钟上升沿采样
 
 // 从设备定义结构体
 typedef struct

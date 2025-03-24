@@ -409,6 +409,16 @@
               <FileType>5</FileType>
               <FilePath>.\Gyroscope.h</FilePath>
             </File>
+            <File>
+              <FileName>Magnetic.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Magnetic.c</FilePath>
+            </File>
+            <File>
+              <FileName>Magnetic.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\Magnetic.h</FilePath>
+            </File>
           </Files>
         </Group>
       </Groups>
