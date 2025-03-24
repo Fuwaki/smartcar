@@ -36,3 +36,5 @@ Objects
 !*.hex
 
 *.__i
+.ccls
+.ccls-cache/

@@ -133,17 +133,19 @@ fn main() -> anyhow::Result<()> {
         peripherals.pins.gpio21,
         peripherals.pins.gpio14,
     )?;
+    // println!("你好");
     nrf.setup(nrf24::ROLE::SLAVE).unwrap();
+    nrf.tx("hello".as_bytes().into())?;
 
-    let mut app = App::new();
-    app.run()?;
+    // let mut app = App::new();
+    // app.run()?;
     // let wifi = block_on(create_wifi(
     //     &sysloop,
     //     esp_idf_svc::nvs::EspDefaultNvsPartition::take()?,
     //     peripherals.modem,
     //     timer::EspTimerService::new()?,
     // ))?;
-    // mem::forget(wifi);
+    // mem::forget(wifi);Error
     // let socket = UdpSocket::bind("127.0.0.1:34254")?;
     //第一个参数是连接标识符
     Ok(())

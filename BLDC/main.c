@@ -75,6 +75,7 @@ void main()
 		focData[1] = (float)Ub; // 添加显式类型转换
 		focData[2] = (float)Uc;
 		VOFA_SendFloat(focData); // 修改为float类型，与focData数组匹配
+
 		
 		// // Uart3SendStr("Hello World!\0");
 		// a++;

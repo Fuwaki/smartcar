@@ -23,11 +23,12 @@ pub enum NrfError {
     SendFailure,
 }
 
-impl<CE_PIN> Nrf24Conn<
-    SpiDeviceDriver<'static, SpiDriver<'static>>,
-    PinDriver<'static, CE_PIN, esp_idf_hal::gpio::Output>,
-    Delay,
-> 
+impl<CE_PIN>
+    Nrf24Conn<
+        SpiDeviceDriver<'static, SpiDriver<'static>>,
+        PinDriver<'static, CE_PIN, esp_idf_hal::gpio::Output>,
+        Delay,
+    >
 where
     CE_PIN: esp_idf_hal::gpio::OutputPin,
 {
@@ -37,7 +38,7 @@ where
         sdo: impl Peripheral<P = impl esp_idf_hal::gpio::OutputPin> + 'static,
         sdi: impl Peripheral<P = impl esp_idf_hal::gpio::InputPin> + 'static,
         csn: impl Peripheral<P = impl esp_idf_hal::gpio::OutputPin> + 'static,
-        ce: impl Peripheral<P = CE_PIN> + 'static, 
+        ce: impl Peripheral<P = CE_PIN> + 'static,
     ) -> Result<Self, anyhow::Error> {
         let spi_driver = SpiDriver::new(
             spi,
@@ -54,7 +55,8 @@ where
         )?;
 
         let delay = Delay::new_default();
-        let ce_pin: PinDriver<'static, _, esp_idf_hal::gpio::Output> = PinDriver::output(ce).map_err(|e| anyhow!("CE pin error: {e}"))?;
+        let ce_pin: PinDriver<'static, _, esp_idf_hal::gpio::Output> =
+            PinDriver::output(ce).map_err(|e| anyhow!("CE pin error: {e}"))?;
 
         let nrf = Nrf24Conn::new(spi, ce_pin, delay);
         Ok(nrf)
@@ -86,18 +88,31 @@ where
             .map_err(|e| anyhow!("{e:?}"))?;
 
         let address = [b"Chara", b"Frisk"];
-
+        //我们要用1管道
         self.radio
             .open_rx_pipe(1, address[0])
             .map_err(|e| anyhow!("{e:?}"))?;
-
+        //发送的时候 我们会用0管道接受对方的ACK 这个是库帮我们完成的
         self.radio
             .open_tx_pipe(address[1])
             .map_err(|e| anyhow!("{e:?}"))?;
-
+        #[cfg(feature = "master")]
+        self.radio.as_tx().map_err(|e| anyhow!("{e:?}"))?;
+        #[cfg(feature = "slave")]
+        self.radio.as_rx().map_err(|e| anyhow!("{e:?}"))?;
         Ok(())
     }
 
-    pub fn tx() {}
+    pub fn tx(&mut self, payload: bytes::Bytes) -> Result<(), anyhow::Error> {
+        let result=self.radio
+            .send(&payload, true)
+            .map_err(|e| anyhow!("{e:?}"))?;
+        if result{
+            println!("send success");
+        }else{
+            println!("send failed");
+        }
+        Ok(())
+    }
     pub fn rx() {}
 }
