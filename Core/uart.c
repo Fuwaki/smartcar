@@ -10,22 +10,6 @@ char wptr;
 char rptr;
 char buffer[16];
 
-
-
-// char c[10]="Ahbjh";
-// char *p=&c;
-
-void Delay1000ms(void)	//@11.0592MHz
-{
-	unsigned long edata i;
-
-	_nop_();
-	_nop_();
-	i = 2764798UL;
-	while (i) i--;
-}
-
-
 void Uart3Isr() interrupt 17
 {
     if (S3TI)
@@ -40,7 +24,8 @@ void Uart3Isr() interrupt 17
         wptr &= 0x0f;
     }
 }
-void Uart3Init()
+
+void Uart3Init() //使用的是串口3，且使用定时器2作为波特率发生器
 {
     S3CON = 0x10;
     T2L = BRT;
@@ -59,6 +44,7 @@ void Uart3Send(char dat)
     busy = 1;
     S3BUF = dat;
 }
+
 void Uart3SendStr(char *p)
 {
     while (*p)
@@ -66,48 +52,23 @@ void Uart3SendStr(char *p)
         Uart3Send(*(p++));
     }
 }
-void main()
+
+// 添加函数用于检查和处理接收缓冲区
+void Uart3CheckAndReceive(void)
 {
-    char c[10];
-    char d[3];
-    char q='a';
-    c[0]='A';
-    c[1]=0;
-    EAXFR = 1;    // 使能访问 XFR,没有冲突不用关闭
-    CKCON = 0x00; // 设置外部数据总线速度为最快
-    WTST = 0x00;  // 设置程序代码等待参数，
-    // 赋值为 0 可将 CPU 执行程序的速度设置为最快
-    P0M0 = 0x00;
-    P0M1 = 0x00;
-    P1M0 = 0x00;
-    P1M1 = 0x00;
-    P2M0 = 0x00;
-    P2M1 = 0x00;
-    P3M0 = 0x00;
-    P3M1 = 0x00;
-    P4M0 = 0x00;
-    P4M1 = 0x00;
-    P5M0 = 0x00;
-    P5M1 = 0x00;
-    Uart3Init();
-    ES3 = 1;
-    EA = 1;
-    d[0]='%';
-    d[1]='d';
-    d[2]=0;
-    UZ_sprintf(c,d,(int)&q);
-
-    while (1)
+    if (rptr != wptr)
     {
-        if (rptr != wptr)
-        {
-            Uart3Send(buffer[rptr++]);
-            rptr &= 0x0f;
-        }
-        // c='A';
+        Uart3Send(buffer[rptr++]);
+        rptr &= 0x0f;
+    }
+}
 
-        Uart3SendStr("Hello World!\0");
-        // c[0]++;
-        Delay1000ms();
+void Uart3SendByLength(unsigned char *p,int length)
+{
+    int i;
+    p+=length-1;
+    for(i=0;i<length;i++)
+    {
+        Uart3Send(*(p--));
     }
 }

@@ -1,8 +1,14 @@
-#ifndef __GPS_H__
-#define __GPS_H__
+#ifndef __FUSION_H__
+#define __FUSION__
+
 /*
 初始化时以当前点建立坐标系 当前朝向为y轴正方向
 */
+void Mahony_Init();
+void Mahony_Update(float gx, float gy, float gz, float ax, float ay, float az, float mx, float my, float mz);
+void Mahony_Get_Gravity_Vector(float *x,float *y,float *z);           //获取重力的分量 使用加速度的时候需要减去重力
+void Mahony_Get_Quaternion(float *w,float *x,float *y,float *z);
+void Mahony_Get_Angular_Velocity(float *roll, float *pitch, float *yaw);
 
 //姿态信息
 struct Posture{

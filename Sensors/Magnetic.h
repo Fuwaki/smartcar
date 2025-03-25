@@ -35,7 +35,13 @@
         float x_gauss;
         float y_gauss;
         float z_gauss;
+        float x_adj;
+        float y_adj;
+        float z_adj;
+        float heading;
     } MagneticData;
+
+    extern MagneticData mag_data;  // 磁力计数据
 
     // 函数声明
     void LIS3MDL_Init(void);
@@ -48,4 +54,7 @@
     void LIS3MDL_InitCalibration(void);
     void LIS3MDL_SetCalibrationParams(float x_off, float y_off, float z_off, 
         float x_scl, float y_scl, float z_scl);
+    unsigned char LIS3MDL_AddCalibrationSample(MagneticData *dataM);
+    unsigned char LIS3MDL_CalculateCalibration(void);
+    unsigned char LIS3MDL_AdvancedCalibration(void);
 #endif

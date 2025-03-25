@@ -70,7 +70,14 @@ static void SPI_SetPin(unsigned char port, unsigned char pin, bit value)
 void SPI_Init(void)
 {
     unsigned char i;
-    SPCTL = 0x50;  // 设置为主模式, SSIG=1(忽略SS引脚), SPEN=1(启用SPI)
+    SPCTL = 0x50;  // 设置为主模式, SSIG=0(SS引脚有效), SPEN=1(启用SPI)
+                   // 0x50 = 01010000b：
+                   // 位7(SSIG)=0：SS引脚有效
+                   // 位6(SPEN)=1：启用SPI
+                   // 位5-4：保留位
+                   // 位3(DORD)=0：MSB先传输
+                   // 位2(MSTR)=1：主模式
+                   // 位1(CPOL)=0, 位0(CPHA)=0：SPI模式0，空闲时钟为低，第一个时钟边沿采样 默认模式
     SPSTAT = 0xC0; // 清除写冲突和SPI完成标志
 
     // 初始化时将所有从设备的CS引脚设为高电平（未选中状态）

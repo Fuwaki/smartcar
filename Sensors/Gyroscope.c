@@ -19,18 +19,6 @@ void Delay1ms(void)	//@40.000MHz
 	while (i) i--;
 }
 
-float fast_sqrt(float x) // 速度更快的平方根计算
-{
-	float halfx = 0.5f * x;
-	float y = x;
-	long i = *(long*) & y;
-    //0x5f3759df是一个平方根倒数速算法
-	i = 0x5f3759df - (i >> 1);
-	y = *(float*) & i;
-	y = y * (1.5f - (halfx * y * y));
-	return y;
-}
-
 // 读取ICM42688-P寄存器
 unsigned char ICM42688_ReadRegister(unsigned char slave_id, unsigned char reg_addr)
 {
@@ -127,7 +115,7 @@ void ICM42688_ReadSensorData(icm42688_data_t *dataf)
 {
     unsigned char buffer[14]; // 7个16位值：加速度(3)、温度、陀螺仪(3)
 
-    if (dataf == 0)
+    if (dataf == NULL)
     {
         return;
     }

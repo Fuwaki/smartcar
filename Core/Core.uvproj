@@ -349,6 +349,16 @@
               <FileType>5</FileType>
               <FilePath>.\AR_PF.h</FilePath>
             </File>
+            <File>
+              <FileName>Muti_SPI_Device.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Muti_SPI_Device.c</FilePath>
+            </File>
+            <File>
+              <FileName>Muti_SPI_Device.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\Muti_SPI_Device.h</FilePath>
+            </File>
           </Files>
         </Group>
       </Groups>

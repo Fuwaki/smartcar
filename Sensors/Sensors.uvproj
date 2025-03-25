@@ -186,7 +186,7 @@
         </Utilities>
         <Target251>
           <Target251Misc>
-            <MemoryModel>3</MemoryModel>
+            <MemoryModel>4</MemoryModel>
             <RTOS>0</RTOS>
             <RomSize>3</RomSize>
             <NearDataHold>0</NearDataHold>
@@ -418,6 +418,16 @@
               <FileName>Magnetic.h</FileName>
               <FileType>5</FileType>
               <FilePath>.\Magnetic.h</FilePath>
+            </File>
+            <File>
+              <FileName>Common.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Common.c</FilePath>
+            </File>
+            <File>
+              <FileName>Common.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\Common.h</FilePath>
             </File>
           </Files>
         </Group>
