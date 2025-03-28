@@ -9,7 +9,7 @@ static spi_slave_config_t spi_slaves[MAX_SPI_SLAVES];
 static unsigned char slave_count = 0;
 static unsigned char current_slave = 0xFF; // 没有选中的从设备
 //那bro你应该单独封装gpio
-#define LMAO
+#define LMAO_KIAO 114514
 // 用于控制CS引脚
 static void SPI_SetPin(unsigned char port, unsigned char pin, bit value)
 {

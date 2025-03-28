@@ -8,8 +8,7 @@
 
 unsigned char gps_receive_buffer[64];
 unsigned char set_rate_10hz[] = {0xF1, 0xD9, 0x06, 0x42, 0x14, 0x00, 0x00, 0x0A, 0x05,
-                                 0x00, 0x64, 0x00, 0x00, 0x00, 0x60, 0xEA, 0x00, 0x00, 0xD0, 0x07, 0x00, 0x00,
-                                 0xC8, 0x00, 0x00, 0x00, 0xB8, 0xED};
+                                 0x00, 0x64, 0x00, 0x00, 0x00, 0x60, 0xEA, 0x00, 0x00, 0xD0, 0x07, 0x00, 0x00,0xC8, 0x00, 0x00, 0x00, 0xB8, 0xED};
 
 unsigned char cmd_gga[] = {0xF1, 0xD9, 0x06, 0x01, 0x03, 0x00, 0xF0, 0x00, 0x00, 0xFA, 0x0F};
 unsigned char cmd_gll[] = {0xF1, 0xD9, 0x06, 0x01, 0x03, 0x00, 0xF0, 0x01, 0x00, 0xFB, 0x11};
@@ -259,25 +258,22 @@ void GPS_Message_Updater()
 
 // void test_rmc_parser(void)
 // {
-//     const char *test_sentence = "$GNRMC,153630.000,A,2754.15158,N,11255.09901,E,0.627,336.31,220325,,,A*4E";
-//     RMC_Data rmc_data;
-
-//     parse_rmc(test_sentence, &rmc_data);
+//     const char *test_sentence[] = {"$GNRMC,140415.800,A,2754.17413,N,11255.02251,E,0.420,10.58,230325,,,A*70", "$GNRMC,140416.600,A,2754.17419,N,11255.02250,E,0.711,351.65,230325,,,A*4F","$GNRMC,140415.900,A,2754.17414,N,11255.02251,E,0.349,27.18,230325,,,A*7E", "$GNRMC,140416.000,A,2754.17415,N,11255.02252,E,0.215,171.24,230325,,,A*43"};
+//     parse_rmc(test_sentence[1], &rmc_data);
 //     print_rmc_data(&rmc_data);
 // }
 
 // int main()
 // {
-//     RMC_Data rmc_data;
-//     char message[128];
+    // char message[128];
 
-//     scanf("%s", message);
-//     GPS_Message_Inputer(message, &rmc_data);  // 传递rmc_data的地址
-//     print_rmc_data(&rmc_data);
+    // scanf("%s", message);
+    // GPS_Message_Inputer(message, &rmc_data, &naturePosition);  // 传递rmc_data的地址
+    // print_rmc_data(&rmc_data);
 
-//     scanf("%s", message);
-//     GPS_Message_Inputer(message, &rmc_data);  // 传递rmc_data的地址
-//     print_rmc_data(&rmc_data);
-//     test_rmc_parser();
-//     return 0;
+    // scanf("%s", message);
+    // GPS_Message_Inputer(message, &rmc_data, &naturePosition);  // 传递rmc_data的地址
+    // print_rmc_data(&rmc_data);
+    // test_rmc_parser();
+    // return 0;
 // }

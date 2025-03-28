@@ -9,6 +9,9 @@
 #include "AR_PF.h"
 #include "ADC.h"
 
+sbit LED = P4^2;
+sbit LED2 = P4^1;
+
 float focData[3]; // 修改为float类型，与VOFA_SendFloats函数参数匹配
 
 void Delay100us(void)
@@ -61,30 +64,40 @@ void Inits()
 
 void main()
 {
-	double i;
-	int a;
-	i=1.0;
+	double i = 0;
+	int a= 0;
 
 
     Inits();
-    Delay100us();
+    P4M0 |= 0x06; P4M1 &= ~0x06; 
 
+    Delay100us();
+	LED2 = 1;
+	LED = 1;
     while(1)
     {
 		focData[0] = (float)Ua; // 添加显式类型转换
 		focData[1] = (float)Ub; // 添加显式类型转换
 		focData[2] = (float)Uc;
 		VOFA_SendFloat(focData); // 修改为float类型，与focData数组匹配
+		LED2 =~ 	LED2;
+		
+		// Uart3SendStr("Hello World!\0");
+		if(i<20.0)
+		{
+			a++;
+			if (a%20==0&&i<20.0)
+			{
+				i+=0.1;
+			}
+			velocityOpenloop(i);
+		}
+		else
+		{
+			velocityOpenloop(20);
+			LED = 0;
+		}
 
-		
-		// // Uart3SendStr("Hello World!\0");
-		// a++;
-		// if (a%1000==0&&i<200.0)
-		// {
-		// 	i+=0.5;
-		// }
-		
-        velocityOpenloop(.3);
 		// Delay1000ms();
 		// Delay100us();
     }
