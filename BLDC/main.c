@@ -9,6 +9,8 @@
 #include "AR_PF.h"
 #include "ADC.h"
 
+#define speed 1.04 // 速度单位为rad/s
+
 sbit LED = P4^2;
 sbit LED2 = P4^1;
 
@@ -71,30 +73,29 @@ void main()
     Inits();
     P4M0 |= 0x06; P4M1 &= ~0x06; 
 
-    Delay100us();
+    // Delay100us();
 	LED2 = 1;
 	LED = 1;
+	// Uart3SendStr("Hello World!\0");
     while(1)
     {
-		focData[0] = (float)Ua; // 添加显式类型转换
-		focData[1] = (float)Ub; // 添加显式类型转换
-		focData[2] = (float)Uc;
-		VOFA_SendFloat(focData); // 修改为float类型，与focData数组匹配
-		LED2 =~ 	LED2;
-		
-		// Uart3SendStr("Hello World!\0");
-		if(i<20.0)
+		// focData[0] = (float)Ua; // 添加显式类型转换
+		// focData[1] = (float)Ub; // 添加显式类型转换
+		// focData[2] = (float)Uc;
+		// VOFA_SendFloat(focData); // 修改为float类型，与focData数组匹配
+		LED2 =~	LED2;
+		if(i<speed)
 		{
 			a++;
-			if (a%20==0&&i<20.0)
+			if (a%30==0&&i<speed)
 			{
-				i+=0.1;
+				i+=0.001;
 			}
 			velocityOpenloop(i);
 		}
 		else
 		{
-			velocityOpenloop(20);
+			velocityOpenloop(speed);
 			LED = 0;
 		}
 

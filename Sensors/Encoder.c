@@ -16,7 +16,7 @@ sbit ENCODER_ZERO = P0 ^ 1;  // 编码器零点信号 Z相
 float timestamp_previous = 0; // 上一个时间戳
 static int lastPosition = 0;
 static int lastCount = 0;
-static unsigned long totalPulses = 0; // 用于记录总脉冲数
+// static unsigned long totalPulses = 0; // 用于记录总脉冲数
 
 struct EncoderData
 {
@@ -154,9 +154,13 @@ void Encoder_DetectZero(void)
 {
     if (ENCODER_ZERO == 0)
     {
-        Encoder_Clear(2); // 清零通道2 (之前是通道1)
+        Encoder_Clear(2); // 清零通道2
         lastPosition = 0;
         encoder.position = 0;
+        lastCount = 0;
+        // totalPulses = 0; // 清零总脉冲数
+        lastPosition = 0; // 清零上次位置
+        //UART_SendStr("Encoder Zero Detected!\n"); // 调试信息
     }
 }
 
@@ -164,7 +168,7 @@ void Encoder_DetectZero(void)
 void Encoder_Update()
 {
     // 获取当前计数值
-    int currentCount = Encoder_Read(2); // 读取通道2的计数值 (之前是通道1)
+    int currentCount = Encoder_Read(2); // 读取通道2的计数值
     int deltaPulses = currentCount - lastCount;
 
     // 处理溢出情况
@@ -179,27 +183,27 @@ void Encoder_Update()
 
     // 更新总脉冲数
     // totalPulses += (deltaPulses > 0) ? deltaPulses : -deltaPulses; lmaoing
-    totalPulses += fabs(deltaPulses);
+    // totalPulses += fabs(deltaPulses);
 
     // 计算位置(1或-1)表示正反转
     encoder.position += deltaPulses * encoder.direction * ANGLE_PER_PULSE;
 
-    _normalizeAngle(encoder.position); // 规范化角度值
-
+    // _normalizeAngle(encoder.position); // 规范化角度值
+    //TODO: 到底是否需要规范化角度值？
+    //? 这个地方的规范化角度值是为了防止角度，但是在零点检测的时候会清零，所以这里不需要规范化
     // 检测零点
     Encoder_DetectZero();
 
     // 假设更新周期是固定的，可以在这里计算速度
     // 如果中断频率是1ms
     // encoder.speed = deltaPulses * encoder.direction * ANGLE_PER_PULSE * 1000; // 角度/秒
-    encoder.speed = (encoder.position - lastPosition)/(timestamp - timestamp_previous); //dtheta/dt
+    encoder.speed = (encoder.position - lastPosition)/(timestamp - timestamp_previous); //d theta/dt
 
     // 更新上次计数值
     lastCount = currentCount;
     timestamp_previous = timestamp;
     lastPosition = encoder.position;
 }
-
 
 void PWMA_Interrupt() interrupt PWMA_VECTOR
 {

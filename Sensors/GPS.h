@@ -37,6 +37,8 @@
     void parse_rmc(char *sentence, RMC_Data *rmc_data);
     void GPS_Message_Inputer(char *message, RMC_Data *rmc_data, NaturePosition *naturePosition);
     void GPS_Calculate(NaturePosition *naturePosition, RMC_Data *rmc_data);
-    // void GPS_Message_Updater();
-    // void Init_GPS(NaturePosition *naturePosition, RMC_Data *rmc_data);
+    void Init_GPS_Setting(void);
+    unsigned char Init_GPS_Offset(NaturePosition *naturePosition, RMC_Data *rmc_data);
+    void UART_SendCommand(unsigned char *cmd, unsigned char length);
+    void GPS_Message_Updater(void);
 #endif

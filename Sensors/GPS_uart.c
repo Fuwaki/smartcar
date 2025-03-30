@@ -2,12 +2,12 @@
 #include <AI8051U.H>
 #include <string.h>
 
-#define FOSC 40000000L // 假设系统时钟为24MHz
+#define FOSC 40000000L
 #define BAUD 115200
 #define UART_BAUD 115200
 #define UART_BUF_SIZE 64                          // 定义接收缓冲区大小
-char wptr;                                        // 写指针
-char rptr;                                        // 读指针
+unsigned char wptr;                               // 写指针
+unsigned char rptr;                               // 读指针
 unsigned char xdata UART_RxBuffer[UART_BUF_SIZE]; // 接收数据缓冲区
 void GPS_UART_Init()
 {
@@ -18,17 +18,21 @@ void GPS_UART_Init()
     // 使用定时器2作为波特率发生器
     AUXR |= 0x01; // 选择定时器2作为波特率发生器
     // 计算定时器2重装值：65536 - FOSC/4/BAUD
-    T2L = (65536 - (FOSC / 4 / UART_BAUD));
-    T2H = (65536 - (FOSC / 4 / UART_BAUD)) >> 8;
+    T2L = (unsigned char)(65536 - (FOSC / 4 / UART_BAUD));      // 低8位
+    T2H = (unsigned char)((65536 - (FOSC / 4 / UART_BAUD)) >> 8); // 高8位
 
-    AUXR |= 0x10; // 启动定时器2
-    AUXR |= 0x04; // 定时器2为1T模式
+    AUXR |= 0x10;   // 启动定时器2
+    AUXR |= 0x04;   // 定时器2为1T模式
 
+    // 设置串口中断优先级
+    IP = (IP & ~0x10) | 0x10;   // 设置串口中断为高优先级
+    
     ES = 1; // 允许串口中断
     EA = 1; // 允许总中断
 
     wptr = 0x00;
     rptr = 0x00;
+    //? 验证是否正确
 }
 
 #pragma region 输出信号
@@ -40,6 +44,7 @@ void GPS_UART_SendByte(unsigned char byte)
     TI = 0; // 清除发送完成标志
 }
 
+//!请使用X系列单片机的UART发送函数
 void GPS_UART_SendStr(char *p) // 发送字符串函数
 {
     while (*p) // 字符串结束标志‘\0’前循环
@@ -110,6 +115,14 @@ void GPS_UART_Routine() interrupt 4
         UART_RxBuffer[wptr] = SBUF;
         wptr = (wptr + 1) % UART_BUF_SIZE; // 更新写指针
         RI = 0;                            // 清除接收中断标志
+        
+        // // 检查缓冲区是否快要溢出
+        // if(((wptr + 1) % UART_BUF_SIZE) == rptr) 
+        //{
+        //     // 缓冲区即将溢出，可以在这里添加处理逻辑
+        //     // 例如: 丢弃最旧的数据
+        //     rptr = (rptr + 1) % UART_BUF_SIZE;
+        // }
     }
 
     if (TI) // 发送中断
@@ -117,3 +130,5 @@ void GPS_UART_Routine() interrupt 4
         TI = 0; // 清除发送中断标志
     }
 }
+
+//*这里没有vofa的发送函数，因为不需要使用vofa的发送函数

@@ -1,10 +1,12 @@
-#include <stdio.h>
 #include <AI8051U.H>
+#include <intrins.h>
 #include <string.h>
-#include <stdlib.h>
 #include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include "GPS_uart.h"
 #include "GPS.h"
+#include "uart.h"
 
 unsigned char gps_receive_buffer[64];
 unsigned char set_rate_10hz[] = {0xF1, 0xD9, 0x06, 0x42, 0x14, 0x00, 0x00, 0x0A, 0x05,
@@ -20,6 +22,18 @@ unsigned char cmd_gst[] = {0xF1, 0xD9, 0x06, 0x01, 0x03, 0x00, 0xF0, 0x20, 0x00,
 
 RMC_Data rmc_data;
 NaturePosition naturePosition;
+
+void GPS_Delay(void)	//为初始化GPS模块提供延时
+{
+	unsigned long edata i;
+
+	_nop_();
+	_nop_();
+	_nop_();
+	i = 2998UL;
+	while (i) i--;
+}
+
 
 // 将NMEA格式的经纬度转换为标准的十进制度
 double nmea_to_decimal(double val)
@@ -195,28 +209,61 @@ void UART_SendCommand(unsigned char *cmd, unsigned char length)
 
 void Init_GPS_Setting()
 {
+    naturePosition.x = 0;
+    naturePosition.y = 0;
+    naturePosition.offsetX = 0;
+    naturePosition.offsetY = 0;
+    
+    rmc_data.hour = 0;
+    rmc_data.minute = 0;
+    rmc_data.second = 0.0;
+    rmc_data.status = 'V';
+    rmc_data.latitude = 0.0;
+    rmc_data.ns = 'N';
+    rmc_data.longitude = 0.0;
+    rmc_data.ew = 'E';
+    rmc_data.speed = 0.0;
+    rmc_data.course = 0.0;
+    rmc_data.day = 0;
+    rmc_data.month = 0;
+    rmc_data.year = 0;
+    rmc_data.mag_var = 0.0;
+    rmc_data.mag_dir = 'E';
+    rmc_data.mode = 'V';
+    rmc_data.valid = 0;
+
     UART_SendCommand(set_rate_10hz, sizeof(set_rate_10hz));
+    GPS_Delay();
     UART_SendCommand(cmd_gga, sizeof(cmd_gga));
+    GPS_Delay();
     UART_SendCommand(cmd_gll, sizeof(cmd_gll));
+    GPS_Delay();
     UART_SendCommand(cmd_gsa, sizeof(cmd_gsa));
+    GPS_Delay();
     UART_SendCommand(cmd_gsv, sizeof(cmd_gsv));
+    GPS_Delay();
     UART_SendCommand(cmd_vtg, sizeof(cmd_vtg));
+    GPS_Delay();
     UART_SendCommand(cmd_zda, sizeof(cmd_zda));
+    GPS_Delay();
     UART_SendCommand(cmd_gst, sizeof(cmd_gst));
+    UART_SendStr("GPS初始化成功!\0");
 }
 
-// 修改Init_GPS函数，使用新的命令发送函数
-void Init_GPS(NaturePosition *naturePosition, RMC_Data *rmc_data)
+unsigned char Init_GPS_Offset(NaturePosition *naturePosition, RMC_Data *rmc_data)
 {
     // 初始化偏移量
+    if (rmc_data->valid == 0)
+    {
+        UART_SendStr("GPS数据无效!\0");
+        return 1; // 返回错误，数据无效
+    }
+    // 设置偏移量为当前GPS数据
     naturePosition->offsetX = rmc_data->latitude;
     naturePosition->offsetY = rmc_data->longitude;
     naturePosition->x = 0;
     naturePosition->y = 0;
-
-    // 初始化GPS设置
-    Init_GPS_Setting();
-    GPS_UART_SendStr("GPS初始化成功!\0");
+    return 0; // 返回成功
 }
 
 void GPS_Message_Updater()
@@ -227,12 +274,12 @@ void GPS_Message_Updater()
         if (len > 0)
         {
             GPS_Message_Inputer(gps_receive_buffer, &rmc_data, &naturePosition);
-            // UART_SendStr("GPS数据更新成功!\0");
+            //? UART_SendStr("GPS数据更新成功!\0"); 后面有了发送F的函数，就不需要这个了
         }
     }
     else
     {
-        GPS_UART_SendByte('N'); // 无数据
+        UART_SendByte('F'); // 无数据
     }
 }
 

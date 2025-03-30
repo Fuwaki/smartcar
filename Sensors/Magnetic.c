@@ -1,4 +1,4 @@
- #include <AI8051U.H>
+#include <AI8051U.H>
 #include <intrins.h>
 #include <string.h>
 #include <stdio.h>
@@ -9,9 +9,8 @@
 #define PI 3.14159265358979323846 // 这么长怎么你了!
 // 当前选定的量程
 static unsigned char current_scale = LIS3MDL_FS_4GAUSS;
-
 // LIS3MDL的SPI设备ID
-static unsigned char lis3mdl_spi_id = 0xFF;
+static unsigned char lis3mdl_spi_id = 0xFF; //初始值为0xFF表示未注册
 
 // 磁力计校准参数
 typedef struct
@@ -27,6 +26,7 @@ typedef struct
 
 // 全局校准参数
 static MagCalibration mag_calibration = {0};
+MagneticData mag_data;
 
 // 用于校准采样的缓冲区
 #define MAG_CALIB_SAMPLES 100
@@ -38,7 +38,7 @@ static unsigned char calibration_in_progress = 0;
 #define LIS3MDL_READ 0x80  // 读操作最高位为1
 #define LIS3MDL_WRITE 0x00 // 写操作最高位为0
 
-void Delay(void) //@40.000MHz
+void Mag_Delay(void) //1ms
 {
     unsigned long edata i;
 
@@ -53,8 +53,7 @@ void Delay(void) //@40.000MHz
 // 初始化磁力计校准参数
 void LIS3MDL_InitCalibration(void)
 {
-    // 这里可以从EEPROM或Flash中加载校准参数
-    // 或者使用默认的校准参数
+    //TODO: 使用默认的校准参数 还是别用Init磁场计算法了
 
     // 默认硬铁校正参数（理想情况下应通过校准过程确定）
     mag_calibration.x_offset = 0.0f;
@@ -67,8 +66,6 @@ void LIS3MDL_InitCalibration(void)
     mag_calibration.z_scale = 1.0f;
 
     mag_calibration.is_calibrated = 0; // 标记为未校准
-
-    // 注意：在实际应用中，应该提供一个校准过程来获取这些参数
 }
 
 // LIS3MDL初始化函数
@@ -94,7 +91,7 @@ void LIS3MDL_Init(void)
     // 1. 复位设备
     LIS3MDL_WriteReg(LIS3MDL_CTRL_REG2, 0x0C); // 软复位
 
-    Delay(); // 等待复位完成
+    Mag_Delay(); // 等待复位完成
 
     // 验证设备ID
     device_id = LIS3MDL_ReadReg(LIS3MDL_WHO_AM_I);
@@ -232,6 +229,8 @@ float LIS3MDL_CalculateHeading(MagneticData *dataM)
     float curAngle;
 
     // 应用校准参数
+    //TODO: 这里需要判断是否已经校准
+    //FIXME 但是我认为直接使用校准参数就可
     if (mag_calibration.is_calibrated)
     {
         LIS3MDL_ApplyCalibration(dataM);
@@ -257,6 +256,8 @@ float LIS3MDL_CalculateHeading(MagneticData *dataM)
     return curAngle;
 }
 
+
+#pragma region 初始化磁场计数据
 // 设置校准参数的函数（可以在校准过程完成后调用）
 void LIS3MDL_SetCalibrationParams(float x_off, float y_off, float z_off,
                                   float x_scl, float y_scl, float z_scl)
@@ -377,6 +378,7 @@ unsigned char LIS3MDL_AddCalibrationSample(MagneticData *dataM)
 
 // TODO 请验证算法是否正确和修复错误
 //  高级椭球拟合校准算法 <- 适用于更复杂的校准场景(就用这个吧)
+//  我认为这个算法只需要在打比赛时候提前校准一次就可以了
 unsigned char LIS3MDL_AdvancedCalibration(void)
 {
     // 计算椭球拟合参数
@@ -463,7 +465,7 @@ unsigned char LIS3MDL_AdvancedCalibration(void)
 
     return 1;
 }
-
+#pragma endregion
     // // 读取磁力计数据
     // if(LIS3MDL_ReadData(&mag_data))
     // {

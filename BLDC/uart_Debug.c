@@ -81,7 +81,7 @@ void Uart3SendByLength(unsigned char *p,int length)
 //         num = -num;
 //     }
     
-//     // 分离整数部分和小数部分
+//    // 分离整数部分和小数部分
 //     intPart = (int)num;
 //     decPart = num - intPart;
     

@@ -20,4 +20,6 @@
     // 从接收缓冲区读取多个字节
     unsigned char UART_Read(unsigned char *buf, unsigned char len);
 
+    void Uart_SendByLength(unsigned char *p,int length);
+    void UART_SendFloat(float value[3]);
 #endif

@@ -14,32 +14,32 @@
 
 #pragma region Motor_Parameters
 float voltage_power_supply = 12; // 12v??
-double Electric_Angle;
-double Shaft_Angle = 0;   // 闭环所用的变量
-double Initial_Angle = 0; // 有可能转子不在0度位置，所以需要一个初始角度
-double Ualpha;
-double Ubeta;
-double Ua;
-double Ub;
-double Uc;
-double DC_a;
-double DC_b;
-double DC_c;
+float Electric_Angle;
+float Shaft_Angle = 0;   // 闭环所用的变量
+float Initial_Angle = 0; // 有可能转子不在0度位置，所以需要一个初始角度
+float Ualpha;
+float Ubeta;
+float Ua;
+float Ub;
+float Uc;
+float DC_a;
+float DC_b;
+float DC_c;
 float Iu;
 float Iv;
 float Iw;
 float Ialpha;
 float Ibeta;
-double Uq;
+float Uq;
 float Id;
 float Iq;
 #pragma endregion
 
 struct info MotorVariables;
 
-double _normalizeAngle(double angle) // 控制在0~2π之间 LOL
+float _normalizeAngle(float angle) // 控制在0~2π之间 LOL
 {
-    double a = fmod(angle, 2 * PI);
+    float a = fmod(angle, 2 * PI);
     return a >= 0 ? a : (a + 2 * PI);
 }
 
@@ -48,23 +48,27 @@ void getMotorInitAngle()
     Initial_Angle = MotorVariables.motor_postion;
 }
 
-double _electric_Angle(double shaft_angle, int pole_pairs) // 电机的电角度 = 机械角度 * 极对数
+float _electric_Angle(float shaft_angle, int pole_pairs) // 电机的电角度 = 机械角度 * 极对数
 {
     return _normalizeAngle((MotorVariables.motor_direction * pole_pairs * shaft_angle) - Initial_Angle);
 }
 
-void Set_PWM(double Ua, double Ub, double Uc)
+void Set_PWM(float Ua, float Ub, float Uc)
 {
-    DC_a = _constrain(Ua / voltage_power_supply, 0.0f, 1.0f);
-    DC_b = _constrain(Ub / voltage_power_supply, 0.0f, 1.0f);
-    DC_c = _constrain(Uc / voltage_power_supply, 0.0f, 1.0f);
+    DC_a = _constrain(Ua / voltage_power_supply, 0.0, 1.0);
+    DC_b = _constrain(Ub / voltage_power_supply, 0.0, 1.0);
+    DC_c = _constrain(Uc / voltage_power_supply, 0.0, 1.0);
+
+    // DC_a = Lowpass_Filter(DC_a,0);
+    // DC_b = Lowpass_Filter(DC_b,1);
+    // DC_c = Lowpass_Filter(DC_c,2);
 
     Set_PWM_Duty(0, (unsigned char)((DC_a) * 100));
     Set_PWM_Duty(1, (unsigned char)((DC_b) * 100));
     Set_PWM_Duty(2, (unsigned char)((DC_c) * 100));
 }
 
-void OutPutter(double Uq, double Ud, double angle_el) // Ud暂时不知道2333,貌似影响不大,Uq是主要的，Ud直轴电压
+void OutPutter(float Uq, float Ud, float angle_el) // Ud暂时不知道2333,貌似影响不大,Uq是主要的，Ud直轴电压
 {
     angle_el = _normalizeAngle(angle_el); // 物理上，而不是理论上
 
@@ -80,27 +84,27 @@ void OutPutter(double Uq, double Ud, double angle_el) // Ud暂时不知道2333,�
     Set_PWM(Ua, Ub, Uc); // 还是在这里做转化吧
 }
 
-void velocityOpenloop(double target_velocity) // finally...
+void velocityOpenloop(float target_velocity) // finally...
 {
     /* 使用早前设置的voltage_power_supply的1/3作为Uq值，这个值会直接影响输出力矩
     最大只能设置为Uq = voltage_power_supply/2，否则ua,ub,uc会超出供电电压限幅 */
-    Uq = voltage_power_supply / 5;
+    Uq = voltage_power_supply / 10;
 
     Shaft_Angle = _normalizeAngle(Shaft_Angle + target_velocity); // 开环控制，软件++
     OutPutter(Uq, 0.0, Shaft_Angle);                              // 输出电压
 }
 
-void positionCloseLoop(double target_position) // 位置闭环控制 位置单位为rad
+void positionCloseLoop(float target_position) // 位置闭环控制 位置单位为rad
 {
     OutPutter(PID_Controller(target_position - MotorVariables.motor_direction * MotorVariables.motor_postion), 0.0, _electric_Angle(MotorVariables.motor_postion, 7));
 }
 
-void speedCloseLoop(double target_speed) // 速度闭环控制 速度单位为rad/s
+void speedCloseLoop(float target_speed) // 速度闭环控制 速度单位为rad/s
 {
     OutPutter(PID_Controller((target_speed - MotorVariables.angular_speed)), 0.0, _electric_Angle(MotorVariables.motor_postion, 7));
 }
 
-float calCurrent(double angle_el) // 计算电流
+float calCurrent(float angle_el) // 计算电流
 {
     // 获取ADC原始值
     unsigned int adc_u, adc_v, adc_w;
@@ -129,7 +133,7 @@ float calCurrent(double angle_el) // 计算电流
     return Iq;
 }
 
-void currentCloseLoop(double target_current) // 电流闭环控制 电流单位为A
+void currentCloseLoop(float target_current) // 电流闭环控制 电流单位为A
 {
     OutPutter(PID_Controller(target_current - calCurrent(_electric_Angle(MotorVariables.motor_postion, 7))), 0.0, _electric_Angle(MotorVariables.motor_postion, 7));
 }

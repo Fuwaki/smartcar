@@ -1,14 +1,14 @@
 #include <intrins.h>
+#include <stdio.h>
 #include "Gyroscope.h"
 #include "SPI_MultiDevice.h"
-#include <stdio.h>
 
 // 当前配置的陀螺仪和加速度计范围
 static gyro_range_t current_gyro_range = GYRO_RANGE_2000_DPS;
 static accel_range_t current_accel_range = ACCEL_RANGE_16G;
 static unsigned char icm42688_spi_id = 0xFF;
 
-void Delay1ms(void)	//@40.000MHz
+void Gyrp_Delay(void)	//@40.000MHz 1ms延时
 {
 	unsigned long edata i;
 
@@ -66,7 +66,7 @@ unsigned char ICM42688_Init()
                            ICM42688_PWR_MGMT0_ACCEL_MODE_LN | ICM42688_PWR_MGMT0_GYRO_MODE_LN);
     
     // 等待传感器启动（按需调整延迟时间）
-    Delay1ms();
+    Gyrp_Delay();
 
     // 设置默认范围
     //TODO: 选择合适的量程
@@ -157,7 +157,7 @@ void ICM42688_Reset()
     ICM42688_WriteRegister(icm42688_spi_id , ICM42688_DEVICE_CONFIG, 0x01);
 
     // 等待复位完成（通常需要几毫秒）
-    Delay1ms();
+    Gyrp_Delay();
 }
 
 // 检查传感器通信是否正常
@@ -263,7 +263,7 @@ void Gyro_Updater()
     // 读取传感器数据
     ICM42688_ReadSensorData(&sensor_data);
     
-    // // 应用卡尔曼滤波
+    // 应用卡尔曼滤波
     // apply_kalman_filter(&sensor_data, &filtered_data, 
     //                     &kf_accel_x, &kf_accel_y, &kf_accel_z,
     //                     &kf_gyro_x, &kf_gyro_y, &kf_gyro_z);

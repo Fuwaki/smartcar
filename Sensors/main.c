@@ -3,13 +3,15 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include "Timer.h"
+#include "uart.h"
+#include "GPS_uart.h"
 #include "GPS.h"
 #include "Encoder.h"
 #include "SPI_MultiDevice.h"
 #include "Gyroscope.h"
-#include "Timer.h"
-#include "uart.h"
-#include "GPS_uart.h"
+#include "Magnetic.h"
+
 //先写个这样的函数丢这
 // void SPI_SEND(char *str){
 
@@ -22,7 +24,6 @@
 
 unsigned char receive_buffer0d00[32];
 unsigned char receive_buffer0d01[32];
-char temp = 0;
 
 void Delay100us(void)	//@40.000MHz
 {
@@ -63,34 +64,60 @@ void Inits()
 	P7M1 = 0x00;P7M0 = 0x00;
 	
 
-	Encoder_Init();
-	Timer0_Init();
-	UART_Init();
-	GPS_UART_Init();
-	Init_GPS(&naturePosition, &rmc_data);
-	SPI_Init();
-	ICM42688_Init();
+	Timer0_Init(); //定时器0初始化
+	UART_Init(); //Debug串口初始化
+	GPS_UART_Init(); //GPS串口初始化
+	Init_GPS_Setting(); //GPS初始化
+	Encoder_Init(); //编码器初始化
+	SPI_Init(); //SPI初始化
+	ICM42688_Init(); //陀螺仪初始化
+	LIS3MDL_Init();
 }
 
 void main()
 {
+	unsigned char GPS_Init = 1;
 	Inits();
 	Delay100us();
 	UART_SendByte('S');
 	while(1)
 	{
-		Gyro_Updater();
+		#pragma region GPS数据模块
 		GPS_Message_Updater();
-		if(UART_Available())
+		if (GPS_Init == 1)
 		{
-			unsigned char received_len;
-			received_len = UART_Read(receive_buffer0d00, 32);
-			if(received_len > 0)
+			GPS_Init = Init_GPS_Offset(&naturePosition, &rmc_data);
+			if (GPS_Init == 0)
 			{
-				receive_buffer0d00[received_len] = '\0';  // 添加字符串结束符
-				// 通过串口发送接收到的数据
-				UART_SendStr(receive_buffer0d00);
+				UART_SendStr("GPS偏移量初始化成功!\0");
+				GPS_Init = 0;
 			}
 		}
+		#pragma endregion
+
+		#pragma region 陀螺仪数据模块
+		Gyro_Updater();
+		#pragma endregion
+
+		#pragma region 编码器数据模块
+		Encoder_Update();
+		#pragma endregion
+
+
+		#pragma region 磁场计数据模块
+		LIS3MDL_ReadData(&mag_data); // 读取磁力计数据
+		#pragma endregion
+
+		// if(UART_Available()) // 	这个是接收数据的函数
+		// {
+		// 	unsigned char received_len;
+		// 	received_len = UART_Read(receive_buffer0d00, 32);
+		// 	if(received_len > 0)
+		// 	{
+		// 		receive_buffer0d00[received_len] = '\0';  // 添加字符串结束符
+		// 		// 通过串口发送接收到的数据
+		// 		UART_SendStr(receive_buffer0d00);
+		// 	}
+		// }
 	}
 }
