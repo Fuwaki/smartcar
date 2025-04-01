@@ -107,6 +107,7 @@ void pwmb_isr()interrupt 27
 			}
 		}
     }
+    motor.duty = 400;
 }
 
 

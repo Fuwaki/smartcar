@@ -58,6 +58,8 @@ void sine_init(void)
 	
 	// 使能PWM所有通道
 	PWMA_ENO = 0x3F;
+
+
 }
 	
 
@@ -90,19 +92,19 @@ void sine_start(uint8 duty)
 	{
 		motor_c_position = 359 ;
 	}
-	
+
 //	temp = ((uint32)sine_pwm_arr[motor_a_position] * BLDC_MAX_DUTY * 3) / 32 / 1024;		// 32为占空比的最大值. 1024为sine_pwm的峰值
 	temp = ((uint32)sine_pwm_arr[motor_a_position] * BLDC_MAX_DUTY * duty) >> 5 >> 10;
 	
-	PWMA_CCR1H = (temp >> 8) & 0xFF;
-    PWMA_CCR1L = temp & 0xFF;
-    
-	temp = ((uint32)sine_pwm_arr[motor_b_position] * BLDC_MAX_DUTY * duty) >> 5 >> 10;
-    PWMA_CCR2H = (temp >> 8) & 0xFF;
+	PWMA_CCR2H = (temp >> 8) & 0xFF;
     PWMA_CCR2L = temp & 0xFF;
     
-	temp = ((uint32)sine_pwm_arr[motor_c_position] * BLDC_MAX_DUTY * duty) >> 5 >> 10;
+	temp = ((uint32)sine_pwm_arr[motor_b_position] * BLDC_MAX_DUTY * duty) >> 5 >> 10;
     PWMA_CCR3H = (temp >> 8) & 0xFF;
     PWMA_CCR3L = temp & 0xFF;
+    
+	temp = ((uint32)sine_pwm_arr[motor_c_position] * BLDC_MAX_DUTY * duty) >> 5 >> 10;
+    PWMA_CCR4H = (temp >> 8) & 0xFF;
+    PWMA_CCR4L = temp & 0xFF;
 	
 }

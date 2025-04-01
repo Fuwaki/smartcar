@@ -90,6 +90,7 @@ void pwm_close_output(void)
 void pwm_a_bn_output(uint8 use_comp)
 
 {
+	P41=~P41;
 	pwm_close_output();
 	if (use_comp)
 	{
@@ -102,7 +103,7 @@ void pwm_a_bn_output(uint8 use_comp)
 	{
 		PWMA_CCER1 = 0x30;
 		PWMA_CCER2 = 0x00;
-		PWMA_ENO = 1 << 2;
+		PWMA_ENO = 1 << 3;
 	}
 	PWM_B_L_PIN = 1;
 	comparator_select_c();
@@ -128,7 +129,7 @@ void pwm_a_cn_output(uint8 use_comp)
 	{
 		PWMA_CCER1 = 0x30;
 		PWMA_CCER2 = 0x00;
-		PWMA_ENO = 1 << 2;
+		PWMA_ENO = 1 << 3;
 	}
 	PWM_C_L_PIN = 1;
 	comparator_select_b();
@@ -155,7 +156,7 @@ void pwm_b_cn_output(uint8 use_comp)
 	{
 		PWMA_CCER1 = 0x00;
 		PWMA_CCER2 = 0x03;
-		PWMA_ENO = 1 << 4;
+		PWMA_ENO = 1 << 5;
 	}
 	PWM_C_L_PIN = 1;
 	comparator_select_a();
@@ -181,7 +182,7 @@ void pwm_b_an_output(uint8 use_comp)
 	{
 		PWMA_CCER1 = 0x00;
 		PWMA_CCER2 = 0x03;
-		PWMA_ENO = 1 << 4;
+		PWMA_ENO = 1 << 5;
 	}
 	PWM_A_L_PIN = 1;
 	comparator_select_c();
@@ -208,7 +209,7 @@ void pwm_c_an_output(uint8 use_comp)
 	{
 		PWMA_CCER1 = 0x00;
 		PWMA_CCER2 = 0x30;
-		PWMA_ENO = 1 << 6;
+		PWMA_ENO = 1 << 7;
 	}
 	PWM_A_L_PIN = 1;
 	comparator_select_b();
@@ -234,7 +235,7 @@ void pwm_c_bn_output(uint8 use_comp)
 	{
 		PWMA_CCER1 = 0x00;
 		PWMA_CCER2 = 0x30;
-		PWMA_ENO = 1 << 6;
+		PWMA_ENO = 1 << 7;
 	}
 	PWM_B_L_PIN = 1;
 	comparator_select_a();
@@ -279,14 +280,14 @@ void pwm_out_duty_update(uint16 duty)
 	temp_l = (uint8)duty;
 	// 字节拆分 轮流写入
 
-	PWMA_CCR1H = temp_h;
-	PWMA_CCR1L = temp_l;
-
 	PWMA_CCR2H = temp_h;
 	PWMA_CCR2L = temp_l;
 
 	PWMA_CCR3H = temp_h;
 	PWMA_CCR3L = temp_l;
+
+	PWMA_CCR4H = temp_h;
+	PWMA_CCR4L = temp_l;
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -325,7 +326,7 @@ void pwm_out_init(void)
 	PWMA_PS = 0x00; // 00000000  配置pwm
 	// Capture Compare Mode Register
 	// 通道B A相
-	PWMA_CCMR2 = 0x78; // 通道模式配置, PWM模式2, 预装载允许
+	PWMA_CCMR2 = 0x68; // 通道模式配置, PWM模式2, 预装载允许
 	// CCMR pwm模式
 	// Capture Compare Register
 	PWMA_CCR2H = 0;
@@ -334,12 +335,12 @@ void pwm_out_init(void)
 	PWMA_CCER1 |= 0x30; // 开启比较输出, 低电平有效
 	// 通道C B相
 	// FIXME 逐飞你是不是搞错了 明明都是PWM模式1啊
-	PWMA_CCMR3 = 0x78; // 通道模式配置, PWM模式1, 预装载允许
+	PWMA_CCMR3 = 0x68; // 通道模式配置, PWM模式1, 预装载允许
 	PWMA_CCR3H = 0;
 	PWMA_CCR3L = 0;
 	PWMA_CCER2 |= 0x03; // 开启比较输出, 低电平有效
 	// 通道D C相
-	PWMA_CCMR4 = 0x78; // 通道模式配置, PWM模式1, 预装载允许
+	PWMA_CCMR4 = 0x68; // 通道模式配置, PWM模式1, 预装载允许
 	PWMA_CCR4H = 0;
 	PWMA_CCR4L = 0;
 	PWMA_CCER2 |= 0x30; // 开启比较输出, 低电平有效

@@ -63,6 +63,7 @@ void motor_next_step(void)
 //-------------------------------------------------------------------------------------------------------------------
 void motor_commutation(void)
 {
+	
     switch(motor.step)
     {
 		case 0:
@@ -143,7 +144,7 @@ void TM4_Isr(void) interrupt 20
 
 
 //-------------------------------------------------------------------------------------------------------------------
-//  @brief      定时器0换相中断
+//  @brief      定时器0换相&消磁中断
 //  @param      void
 //  @return     void
 //  @since      v1.0
@@ -153,6 +154,7 @@ void TM0_Isr(void) interrupt TMR0_VECTOR
 {	
 	//	硬件自动清除中断标志位
 	uint16 tim_com; 	
+
 
 	if(xc_flag == 0)
 	{
@@ -198,6 +200,7 @@ void TM0_Isr(void) interrupt TMR0_VECTOR
 				}
 				else
 				{
+					//这个是通过总换向错误看需不需要暂停 上面的定时器是看单次换向是否超时
 					// 只有在占空比大于10%的时候，才进行换相错误判断。
 	//				if(motor.duty_register >= (BLDC_MAX_DUTY / 10))
 					{
@@ -208,11 +211,8 @@ void TM0_Isr(void) interrupt TMR0_VECTOR
 							motor.run_flag = MOTOR_STOP_STALL;
 						}
 					}
-
 				}
 			}
-			
-
 		}
 	}
 	else if(xc_flag == 1)
@@ -221,7 +221,6 @@ void TM0_Isr(void) interrupt TMR0_VECTOR
 		
 //		// 等待消磁, 10度
 //		while(((TH0 << 8) | TL0) < (motor.filter_commutation_time_sum / 36));
-
 		comparator_open_isr();
 		
 		ET0 = 0; 		// 关闭定时器0中断
@@ -302,7 +301,7 @@ void motor_power_on_beep(uint16 volume)
     PWM_C_H_PIN = 0;
     PWM_C_L_PIN = 0;
 	pwm_out_duty_update(motor.duty_register);
-	pwm_init(PWMA_CH1P_P20, frequency_spectrum[1], beep_duty);
+	pwm_init(PWMA_CH2N_P13, frequency_spectrum[1], beep_duty);
 	PWMA_ENO = 1<<2;
 	delay_ms(MUSIC_DELAY_MS);
 	
@@ -313,7 +312,7 @@ void motor_power_on_beep(uint16 volume)
     PWM_B_L_PIN = 0;
     PWM_C_H_PIN = 0;
     PWM_C_L_PIN = 1;
-	pwm_init(PWMA_CH2P_P22, frequency_spectrum[2], beep_duty);
+	pwm_init(PWMA_CH3N_P15, frequency_spectrum[2], beep_duty);
 	PWMA_ENO = 1<<4;
 	delay_ms(MUSIC_DELAY_MS);
 	
@@ -324,7 +323,7 @@ void motor_power_on_beep(uint16 volume)
     PWM_B_L_PIN = 0;
     PWM_C_H_PIN = 0;
     PWM_C_L_PIN = 0;
-	pwm_init(PWMA_CH3P_P24, frequency_spectrum[3], beep_duty);
+	pwm_init(PWMA_CH4N_P17, frequency_spectrum[3], beep_duty);
 	PWMA_ENO = 1<<6;
 	delay_ms(MUSIC_DELAY_MS);
 	
@@ -397,10 +396,13 @@ void motor_init(void)
 	// 设置PWMB输入捕获高优先级 为 2 ,最高优先级为3
     IP2  |= 0<<3;
     IP2H |= 1<<3;
+
+	gpio_mode(P4_1, GPO_PP);
+	P41=0;
    
 
 #if (1 == BLDC_BEEP_ENABLE)
     // 电机鸣叫表示初始化完成
-    motor_power_on_beep(BLDC_BEEP_VOLUME);
+    // motor_power_on_beep(BLDC_BEEP_VOLUME);
 #endif
 }

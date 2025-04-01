@@ -41,22 +41,22 @@
 
 #define BLDC_OPEN_LOOP_WAIT        		(50 )           // 闭环等待换向次数
 
-#define BLDC_SPEED_INCREMENTAL      	(1)            	// 加减速响应 1-20，可修改这个提高加速响应，
+#define BLDC_SPEED_INCREMENTAL      	(10)            	// 加减速响应 1-20，可修改这个提高加速响应，
 														// 设置20响应速度最慢，设置1响应速度最快。
 														// 响应速度越快，越容易出现换相错误，所以建议从20开始，一点一点减小。
 
 #define BLDC_POLES                  	(7)             // 电机极对数
 
-#define BLDC_BEEP_ENABLE                (1 )      		// 1:使能上电电机鸣叫功能 0：禁用
+#define BLDC_BEEP_ENABLE                (0)      		// 1:使能上电电机鸣叫功能 0：禁用
 	
-#define BLDC_BEEP_VOLUME                (30 )    	 	// 电机鸣叫声音大小 0-100
+#define BLDC_BEEP_VOLUME                (50 )    	 	// 电机鸣叫声音大小 0-100
 
 #define BLDC_MOTOR_ANGLE				(25)			// 马达进角，进入比较器中断后，延时多少度进行换相
 														// 范围0-30度
 
-#define BLDC_USE_SINE_START             (1)   			// 使用正弦启动
+#define BLDC_USE_SINE_START             (0)   			// 使用正弦启动
 
-#define BLDC_SINE_START_DUTY            (4)   		    // 正弦启动占空比 1-32 ,值越大正弦启动力越大。
+#define BLDC_SINE_START_DUTY            (12)   		    // 正弦启动占空比 1-32 ,值越大正弦启动力越大。
 
 
 #endif

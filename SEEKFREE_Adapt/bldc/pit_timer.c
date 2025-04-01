@@ -65,7 +65,7 @@ void led_control(void)
     else if (motor.restart_delay)
     {
         // 由于堵转导致停止 LED快闪
-        if (0 == (pit_count % 500))
+        if (0 == (pit_count % 50))
         {
             LED_PIN = !LED_PIN;
         }
@@ -86,6 +86,7 @@ void led_control(void)
             LED_PIN = !LED_PIN;
         }
     }
+    
     else if (MOTOR_OPEN_LOOP == motor.run_flag)
     {
         // 启动后继续维持一段时间 较快闪烁
@@ -109,6 +110,7 @@ void pit_motor_control()
 
     uint8 pin_state = 0;
     static uint8 oled_pin_state = 0;
+
 
     switch (motor.run_flag)
     {
@@ -137,6 +139,7 @@ void pit_motor_control()
             while (((T4H << 8) | T4L) < sine_delay)
                 ;
         } while (motor_a_position != 0);
+        //使用sin开环启动 但是只转一圈
 
         motor.step = 2;
         motor.commutation_time[0] = 6000;
@@ -301,12 +304,16 @@ void pit_motor_control()
             // 电机换相
             motor_commutation();
             motor.run_flag = MOTOR_START;
+            //FIXME 问题应该出在这里
         }
     }
     break;
     case MOTOR_CLOSE_LOOP:
     {
+        //读取比较器数值
         pin_state = (CMPCR1 & 0x01);
+        P41=~P41;
+
         // 通过PA2引脚的电平状态，进行堵转检测
         if (oled_pin_state != pin_state)
         {
@@ -315,6 +322,7 @@ void pit_motor_control()
         }
         else
         {
+            // 第三处堵转检测
             // 如果引脚一直是一个状态，且超过了 BLDC_STALL_TIME_OUT ms 则认为堵转了
             if (stall_time_out_check++ > (10 * 200)) // 10KHZ，0.1ms计数一次
             {
@@ -417,13 +425,13 @@ void pit_motor_control()
 void TM1_Isr() interrupt 3
 {
     pit_count++;
-    if (battery_voltage_get())
-    {
-        motor.run_flag = BYTE_LOW_VOLTAGE;
-    }
+    // if (battery_voltage_get())
+    // {
+    //     motor.run_flag = BYTE_LOW_VOLTAGE;
+    // }
     // 电池电压检测为最高优先级，当电压过低，就不转
-    if (motor.run_flag != BYTE_LOW_VOLTAGE)
-    {
+    // if (motor.run_flag != BYTE_LOW_VOLTAGE)
+    // {
         // 输入的占空比为0，则为空闲状态
         if (motor.duty == 0)
         {
@@ -437,9 +445,10 @@ void TM1_Isr() interrupt 3
                 motor.run_flag = MOTOR_START;
             }
         }
-    }
+    // }
     led_control();
     pit_motor_control();
+
 }
 
 //-------------------------------------------------------------------------------------------------------------------
