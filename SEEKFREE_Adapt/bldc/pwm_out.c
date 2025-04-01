@@ -90,7 +90,7 @@ void pwm_close_output(void)
 void pwm_a_bn_output(uint8 use_comp)
 
 {
-	P41=~P41;
+
 	pwm_close_output();
 	if (use_comp)
 	{
@@ -103,9 +103,10 @@ void pwm_a_bn_output(uint8 use_comp)
 	{
 		PWMA_CCER1 = 0x30;
 		PWMA_CCER2 = 0x00;
-		PWMA_ENO = 1 << 3;
+		PWMA_ENO = 1 << 2;
 	}
-	PWM_B_L_PIN = 1;
+	PWM_A_H_PIN = 1;
+	// PWM_B_L_PIN = 1;
 	comparator_select_c();
 }
 
@@ -129,9 +130,9 @@ void pwm_a_cn_output(uint8 use_comp)
 	{
 		PWMA_CCER1 = 0x30;
 		PWMA_CCER2 = 0x00;
-		PWMA_ENO = 1 << 3;
+		PWMA_ENO = 1 << 4;
 	}
-	PWM_C_L_PIN = 1;
+	PWM_A_H_PIN = 1;
 	comparator_select_b();
 }
 
@@ -156,9 +157,10 @@ void pwm_b_cn_output(uint8 use_comp)
 	{
 		PWMA_CCER1 = 0x00;
 		PWMA_CCER2 = 0x03;
-		PWMA_ENO = 1 << 5;
+		PWMA_ENO = 1 << 4;
+		// PWMA_ENO=0xff;
 	}
-	PWM_C_L_PIN = 1;
+	PWM_B_H_PIN = 1;
 	comparator_select_a();
 }
 
@@ -182,9 +184,9 @@ void pwm_b_an_output(uint8 use_comp)
 	{
 		PWMA_CCER1 = 0x00;
 		PWMA_CCER2 = 0x03;
-		PWMA_ENO = 1 << 5;
+		PWMA_ENO = 3 << 2;
 	}
-	PWM_A_L_PIN = 1;
+	PWM_B_H_PIN = 1;
 	comparator_select_c();
 }
 
@@ -209,9 +211,9 @@ void pwm_c_an_output(uint8 use_comp)
 	{
 		PWMA_CCER1 = 0x00;
 		PWMA_CCER2 = 0x30;
-		PWMA_ENO = 1 << 7;
+		PWMA_ENO = 3 << 2;
 	}
-	PWM_A_L_PIN = 1;
+	PWM_C_H_PIN = 1;
 	comparator_select_b();
 }
 
@@ -235,9 +237,9 @@ void pwm_c_bn_output(uint8 use_comp)
 	{
 		PWMA_CCER1 = 0x00;
 		PWMA_CCER2 = 0x30;
-		PWMA_ENO = 1 << 7;
+		PWMA_ENO = 1 << 6;
 	}
-	PWM_B_L_PIN = 1;
+	PWM_C_H_PIN = 1;
 	comparator_select_a();
 }
 
@@ -299,13 +301,7 @@ void pwm_out_duty_update(uint16 duty)
 //-------------------------------------------------------------------------------------------------------------------
 void pwm_out_init(void)
 {
-	PWM_A_H_PIN = 0;
-	PWM_A_L_PIN = 0;
-	PWM_B_H_PIN = 0;
-	PWM_B_L_PIN = 0;
-	PWM_C_H_PIN = 0;
-	PWM_C_L_PIN = 0;
-
+	pwm_close_output();
 	// 初始化低边为推挽输出
 	gpio_mode(P5_4, GPO_PP);
 	gpio_mode(P1_3, GPO_PP);

@@ -227,5 +227,7 @@ void PWMA_Interrupt() interrupt PWMA_VECTOR
 //Ciallo～(∠・ω< )⌒★!!!
 //Ciallo～(∠・ω< )⌒★!!!
 //Ciallo～(∠・ω< )⌒★!!!
+//☆⌒( >ω・∠)～ollɐıɔ
+//Ciallo ～(∠・ω< )⌒★!!!
 
 //Fuwaki u damn boy!!!

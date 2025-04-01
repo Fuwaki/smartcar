@@ -5,7 +5,7 @@
 #define FOSC 40000000L
 #define UART3_BAUD 115200  // UART3波特率
 #define UART_BUF_SIZE 64   // 定义接收缓冲区大小
-
+bit busy;
 char uart3_wptr; // 写指针
 char uart3_rptr; // 读指针
 unsigned char xdata UART3_RxBuffer[UART_BUF_SIZE]; // 接收数据缓冲区
@@ -19,7 +19,9 @@ void UART_Init(void)
     // bit5=0: S3SM2, 禁用多机通信
     // bit4=1: S3REN, 允许接收
     // bit3-0=0000: 其他位清零
-    S3CON = 0x50;
+    // S3CON = 0x50;
+    S3CON = 0x10;		//8位数据,可变波特率
+	S3CON |= 0x40;		//串口3选择定时器3为波特率发生器
     
     P_SW2 |= 0x02;  // 将UART3切换到P5.0(RXD3)和P5.1(TXD3)
     
@@ -46,9 +48,10 @@ void UART_Init(void)
 #pragma region 输出信号
 void UART_SendByte(unsigned char byte)
 {
+    while(busy);
+    busy = 1;
     S3BUF = byte;          // 将数据写入S3BUF
-    while(!(S3CON & 0x02)); // 等待发送完成
-    S3CON &= ~0x02;        // 清除发送完成标志
+    
 }
 
 void UART_SendStr(char *p)
@@ -142,16 +145,15 @@ unsigned char UART_Read(unsigned char *buf, unsigned char len)
 // UART3中断服务程序
 void UART3_Routine() interrupt 17
 {
-    if(S3CON & 0x01)  // 接收中断
+    if (S3TI)
     {
-        // 将接收到的数据存入缓冲区
-        UART3_RxBuffer[uart3_wptr] = S3BUF;
-        uart3_wptr = (uart3_wptr + 1) % UART_BUF_SIZE;  // 更新写指针
-        S3CON &= ~0x01;  // 清除接收中断标志
+        S3TI = 0;
+        busy = 0;
     }
-    
-    if(S3CON & 0x02)  // 发送中断
+    if (S3RI)
     {
-        S3CON &= ~0x02;  // 清除发送中断标志
+        S3RI = 0;
+        UART3_RxBuffer[uart3_wptr++] = S3BUF;
+        uart3_wptr &= 0x0f;
     }
 }

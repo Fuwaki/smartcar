@@ -6,6 +6,7 @@
 #include "PID_Controller.h"
 #include "Lowpass_Filter.h"
 #include "ADC.h"
+#include "TrigTable.h" // 添加三角函数表头文件
 
 #define PI 3.14159265358979323846 // 这么长怎么你了！
 
@@ -73,8 +74,9 @@ void OutPutter(float Uq, float Ud, float angle_el) // Ud暂时不知道2333,貌�
     angle_el = _normalizeAngle(angle_el); // 物理上，而不是理论上
 
     // Park变换: 旋转坐标系(d-q)到静止坐标系(alpha-beta)
-    Ualpha = Ud * cos(angle_el) - Uq * sin(angle_el);
-    Ubeta = Ud * sin(angle_el) + Uq * cos(angle_el);
+    // 使用查表函数替代直接计算三角函数
+    Ualpha = Ud * fast_cos(angle_el) - Uq * fast_sin(angle_el);
+    Ubeta = Ud * fast_sin(angle_el) + Uq * fast_cos(angle_el);
 
     /* Anti-Clarke变换 */
     Ua = Ualpha + voltage_power_supply / 2; // 电压被平移到中间去玩
@@ -127,8 +129,9 @@ float calCurrent(float angle_el) // 计算电流
     Ibeta = (Iu + 2 * Iv) / sqrt(3);
 
     // Park变换: 静止坐标系(alpha-beta)到旋转坐标系(d-q)
-    Id = Ialpha * cos(angle_el) + Ibeta * sin(angle_el);
-    Iq = -Ialpha * sin(angle_el) + Ibeta * cos(angle_el);
+    // 使用查表函数替代直接计算三角函数
+    Id = Ialpha * fast_cos(angle_el) + Ibeta * fast_sin(angle_el);
+    Iq = -Ialpha * fast_sin(angle_el) + Ibeta * fast_cos(angle_el);
 
     return Iq;
 }

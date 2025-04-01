@@ -10,6 +10,10 @@ static unsigned char slave_count = 0;
 static unsigned char current_slave = 0xFF; // 没有选中的从设备
 //那bro你应该单独封装gpio
 #define LMAO_KIAO 114514
+
+// SPI从模式状态
+static bit spi_slave_mode_enabled = 0;
+
 // 用于控制CS引脚
 static void SPI_SetPin(unsigned char port, unsigned char pin, bit value)
 {
@@ -265,3 +269,135 @@ void SPI_WriteMultiRegisters(unsigned char slave_id, unsigned char start_addr,
 
     SPI_ReleaseSlave(slave_id);
 }
+
+
+#pragma region SPI从模式
+// SPI从模式回调函数指针
+static void (*spi_slave_rx_callback)(unsigned char) = NULL;
+static unsigned char (*spi_slave_tx_callback)(void) = NULL;
+
+// SPI从模式初始化函数 - 使用USART2和定时器1实现SPI从模式
+void SPI_InitSlave(void)
+{
+// 首先将USART2重定向至P2口，必须在配置前设置
+    P_SW2 |= 0x80;        // 设置EAXFR=1，允许访问扩展SFR
+    S2SPI_S0 = 1;       /*P2.3(SS) - 片选信号
+                         P2.5(MOSI) - 主机输出/从机输入
+                         P2.6(MISO) - 主机输入/从机输出
+                         P2.7(SCLK) - 时钟信号*/
+
+    // 配置USART2为SPI从模式
+    USART2CR1 = 0x00;   // 先清除所有位
+    USART2CR1 = (0 << 7) |   // LINEN=0 禁用lin
+                (0 << 6) |   // DORD=0（MSB优先）高位优先
+                (0 << 5) |   // CLKEN=0 禁用时钟
+                (1 << 4) |   // SPMOD=1 使能SPI模式
+                (1 << 3) |   // SPIEN=1 使能SPI功能
+                (1 << 2) |   // SPSLV=1（从模式）
+                (0 << 1) |   // CPOL=0 空闲时候低电平
+                (0 << 0);    // CPHA=0 第一个边缘采样
+    P_SW2 &= ~0x80;       // 恢复EAXFR=0    
+    
+    // 配置P2.3(SS)为输入模式
+    P2M1 |= (1 << 3);
+    P2M0 &= ~(1 << 3);
+
+    // 配置P2.5(MOSI)为输入模式 - 接收主机数据
+    P2M1 |= (1 << 5);
+    P2M0 &= ~(1 << 5);
+
+    // 配置P2.6(MISO)为推挽输出模式 - 向主机发送数据
+    P2M1 &= ~(1 << 6);
+    P2M0 |= (1 << 6);
+    
+    // 配置P2.7(SCLK)为输入模式 - 接收主机时钟信号
+    P2M1 |= (1 << 7);
+    P2M0 &= ~(1 << 7);
+    
+    // 配置定时器1作为USART2的时钟源
+    TMOD &= ~0xF0;       // 清除T1相关设置
+    TMOD |= 0x20;        // T1为8位自动重装模式
+    AUXR &= ~(1 << 6);   // T1为1T模式
+    TH1 = 0xFF;          // 设置定时器初值为最大值以获得最高波特率
+    TL1 = 0xFF;          
+    TR1 = 1;             // 启动定时器1
+    
+    // 配置USART2为同步模式
+    S2CON = 0x10;        // S2SM0=0, S2SM1=0, S2REN=1: 同步移位寄存器模式且使能接收
+    
+    // 使能USART2中断
+    IE2 |= 0x01;         // ES2=1: 使能串口2中断
+    EA = 1;              // 总中断使能
+    
+    // 准备接收缓冲区，初始化发送数据为默认值
+    S2BUF = 0xFF;
+    
+    spi_slave_mode_enabled = 1;
+}
+
+// 禁用SPI从模式
+void SPI_DisableSlave(void) //留在这里huh
+{
+    // 关闭USART2
+    S2CON = 0x00;        // 关闭USART2
+    
+    // 禁用T1时钟输出
+    TR1 = 0;             // 停止定时器1
+    
+    // 禁用USART2中断
+    IE2 &= ~0x01;        // 禁用串口2中断
+    
+    spi_slave_mode_enabled = 0;
+}
+
+// 设置SPI从模式接收回调函数
+void SPI_SetSlaveRxCallback(void (*callback)(unsigned char))
+{
+    spi_slave_rx_callback = callback;
+}
+
+// 设置SPI从模式发送回调函数
+void SPI_SetSlaveTxCallback(unsigned char (*callback)(void))
+{
+    spi_slave_tx_callback = callback;
+}
+
+// 准备要发送的数据（主机请求时将发送此数据）
+void SPI_SlavePrepareTxData(unsigned char dataSend)
+{
+    S2BUF = dataSend;  // 直接写入要发送的数据到S2BUF寄存器
+}
+
+// USART2中断服务程序 - 用于处理从P2口接收到的SPI数据
+void USART2_Isr() interrupt 8  // 使用中断8号 (UART2中断)
+{
+    if (S2CON & 0x01)  // S2RI: 接收中断标志
+    {
+        unsigned char received_data = S2BUF;
+        S2CON &= ~0x01;  // 清除接收中断标志
+        
+        // 如果注册了接收回调函数，则调用
+        if (spi_slave_rx_callback)
+        {
+            spi_slave_rx_callback(received_data);
+        }
+    }
+    
+    if (S2CON & 0x02)  // S2TI: 发送中断标志
+    {
+        S2CON &= ~0x02;  // 清除发送中断标志
+        
+        // 如果注册了发送回调函数，则准备下一个要发送的数据
+        if (spi_slave_tx_callback)
+        {
+            S2BUF = spi_slave_tx_callback();
+        }
+        else
+        {
+            // 默认发送0xFF
+            S2BUF = 0xFF;
+        }
+    }
+}
+
+#pragma endregion SPI从模式

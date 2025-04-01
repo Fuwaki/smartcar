@@ -207,7 +207,7 @@ void UART_SendCommand(unsigned char *cmd, unsigned char length)
     }
 }
 
-void Init_GPS_Setting()
+void Init_GPS_Setting() //FIXME :这里和uart有冲突
 {
     naturePosition.x = 0;
     naturePosition.y = 0;
@@ -230,7 +230,7 @@ void Init_GPS_Setting()
     rmc_data.mag_var = 0.0;
     rmc_data.mag_dir = 'E';
     rmc_data.mode = 'V';
-    rmc_data.valid = 0;
+    rmc_data.valid = -1; // 初始化为无效状态
 
     UART_SendCommand(set_rate_10hz, sizeof(set_rate_10hz));
     GPS_Delay();

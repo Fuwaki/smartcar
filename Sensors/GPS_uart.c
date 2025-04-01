@@ -5,10 +5,10 @@
 #define FOSC 40000000L
 #define BAUD 115200
 #define UART_BAUD 115200
-#define UART_BUF_SIZE 64                          // 定义接收缓冲区大小
-unsigned char wptr;                               // 写指针
-unsigned char rptr;                               // 读指针
-unsigned char xdata UART_RxBuffer[UART_BUF_SIZE]; // 接收数据缓冲区
+#define GPS_UART_BUF_SIZE 64                          // 定义接收缓冲区大小，避免与UART_BUF_SIZE冲突
+unsigned char GPSwptr;                               // 写指针
+unsigned char GPSrptr;                               // 读指针
+unsigned char xdata GPS_UART_RxBuffer[GPS_UART_BUF_SIZE]; // 接收数据缓冲区，避免与UART3_RxBuffer冲突
 void GPS_UART_Init()
 {
     // 设置UART1使用RXD_2/TXD_2引脚
@@ -30,8 +30,8 @@ void GPS_UART_Init()
     ES = 1; // 允许串口中断
     EA = 1; // 允许总中断
 
-    wptr = 0x00;
-    rptr = 0x00;
+    GPSwptr = 0x00;
+    GPSrptr = 0x00;
     //? 验证是否正确
 }
 
@@ -75,7 +75,7 @@ void GPS_UART_SendString(unsigned char *str)
 // 检查是否有接收到的数据
 unsigned short int GPS_UART_Available(void)
 {
-    return (wptr != rptr);
+    return (GPSwptr != GPSrptr);
 }
 
 // 读取接收到的一个字节数据
@@ -83,11 +83,11 @@ unsigned char GPS_UART_ReadByte(void)
 {
     unsigned char dat;
 
-    if (wptr == rptr)
+    if (GPSwptr == GPSrptr)
         return 0; // 缓冲区为空，返回0
 
-    dat = UART_RxBuffer[rptr];
-    rptr = (rptr + 1) % UART_BUF_SIZE; // 更新读指针
+    dat = GPS_UART_RxBuffer[GPSrptr];
+    GPSrptr = (GPSrptr + 1) % GPS_UART_BUF_SIZE; // 更新读指针
 
     return dat;
 }
@@ -112,16 +112,16 @@ void GPS_UART_Routine() interrupt 4
     if (RI) // 接收中断
     {
         // 将接收到的数据存入缓冲区
-        UART_RxBuffer[wptr] = SBUF;
-        wptr = (wptr + 1) % UART_BUF_SIZE; // 更新写指针
+        GPS_UART_RxBuffer[GPSwptr] = SBUF;
+        GPSwptr = (GPSwptr + 1) % GPS_UART_BUF_SIZE; // 更新写指针
         RI = 0;                            // 清除接收中断标志
         
         // // 检查缓冲区是否快要溢出
-        // if(((wptr + 1) % UART_BUF_SIZE) == rptr) 
+        // if(((GPSwptr + 1) % GPS_UART_BUF_SIZE) == GPSrptr) 
         //{
         //     // 缓冲区即将溢出，可以在这里添加处理逻辑
         //     // 例如: 丢弃最旧的数据
-        //     rptr = (rptr + 1) % UART_BUF_SIZE;
+        //     GPSrptr = (GPSrptr + 1) % GPS_UART_BUF_SIZE;
         // }
     }
 

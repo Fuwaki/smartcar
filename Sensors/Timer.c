@@ -12,15 +12,6 @@ void Timer0_Init(void) // 100us的定时器
     TR0 = 1;
 }
 
-void Timer1_Init(void) // 100us的定时器
-{
-    TMOD |= 0x10;
-    TH1 = 0xF2;
-    TL1 = 0xA4;
-    ET1 = 1;
-    TR1 = 1;
-}
-
 void Timer0_ISR(void) interrupt 1
 {
     TH0 = 0xF2;

@@ -8,6 +8,7 @@
 #include "GPS_uart.h"
 #include "GPS.h"
 #include "Encoder.h"
+
 #include "SPI_MultiDevice.h"
 #include "Gyroscope.h"
 #include "Magnetic.h"
@@ -21,6 +22,12 @@
 // 	char *s = "";
 // 	SPI_SEND(s);
 // }
+
+
+
+float a;
+float value[3] = {1.0, 0.0, 0.0};
+
 
 unsigned char receive_buffer0d00[32];
 unsigned char receive_buffer0d01[32];
@@ -63,15 +70,15 @@ void Inits()
 	P6M1 = 0x00;P6M0 = 0x00;
 	P7M1 = 0x00;P7M0 = 0x00;
 	
-
 	Timer0_Init(); //定时器0初始化
-	UART_Init(); //Debug串口初始化
 	GPS_UART_Init(); //GPS串口初始化
-	Init_GPS_Setting(); //GPS初始化
+	// Init_GPS_Setting(); //GPS初始化
 	Encoder_Init(); //编码器初始化
 	SPI_Init(); //SPI初始化
+	// SPI_InitSlave(); //SPI从模式初始化
 	ICM42688_Init(); //陀螺仪初始化
-	LIS3MDL_Init();
+	UART_Init(); //Debug串口初始化
+	// LIS3MDL_Init();
 }
 
 void main()
@@ -79,35 +86,41 @@ void main()
 	unsigned char GPS_Init = 1;
 	Inits();
 	Delay100us();
-	UART_SendByte('S');
+	
+	
 	while(1)
 	{
-		#pragma region GPS数据模块
-		GPS_Message_Updater();
-		if (GPS_Init == 1)
-		{
-			GPS_Init = Init_GPS_Offset(&naturePosition, &rmc_data);
-			if (GPS_Init == 0)
-			{
-				UART_SendStr("GPS偏移量初始化成功!\0");
-				GPS_Init = 0;
-			}
-		}
-		#pragma endregion
+		// UART_SendByte('S');
+		// UART_SendStr("Hello World!\0");
+		a = (float) rmc_data.valid;
+		value[0] = a;
+		UART_SendFloat(value);
+		// #pragma region GPS数据模块
+		// GPS_Message_Updater();
+		// if (GPS_Init == 1)
+		// {
+		// 	GPS_Init = Init_GPS_Offset(&naturePosition, &rmc_data);
+		// 	if (GPS_Init == 0)
+		// 	{
+		// 		UART_SendStr("GPS偏移量初始化成功!\0");
+		// 		GPS_Init = 0;
+		// 	}
+		// }
+		// #pragma endregion
 
-		#pragma region 陀螺仪数据模块
-		Gyro_Updater();
-		#pragma endregion
+		// #pragma region 陀螺仪数据模块
+		// Gyro_Updater();
+		// #pragma endregion
 
-		#pragma region 编码器数据模块
-		Encoder_Update();
-		#pragma endregion
+		// #pragma region 编码器数据模块
+		// Encoder_Update();
+		// #pragma endregion
 
 
-		#pragma region 磁场计数据模块
-		LIS3MDL_ReadData(&mag_data); // 读取磁力计数据
-		#pragma endregion
-
+		// #pragma region 磁场计数据模块
+		// // LIS3MDL_ReadData(&mag_data); // 读取磁力计数据
+		// #pragma endregion
+		// // UART_SendStr("数据读取完成!\0");
 		// if(UART_Available()) // 	这个是接收数据的函数
 		// {
 		// 	unsigned char received_len;

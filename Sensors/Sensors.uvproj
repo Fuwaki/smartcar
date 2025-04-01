@@ -410,16 +410,6 @@
               <FilePath>.\Gyroscope.h</FilePath>
             </File>
             <File>
-              <FileName>Magnetic.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\Magnetic.c</FilePath>
-            </File>
-            <File>
-              <FileName>Magnetic.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>.\Magnetic.h</FilePath>
-            </File>
-            <File>
               <FileName>Common.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Common.c</FilePath>
@@ -428,6 +418,16 @@
               <FileName>Common.h</FileName>
               <FileType>5</FileType>
               <FilePath>.\Common.h</FilePath>
+            </File>
+            <File>
+              <FileName>Magnetic.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Magnetic.c</FilePath>
+            </File>
+            <File>
+              <FileName>Magnetic.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\Magnetic.h</FilePath>
             </File>
           </Files>
         </Group>

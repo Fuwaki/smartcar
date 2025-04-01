@@ -2,6 +2,8 @@
 #define __SPI_MULTIDEVICE_H__
 
 #include <AI8051U.H>
+#include <stdio.h>
+#include <string.h>
 
 // 最大支持的SPI从设备数量
 #define MAX_SPI_SLAVES 8
@@ -51,5 +53,20 @@ void SPI_ReadMultiRegisters(unsigned char slave_id, unsigned char start_addr,
 // 写入多个寄存器
 void SPI_WriteMultiRegisters(unsigned char slave_id, unsigned char start_addr,
                              unsigned char *buffer, unsigned int count);
+
+// SPI从模式初始化函数
+void SPI_InitSlave(void);
+void SPI_DisableSlave(void);
+
+// SPI从模式回调函数设置
+void SPI_SetSlaveRxCallback(void (*callback)(unsigned char));
+void SPI_SetSlaveTxCallback(unsigned char (*callback)(void));
+void SPI_SlavePrepareTxData(unsigned char dataSend);
+
+// 新增: 准备发送浮点数数组的函数
+void SPI_PrepareSendFloats(float *values, unsigned char count);
+
+// 内部函数: 浮点数发送回调函数
+unsigned char SPI_FloatTxCallback(void);
 
 #endif // __SPI_MULTIDEVICE_H__

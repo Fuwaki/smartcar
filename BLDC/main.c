@@ -6,6 +6,7 @@
 #include "Lowpass_Filter.h"
 #include "Observer.h"
 #include "uart_Debug.h"
+#include "TrigTable.h"
 #include "AR_PF.h"
 #include "ADC.h"
 
@@ -79,10 +80,10 @@ void main()
 	// Uart3SendStr("Hello World!\0");
     while(1)
     {
-		// focData[0] = (float)Ua; // 添加显式类型转换
-		// focData[1] = (float)Ub; // 添加显式类型转换
-		// focData[2] = (float)Uc;
-		// VOFA_SendFloat(focData); // 修改为float类型，与focData数组匹配
+		focData[0] = (float)Ua; // 添加显式类型转换
+		focData[1] = (float)Ub; // 添加显式类型转换
+		focData[2] = (float)Uc;
+		VOFA_SendFloat(focData); // 修改为float类型，与focData数组匹配
 		LED2 =~	LED2;
 		if(i<speed)
 		{

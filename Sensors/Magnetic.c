@@ -119,7 +119,7 @@ void LIS3MDL_Init(void)
     LIS3MDL_WriteReg(LIS3MDL_CTRL_REG5, 0x40);
 
     // 初始化校准参数
-    LIS3MDL_InitCalibration();
+    // LIS3MDL_InitCalibration();
 }
 
 // 读取LIS3MDL寄存器
@@ -214,7 +214,7 @@ void LIS3MDL_CalcMagneticField(MagneticData *dataM, unsigned char scale)
 void LIS3MDL_ApplyCalibration(MagneticData *dataM)
 {
     // 应用硬铁校正（偏移量）
-    float x_calibrated = dataM->x_gauss - mag_calibration.x_offset;
+	    float x_calibrated = dataM->x_gauss - mag_calibration.x_offset;
     float y_calibrated = dataM->y_gauss - mag_calibration.y_offset;
     float z_calibrated = dataM->z_gauss - mag_calibration.z_offset;
 
@@ -423,9 +423,9 @@ unsigned char LIS3MDL_AdvancedCalibration(void)
     y_sum /= sample_count;
     z_sum /= sample_count;
 
-    // 简化的椭球拟合算法
-    // 假设椭球的主轴与坐标轴对齐，即椭球方程为：
-    // Ax^2 + By^2 + Cz^2 + Dx + Ey + Fz + G = 0
+    //? 简化的椭球拟合算法
+    //? 假设椭球的主轴与坐标轴对齐，即椭球方程为：
+    //* Ax^2 + By^2 + Cz^2 + Dx + Ey + Fz + G = 0
 
     // 计算偏移（硬铁校正）- 使用样本均值作为中心点估计
     x_offset = x_sum;
