@@ -198,9 +198,12 @@ void GPS_Message_Inputer(char *message, RMC_Data *rmc_data , NaturePosition *nat
     GPS_Calculate(naturePosition, rmc_data);
 }
 
-void UART_SendCommand(unsigned char *cmd, unsigned char length)
+void GPS_SendCommand(unsigned char *cmd, unsigned char length)
 {
     unsigned char i;
+    if (cmd == NULL || length == 0)
+        return;
+        
     for(i = 0; i < length; i++)
     {
         GPS_UART_SendByte(cmd[i]);
@@ -232,21 +235,21 @@ void Init_GPS_Setting() //FIXME :这里和uart有冲突
     rmc_data.mode = 'V';
     rmc_data.valid = -1; // 初始化为无效状态
 
-    UART_SendCommand(set_rate_10hz, sizeof(set_rate_10hz));
+    GPS_SendCommand(set_rate_10hz, sizeof(set_rate_10hz));
     GPS_Delay();
-    UART_SendCommand(cmd_gga, sizeof(cmd_gga));
+    GPS_SendCommand(cmd_gga, sizeof(cmd_gga));
     GPS_Delay();
-    UART_SendCommand(cmd_gll, sizeof(cmd_gll));
+    GPS_SendCommand(cmd_gll, sizeof(cmd_gll));
     GPS_Delay();
-    UART_SendCommand(cmd_gsa, sizeof(cmd_gsa));
+    GPS_SendCommand(cmd_gsa, sizeof(cmd_gsa));
     GPS_Delay();
-    UART_SendCommand(cmd_gsv, sizeof(cmd_gsv));
+    GPS_SendCommand(cmd_gsv, sizeof(cmd_gsv));
     GPS_Delay();
-    UART_SendCommand(cmd_vtg, sizeof(cmd_vtg));
+    GPS_SendCommand(cmd_vtg, sizeof(cmd_vtg));
     GPS_Delay();
-    UART_SendCommand(cmd_zda, sizeof(cmd_zda));
+    GPS_SendCommand(cmd_zda, sizeof(cmd_zda));
     GPS_Delay();
-    UART_SendCommand(cmd_gst, sizeof(cmd_gst));
+    GPS_SendCommand(cmd_gst, sizeof(cmd_gst));
     UART_SendStr("GPS初始化成功!\0");
 }
 

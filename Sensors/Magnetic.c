@@ -214,7 +214,7 @@ void LIS3MDL_CalcMagneticField(MagneticData *dataM, unsigned char scale)
 void LIS3MDL_ApplyCalibration(MagneticData *dataM)
 {
     // 应用硬铁校正（偏移量）
-	    float x_calibrated = dataM->x_gauss - mag_calibration.x_offset;
+    float x_calibrated = dataM->x_gauss - mag_calibration.x_offset;
     float y_calibrated = dataM->y_gauss - mag_calibration.y_offset;
     float z_calibrated = dataM->z_gauss - mag_calibration.z_offset;
 

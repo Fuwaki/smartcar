@@ -25,7 +25,7 @@
 
 
 
-float a;
+float a, b, c;
 float value[3] = {1.0, 0.0, 0.0};
 
 
@@ -71,13 +71,13 @@ void Inits()
 	P7M1 = 0x00;P7M0 = 0x00;
 	
 	Timer0_Init(); //定时器0初始化
+	UART_Init(); //Debug串口初始化
 	GPS_UART_Init(); //GPS串口初始化
-	// Init_GPS_Setting(); //GPS初始化
+	Init_GPS_Setting(); //GPS初始化
 	Encoder_Init(); //编码器初始化
 	SPI_Init(); //SPI初始化
 	// SPI_InitSlave(); //SPI从模式初始化
 	ICM42688_Init(); //陀螺仪初始化
-	UART_Init(); //Debug串口初始化
 	// LIS3MDL_Init();
 }
 
@@ -92,9 +92,6 @@ void main()
 	{
 		// UART_SendByte('S');
 		// UART_SendStr("Hello World!\0");
-		a = (float) rmc_data.valid;
-		value[0] = a;
-		UART_SendFloat(value);
 		// #pragma region GPS数据模块
 		// GPS_Message_Updater();
 		// if (GPS_Init == 1)
@@ -102,16 +99,23 @@ void main()
 		// 	GPS_Init = Init_GPS_Offset(&naturePosition, &rmc_data);
 		// 	if (GPS_Init == 0)
 		// 	{
-		// 		UART_SendStr("GPS偏移量初始化成功!\0");
+		// 		UART_SendStr("GPS偏移量初始化成功!\0"); //yoshino sama
 		// 		GPS_Init = 0;
 		// 	}
 		// }
 		// #pragma endregion
-
-		// #pragma region 陀螺仪数据模块
-		// Gyro_Updater();
-		// #pragma endregion
-
+		
+		#pragma region 陀螺仪数据模块 //0d00
+		Gyro_Updater();
+		#pragma endregion
+		a = (float) gyro_data.accel_x_g;
+		b = (float) gyro_data.accel_y_g;
+		c = (float) gyro_data.accel_z_g;
+		value[0] = a;
+		value[1] = b;
+		value[2] = c;
+		UART_SendFloat(value);
+		
 		// #pragma region 编码器数据模块
 		// Encoder_Update();
 		// #pragma endregion

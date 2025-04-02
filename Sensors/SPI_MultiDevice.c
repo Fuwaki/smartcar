@@ -9,10 +9,13 @@ static spi_slave_config_t spi_slaves[MAX_SPI_SLAVES];
 static unsigned char slave_count = 0;
 static unsigned char current_slave = 0xFF; // 没有选中的从设备
 //那bro你应该单独封装gpio
-#define LMAO_KIAO 114514
 
 // SPI从模式状态
-static bit spi_slave_mode_enabled = 0;
+bit spi_slave_mode_enabled = 0; //0d00
+bit spi_master_rx = 0; // SPI接收标志位
+bit spi_master_tx = 0; // SPI发送标志位
+bit spi_slave_rx = 0; // SPI从设备接收标志位
+bit spi_slave_tx = 0; // SPI从设备发送标志位
 
 // 用于控制CS引脚
 static void SPI_SetPin(unsigned char port, unsigned char pin, bit value)
@@ -189,11 +192,16 @@ void SPI_ReleaseSlave(unsigned char slave_id)
 // 通过SPI收发一个字节
 unsigned char SPI_TransferByte(unsigned char data_out)
 {
-    SPDAT = data_out;
-    while (!(SPSTAT & 0x80))
-        ;          // 等待SPIF置位，传输完成
-    SPSTAT = 0xC0; // 清除SPIF和WCOL标志
-    return SPDAT;
+    while (spi_master_tx); // 等待之前的发送完成
+    spi_master_tx = 1; // 设置发送标志位
+    SPDAT = data_out; // 写入数据启动传输
+    
+    // 等待SPI传输完成 (检查SPIF位)
+    while (!(SPSTAT & 0x80)); // 等待SPIF标志位置1
+    SPSTAT = 0xC0; // 清除写冲突和SPI完成标志
+    
+    spi_master_tx = 0; // 清除发送标志位
+    return SPDAT; // 返回接收到的数据
 }
 
 // 通过SPI收发多个字节

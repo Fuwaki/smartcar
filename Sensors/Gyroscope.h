@@ -91,6 +91,8 @@
         float temp_c;
     } icm42688_data_t;
 
+    extern icm42688_data_t gyro_data; // 声明传感器数据结构体
+
     // 初始化ICM42688-P传感器
     // 返回：0-成功，1-失败
     unsigned char ICM42688_Init();

@@ -4,20 +4,23 @@
 #include "SPI_MultiDevice.h"
 
 // 当前配置的陀螺仪和加速度计范围
-static gyro_range_t current_gyro_range = GYRO_RANGE_2000_DPS;
-static accel_range_t current_accel_range = ACCEL_RANGE_16G;
+static gyro_range_t current_gyro_range = GYRO_RANGE_125_DPS;
+static accel_range_t current_accel_range = ACCEL_RANGE_4G;
 static unsigned char icm42688_spi_id = 0xFF;
 
-void Gyrp_Delay(void)	//@40.000MHz 1ms延时
+icm42688_data_t gyro_data;
+
+
+void Gyrp_Delay(void)	//@40.000MHz 10ms延时
 {
 	unsigned long edata i;
 
 	_nop_();
 	_nop_();
-	_nop_();
-	i = 9998UL;
+	i = 99998UL;
 	while (i) i--;
 }
+
 
 // 读取ICM42688-P寄存器
 unsigned char ICM42688_ReadRegister(unsigned char slave_id, unsigned char reg_addr)
@@ -44,9 +47,9 @@ unsigned char ICM42688_Init()
     unsigned char who_am_i;
 
     spi_slave_config_t icm42688_config;
-    icm42688_config.cs_port = 1;
-    icm42688_config.cs_pin = 6;
-    icm42688_config.mode = SPI_MODE3;   // ICM42688使用SPI模式3 (CPOL=1, CPHA=1)
+    icm42688_config.cs_port = 0;
+    icm42688_config.cs_pin = 2;
+    icm42688_config.mode = SPI_MODE0;   // ICM42688使用SPI模式0
     icm42688_config.clock_div = 0x00;   // SPI时钟速率设置，根据需要调整
 
     // 注册ICM42688-P为SPI从设备
@@ -70,8 +73,8 @@ unsigned char ICM42688_Init()
 
     // 设置默认范围
     //TODO: 选择合适的量程
-    ICM42688_SetGyroRange(GYRO_RANGE_15_625_DPS);     
-    ICM42688_SetAccelRange(ACCEL_RANGE_2G);
+    ICM42688_SetGyroRange(GYRO_RANGE_125_DPS);     
+    ICM42688_SetAccelRange(ACCEL_RANGE_4G);
 
     return 0; // 初始化成功
 }
@@ -113,23 +116,21 @@ void ICM42688_SetAccelRange(accel_range_t range)
 // 读取传感器原始数据
 void ICM42688_ReadSensorData(icm42688_data_t *dataf)
 {
-    unsigned char buffer[14]; // 7个16位值：加速度(3)、温度、陀螺仪(3)
+    unsigned char buffer[16]; // 8个16位值：温度(1)、加速度(3)、陀螺仪(3)
 
     if (dataf == NULL)
     {
         return;
     }
 
-    // 一次性读取所有数据 (从ACCEL_DATA_X1到GYRO_DATA_Z0)
-    ICM42688_ReadMultiRegisters(icm42688_spi_id, ICM42688_ACCEL_DATA_X1, buffer, 14);
+    // 一次性读取所有数据 (从TEMP_DATA1到GYRO_DATA_Z0)
+    ICM42688_ReadMultiRegisters(icm42688_spi_id, ICM42688_TEMP_DATA1, buffer, 16);
 
     // 合并高低字节（大端格式）
-    dataf->accel_x = (buffer[0] << 8) | buffer[1];
-    dataf->accel_y = (buffer[2] << 8) | buffer[3];
-    dataf->accel_z = (buffer[4] << 8) | buffer[5];
-
-    dataf->temp = (buffer[6] << 8) | buffer[7];
-
+    dataf->temp = (buffer[0] << 8) | buffer[1];
+    dataf->accel_x = (buffer[2] << 8) | buffer[3];
+    dataf->accel_y = (buffer[4] << 8) | buffer[5];
+    dataf->accel_z = (buffer[6] << 8) | buffer[7];
     dataf->gyro_x = (buffer[8] << 8) | buffer[9];
     dataf->gyro_y = (buffer[10] << 8) | buffer[11];
     dataf->gyro_z = (buffer[12] << 8) | buffer[13];
@@ -245,7 +246,6 @@ float ICM42688_AccelConvert(int raw_accel, accel_range_t range)
 
 void Gyro_Updater()
 {
-    static icm42688_data_t sensor_data;
     // 在这里处理传感器数据
 
     // static icm42688_data_t filtered_data;
@@ -261,7 +261,7 @@ void Gyro_Updater()
     // }
     
     // 读取传感器数据
-    ICM42688_ReadSensorData(&sensor_data);
+    ICM42688_ReadSensorData(&gyro_data);
     
     // 应用卡尔曼滤波
     // apply_kalman_filter(&sensor_data, &filtered_data, 
