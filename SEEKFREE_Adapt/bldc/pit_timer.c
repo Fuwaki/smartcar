@@ -111,7 +111,6 @@ void pit_motor_control()
     uint8 pin_state = 0;
     static uint8 oled_pin_state = 0;
 
-
     switch (motor.run_flag)
     {
     case MOTOR_START:
@@ -122,6 +121,7 @@ void pit_motor_control()
         comparator_close_isr();    // 关闭比较器中断
         stall_time_out_check = 0;  // 堵转检测计数器设置为0
         motor.commutation_num = 0; // 电机换相计数器设置为0
+
 
 #if BLDC_USE_SINE_START
 
@@ -187,6 +187,8 @@ void pit_motor_control()
         pwm_out_duty_update(motor.duty_register);
         if (((T4H << 8) | T4L) > 20 * 1000)
         {
+            P41=~P41;
+
             motor.commutation_time[0] = 6000;
             motor.commutation_time[1] = 6000;
             motor.commutation_time[2] = 6000;
@@ -206,6 +208,7 @@ void pit_motor_control()
 
             motor_next_step();
             motor_commutation();
+            // 不切换 用来调试换向
             motor.run_flag = MOTOR_OPEN_LOOP;
         }
 #endif
@@ -310,10 +313,7 @@ void pit_motor_control()
     break;
     case MOTOR_CLOSE_LOOP:
     {
-        //读取比较器数值
         pin_state = (CMPCR1 & 0x01);
-        P41=~P41;
-
         // 通过PA2引脚的电平状态，进行堵转检测
         if (oled_pin_state != pin_state)
         {
@@ -383,6 +383,7 @@ void pit_motor_control()
     break;
     case MOTOR_STOP_STALL:
     {
+
         motor_stop();
         IE2 = ~0x40;            // 关闭定时器4中断
         comparator_close_isr(); // 关闭比较器中断
