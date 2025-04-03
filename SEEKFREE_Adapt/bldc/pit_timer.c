@@ -307,7 +307,6 @@ void pit_motor_control()
             // 电机换相
             motor_commutation();
             motor.run_flag = MOTOR_START;
-            //FIXME 问题应该出在这里
         }
     }
     break;
