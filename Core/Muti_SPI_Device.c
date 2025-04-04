@@ -5,7 +5,6 @@ static SPI_Device spi_devices[8];           // 最多支持8个设备
 static unsigned char device_count = 0;      // 当前注册的设备数量
 static unsigned char current_device = 0xFF; // 当前选中的设备, 0xFF表示没有选中设备
 
-// 定义CS引脚控制函数
 void CS_Control(SPI_Device *device, unsigned char state)
 {
     // 访问扩展SFR
@@ -74,19 +73,26 @@ void SPI_Init(void)
 
     // 设置SPI引脚 (根据实际需求修改)
     P_SW2 |= 0x80; // 使能访问XSFR
-    
+    P_SW1 &= ~0x0c;	// 选择SPI模式
     // 设置为推挽输出和输入
-    P1M0 |= 0x2C;  // P1.2/P1.3/P1.5设为推挽输出(SS/MOSI/SCLK) -> 00101100b
-    P1M1 &= ~0x2C; // 清除P1.2/P1.3/P1.5的M1位
+    P1M0 |= 0x28;  // P1.3/P1.5设为推挽输出(MOSI/SCLK) -> 00101000b
+    P1M1 &= ~0x28; // 清除P1.3/P1.5的M1位
     
     P1M0 &= ~0x10; // P1.4(MISO)设为输入 -> 00010000b
     P1M1 |= 0x10;  // 设置P1.4的M1位
     
+    // 配置P5.4为SS引脚（推挽输出）
+    P5M0 |= 0x10;  // P5.4设为推挽输出(SS) -> 00010000b
+    P5M1 &= ~0x10; // 清除P5.4的M1位
+    
     P_SW2 &= ~0x80; // 禁用访问XSFR QwQ
     
-    /*SSIG (位7)：SS引脚忽略位，1表示忽略SS引脚
+    /*SPCTL寄存器配置:
+    SSIG (位7)：SS引脚忽略位，1表示忽略SS引脚(使用软件控制片选信号)
+      - 设为1是因为我们使用CS_Control函数手动控制每个从设备的片选
+      - 如果设为0，当SS引脚被拉低时，主设备可能会自动切换到从设备模式
     SPEN (位6)：SPI使能位，1表示启用SPI功能
-    DORD (位5)：数据顺序位，未设置为0
+    DORD (位5)：数据顺序位，0表示MSB先传输(高位先出)
     MSTR (位4)：主/从模式选择位，1表示主机模式
     CPOL (位3)：时钟极性位，未设置为0
     CPHA (位2)：时钟相位位，未设置为0
@@ -94,6 +100,7 @@ void SPI_Init(void)
     SPR0 (位0)：波特率控制位0，未设置为0*/
     // 启用SPI功能，设为主机模式，SSIG=1(忽略SS引脚)
     SPCTL = (1 << 7) | (1 << 6) | (1 << 4); // SSIG=1, SPEN=1, MSTR=1
+    
 
     // 清除状态标志
     SPSTAT = 0xC0; // 清除SPIF和WCOL标志

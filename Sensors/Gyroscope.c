@@ -50,7 +50,7 @@ unsigned char ICM42688_Init()
     icm42688_config.cs_port = 0;
     icm42688_config.cs_pin = 2;
     icm42688_config.mode = SPI_MODE0;   // ICM42688使用SPI模式0
-    icm42688_config.clock_div = 0x00;   // SPI时钟速率设置，根据需要调整
+    icm42688_config.clock_div = SPI_CLOCK_DIV4;   // SPI时钟速率设置，根据需要调整
 
     // 注册ICM42688-P为SPI从设备
     icm42688_spi_id = SPI_RegisterSlave(&icm42688_config);

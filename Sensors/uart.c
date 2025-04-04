@@ -5,7 +5,7 @@
 #define FOSC 40000000L
 #define UART3_BAUD 115200  // UART3波特率
 #define UART_BUF_SIZE 64   // 定义接收缓冲区大小
-bit busy;
+bit Uart3Busy;
 char uart3_wptr; // 写指针
 char uart3_rptr; // 读指针
 unsigned char xdata UART3_RxBuffer[UART_BUF_SIZE]; // 接收数据缓冲区
@@ -34,22 +34,20 @@ void UART_Init(void)
     T3L = (65536 - (FOSC/4/UART3_BAUD));
     T3H = (65536 - (FOSC/4/UART3_BAUD)) >> 8;
     
-    // 配置定时器3为UART3的波特率发生器
-    // S3CON |= 0x40;         // 将Timer3用于UART3波特率发生器(S3ST3=1)
-    //上面的代码已经在S3CON中设置了 这里只是为了防止后续代码出错
-    
     IE2 |= 0x08;           // 使能UART3中断
     EA = 1;                // 允许总中断
 
     uart3_wptr = 0x00;
     uart3_rptr = 0x00;
+
+    P5M0 |= 0x03; P5M1 &= ~0x03; // 设置TXD3和RXD3为推挽输出模式
 }
 
 #pragma region 输出信号
 void UART_SendByte(unsigned char byte)
 {
-    while(busy);
-    busy = 1;
+    while(Uart3Busy);
+    Uart3Busy = 1;
     S3BUF = byte;          // 将数据写入S3BUF
     
 }
@@ -148,7 +146,7 @@ void UART3_Routine() interrupt 17
     if (S3TI)
     {
         S3TI = 0;
-        busy = 0;
+        Uart3Busy = 0;
     }
     if (S3RI)
     {

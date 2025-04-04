@@ -61,6 +61,7 @@ void Inits()
     PWM_Init();
 	Timer0_Init();
     Uart3Init();
+	initTrigTables(); // 初始化三角函数表
 	ES3 = 1;
 	// Timer1_Init();
 }

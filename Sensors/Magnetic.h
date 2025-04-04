@@ -29,9 +29,9 @@
 
     // 数据存储结构体
     typedef struct {
-        int x;
-        int y;
-        int z;
+        short x_mag;
+        short y_mag;
+        short z_mag;
         float x_gauss;
         float y_gauss;
         float z_gauss;
@@ -47,6 +47,7 @@
     void LIS3MDL_Init(void);
     unsigned char LIS3MDL_ReadReg(unsigned char reg);
     void LIS3MDL_WriteReg(unsigned char reg, unsigned char value);
+    void LIS3MDL_ReadMultiRegisters(unsigned char reg, unsigned char *buffer, unsigned char len);
     unsigned char LIS3MDL_ReadData(MagneticData* dataM);  // 修改返回类型为unsigned char
     void LIS3MDL_CalcMagneticField(MagneticData* dataM, unsigned char scale);
     float LIS3MDL_CalculateHeading(MagneticData *dataM);  // 计算方位角函数声明
@@ -57,4 +58,5 @@
     unsigned char LIS3MDL_AddCalibrationSample(MagneticData *dataM);
     unsigned char LIS3MDL_CalculateCalibration(void);
     unsigned char LIS3MDL_AdvancedCalibration(void);
+    void LIS3MDL_Updater(void);
 #endif

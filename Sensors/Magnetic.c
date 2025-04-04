@@ -7,10 +7,10 @@
 #include "SPI_MultiDevice.h"
 
 #define PI 3.14159265358979323846 // 这么长怎么你了!
-// 当前选定的量程
-static unsigned char current_scale = LIS3MDL_FS_4GAUSS;
-// LIS3MDL的SPI设备ID
-static unsigned char lis3mdl_spi_id = 0xFF; //初始值为0xFF表示未注册
+#define LIS3MDL_READ 0x80  // 读操作最高位为1
+#define LIS3MDL_WRITE 0x00 // 写操作最高位为0
+unsigned char current_scale = LIS3MDL_FS_4GAUSS;
+unsigned char lis3mdl_spi_id = 0xFF; //初始值为0xFF表示未注册
 
 // 磁力计校准参数
 typedef struct
@@ -30,13 +30,10 @@ MagneticData mag_data;
 
 // 用于校准采样的缓冲区
 #define MAG_CALIB_SAMPLES 100
+unsigned int sample_count = 0;
 static MagneticData mag_samples[MAG_CALIB_SAMPLES];
-static unsigned int sample_count = 0;
 static unsigned char calibration_in_progress = 0;
 
-// SPI通信地址位定义
-#define LIS3MDL_READ 0x80  // 读操作最高位为1
-#define LIS3MDL_WRITE 0x00 // 写操作最高位为0
 
 void Mag_Delay(void) //1ms
 {
@@ -74,10 +71,10 @@ void LIS3MDL_Init(void)
     unsigned char device_id;
     // 配置SPI从设备
     spi_slave_config_t lis3mdl_config;
-    lis3mdl_config.cs_port = 1;
-    lis3mdl_config.cs_pin = 6;
-    lis3mdl_config.mode = SPI_MODE3; // LIS3MDL使用SPI模式3 (CPOL=1, CPHA=1)
-    lis3mdl_config.clock_div = 0x00; // SPI时钟速率设置，根据需要调整
+    lis3mdl_config.cs_port = 4;
+    lis3mdl_config.cs_pin = 2;
+    lis3mdl_config.mode = SPI_MODE0; // LIS3MDL使用SPI模式0
+    lis3mdl_config.clock_div = SPI_CLOCK_DIV4; // SPI时钟分频4
 
     // 注册LIS3MDL为SPI从设备
     lis3mdl_spi_id = SPI_RegisterSlave(&lis3mdl_config);
@@ -88,7 +85,10 @@ void LIS3MDL_Init(void)
         return;
     }
 
-    // 1. 复位设备
+    // 适当延时以确保SPI总线稳定
+    Mag_Delay();
+
+    //复位设备
     LIS3MDL_WriteReg(LIS3MDL_CTRL_REG2, 0x0C); // 软复位
 
     Mag_Delay(); // 等待复位完成
@@ -98,26 +98,27 @@ void LIS3MDL_Init(void)
     if (device_id != 0x3D)
     { // LIS3MDL的WHO_AM_I寄存器值应为0x3D
         // 设备ID错误，可以在此添加错误处理代码
-        return;
+        return; //这就是错误处理代码qwq
     }
 
-    // 2. 配置传感器
+    //配置传感器
     // CTRL_REG1: 温度传感器使能, XY轴高性能模式, 80Hz输出速率
     LIS3MDL_WriteReg(LIS3MDL_CTRL_REG1, 0xFC);
+    Mag_Delay(); // 等待配置完成
 
     // CTRL_REG2: 设置量程为±4高斯
     LIS3MDL_WriteReg(LIS3MDL_CTRL_REG2, LIS3MDL_FS_4GAUSS);
     current_scale = LIS3MDL_FS_4GAUSS;
-
+    Mag_Delay(); // 等待配置完成
     // CTRL_REG3: 连续转换模式
     LIS3MDL_WriteReg(LIS3MDL_CTRL_REG3, 0x00);
-
+    Mag_Delay(); // 等待配置完成
     // CTRL_REG4: Z轴高性能模式, 大端数据
     LIS3MDL_WriteReg(LIS3MDL_CTRL_REG4, 0x0C);
-
+    Mag_Delay(); // 等待配置完成
     // CTRL_REG5: 快速读取模式
     LIS3MDL_WriteReg(LIS3MDL_CTRL_REG5, 0x40);
-
+    Mag_Delay(); // 等待配置完成
     // 初始化校准参数
     // LIS3MDL_InitCalibration();
 }
@@ -126,13 +127,11 @@ void LIS3MDL_Init(void)
 unsigned char LIS3MDL_ReadReg(unsigned char reg)
 {
     unsigned char value;
-
     // SPI通信中，读操作需要将寄存器地址最高位置1
     SPI_SelectSlave(lis3mdl_spi_id);
     SPI_TransferByte(reg | LIS3MDL_READ);
     value = SPI_TransferByte(0xFF); // 发送dummy字节，读取返回数据
     SPI_ReleaseSlave(lis3mdl_spi_id);
-
     return value;
 }
 
@@ -146,42 +145,75 @@ void LIS3MDL_WriteReg(unsigned char reg, unsigned char value)
     SPI_ReleaseSlave(lis3mdl_spi_id);
 }
 
-// 读取LIS3MDL三轴磁场数据
-// 返回值: 1-成功读取数据, 0-数据未就绪
-unsigned char LIS3MDL_ReadData(MagneticData *dataM)
+// 连续读取多个LIS3MDL寄存器
+void LIS3MDL_ReadMultiRegisters(unsigned char reg, unsigned char *buffer, unsigned char len)
 {
-    unsigned char x_l, x_h, y_l, y_h, z_l, z_h;
+    unsigned char i;
+    SPI_SelectSlave(lis3mdl_spi_id);
+    // 发送起始地址，最高位置1表示读操作
+    SPI_TransferByte(reg | LIS3MDL_READ);
+    // 连续读取多个寄存器数据
+    for(i = 0; i < len; i++)
+    {
+        buffer[i] = SPI_TransferByte(0xFF);
+    }
+    SPI_ReleaseSlave(lis3mdl_spi_id);
+}
 
+// 读取LIS3MDL三轴磁场数据
+unsigned char LIS3MDL_ReadData(MagneticData *dataM) //用这个函数来判断spi是否正常
+{
+    unsigned char buffer[6];
+    // 空指针检查
+    if (dataM == NULL)
+        return 0; // 返回0表示读取失败
+        
     // 检查数据是否准备好
     if (!(LIS3MDL_ReadReg(LIS3MDL_STATUS_REG) & 0x08))
         return 0; // 数据未准备好，返回0表示读取失败
 
-    // 在SPI模式下，可以使用连续读取模式提高效率
-    SPI_SelectSlave(lis3mdl_spi_id);
-    SPI_TransferByte(LIS3MDL_OUT_X_L | LIS3MDL_READ);
-    x_l = SPI_TransferByte(0xFF); // 发送虚拟数据，读取返回值方便后续读取
-    x_h = SPI_TransferByte(0xFF);
-    y_l = SPI_TransferByte(0xFF);
-    y_h = SPI_TransferByte(0xFF);
-    z_l = SPI_TransferByte(0xFF);
-    z_h = SPI_TransferByte(0xFF);
-    SPI_ReleaseSlave(lis3mdl_spi_id);
+    // 为确保数据的稳定性，添加一个短暂延时
 
-    // 合并数据
-    dataM->x = (int)((x_h << 8) | x_l);
-    dataM->y = (int)((y_h << 8) | y_l);
-    dataM->z = (int)((z_h << 8) | z_l);
+    // 使用连续读取函数读取所有数据
+    LIS3MDL_ReadMultiRegisters(LIS3MDL_OUT_X_L, buffer, 6);
+
+    dataM->x_mag = (short)((buffer[1] << 8) | buffer[0]);
+    dataM->y_mag = (short)((buffer[3] << 8) | buffer[2]);
+    dataM->z_mag = (short)((buffer[5] << 8) | buffer[4]);
 
     // 计算实际磁场值
     LIS3MDL_CalcMagneticField(dataM, current_scale);
-
     return 1; // 返回1表示成功读取
+}
+
+void LIS3MDL_Updater()
+{
+    // 读取磁力计数据
+    if (LIS3MDL_ReadData(&mag_data))
+    {
+        // 如果正在校准
+        if (calibration_in_progress)
+        {
+            // 添加样本到校准集
+            LIS3MDL_AddCalibrationSample(&mag_data);
+        }
+        else
+        {
+            // 校准已完成，计算方位角
+            LIS3MDL_CalculateHeading(&mag_data);
+            // 使用计算出的方位角进行其他操作...
+        }
+    }
 }
 
 // 计算实际磁场值（高斯）
 void LIS3MDL_CalcMagneticField(MagneticData *dataM, unsigned char scale)
 {
     float sensitivity;
+
+// 空指针检查
+    if (dataM == NULL)
+        return;
 
     // 根据量程选择灵敏度系数(LSB/高斯)
     switch (scale)
@@ -205,18 +237,20 @@ void LIS3MDL_CalcMagneticField(MagneticData *dataM, unsigned char scale)
     }
 
     // 将原始数据转换为高斯
-    dataM->x_gauss = (float)dataM->x / sensitivity;
-    dataM->y_gauss = (float)dataM->y / sensitivity;
-    dataM->z_gauss = (float)dataM->z / sensitivity;
+    dataM->x_gauss = (float)dataM->x_mag / sensitivity;
+    dataM->y_gauss = (float)dataM->y_mag / sensitivity;
+    dataM->z_gauss = (float)dataM->z_mag / sensitivity;
 }
 
 // 应用校准参数到磁力计数据
 void LIS3MDL_ApplyCalibration(MagneticData *dataM)
 {
     // 应用硬铁校正（偏移量）
-    float x_calibrated = dataM->x_gauss - mag_calibration.x_offset;
-    float y_calibrated = dataM->y_gauss - mag_calibration.y_offset;
-    float z_calibrated = dataM->z_gauss - mag_calibration.z_offset;
+    float x_calibrated ,y_calibrated, z_calibrated;
+
+    x_calibrated = dataM->x_gauss - mag_calibration.x_offset;
+    y_calibrated = dataM->y_gauss - mag_calibration.y_offset;
+    z_calibrated = dataM->z_gauss - mag_calibration.z_offset;
 
     // 应用软铁校正（比例因子）
     dataM->x_adj = x_calibrated * mag_calibration.x_scale;
@@ -242,7 +276,7 @@ float LIS3MDL_CalculateHeading(MagneticData *dataM)
     }
 
     // 使用校正后的数据计算方位角
-    curAngle = atan2(dataM->y_gauss, dataM->x_gauss);
+    curAngle = atan2(dataM->y_adj, dataM->x_adj);
 
     // 将角度范围调整为[0, 2π]
     if (curAngle < 0)
@@ -354,18 +388,39 @@ unsigned char LIS3MDL_CalculateCalibration(void)
 // 添加一个采样点到校准数据集
 unsigned char LIS3MDL_AddCalibrationSample(MagneticData *dataM)
 {
+float sensitivity;
+    
     if (!calibration_in_progress || sample_count >= MAG_CALIB_SAMPLES)
         return 0;
 
     // 保存原始数据（未校准的）
-    mag_samples[sample_count].x = dataM->x;
-    mag_samples[sample_count].y = dataM->y;
-    mag_samples[sample_count].z = dataM->z;
+    mag_samples[sample_count].x_mag = dataM->x_mag;
+    mag_samples[sample_count].y_mag = dataM->y_mag;
+    mag_samples[sample_count].z_mag = dataM->z_mag;
 
-    // 计算高斯值
-    mag_samples[sample_count].x_gauss = (float)dataM->x / 6842.0f; // 假设使用±4高斯量程
-    mag_samples[sample_count].y_gauss = (float)dataM->y / 6842.0f;
-    mag_samples[sample_count].z_gauss = (float)dataM->z / 6842.0f;
+// 根据当前量程选择正确的灵敏度系数
+    switch (current_scale)
+    {
+    case LIS3MDL_FS_4GAUSS:
+        sensitivity = 6842.0f;
+        break;
+    case LIS3MDL_FS_8GAUSS:
+        sensitivity = 3421.0f;
+        break;
+    case LIS3MDL_FS_12GAUSS:
+        sensitivity = 2281.0f;
+        break;
+    case LIS3MDL_FS_16GAUSS:
+        sensitivity = 1711.0f;
+        break;
+    default:
+        sensitivity = 6842.0f; // 默认值
+    }
+
+    // 计算高斯值，使用正确的当前灵敏度
+    mag_samples[sample_count].x_gauss = (float)dataM->x_mag / sensitivity;
+    mag_samples[sample_count].y_gauss = (float)dataM->y_mag / sensitivity;
+    mag_samples[sample_count].z_gauss = (float)dataM->z_mag / sensitivity;
 
     sample_count++;
 

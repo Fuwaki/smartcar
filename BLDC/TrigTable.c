@@ -14,8 +14,8 @@ void initTrigTables(void)
     for (i = 0; i < TRIG_TABLE_SIZE; i++)
     {
         angle = i * 2.0f * 3.14159265358979323846f / TRIG_TABLE_SIZE;
-        sin_table[i] = sinf(angle);
-        cos_table[i] = cosf(angle);
+        sin_table[i] = sin(angle);
+        cos_table[i] = cos(angle);
     }
 }
 
@@ -32,13 +32,15 @@ static float normalizeAngle(float angle)
 // 快速查表获取sin值（使用线性插值提高精度）
 float fast_sin(float angle)
 {
+    float index_float, fraction;
+    int index, index_next;
     angle = normalizeAngle(angle);
     
-    float index_float = angle * TRIG_TABLE_SIZE / (2.0f * 3.14159265358979323846f);
-    int index = (int)index_float;
-    float fraction = index_float - index;
+    index_float = angle * TRIG_TABLE_SIZE / (2.0f * 3.14159265358979323846f);
+    index = (int)index_float;
+    fraction = index_float - index;
     
-    int index_next = (index + 1) % TRIG_TABLE_SIZE;
+    index_next = (index + 1) % TRIG_TABLE_SIZE;
     
     return sin_table[index] + fraction * (sin_table[index_next] - sin_table[index]);
 }
@@ -46,13 +48,15 @@ float fast_sin(float angle)
 // 快速查表获取cos值（使用线性插值提高精度）
 float fast_cos(float angle)
 {
+    float index_float, fraction;
+    int index, index_next;
     angle = normalizeAngle(angle);
     
-    float index_float = angle * TRIG_TABLE_SIZE / (2.0f * 3.14159265358979323846f);
-    int index = (int)index_float;
-    float fraction = index_float - index;
+    index_float = angle * TRIG_TABLE_SIZE / (2.0f * 3.14159265358979323846f);
+    index = (int)index_float;
+    fraction = index_float - index;
     
-    int index_next = (index + 1) % TRIG_TABLE_SIZE;
+    index_next = (index + 1) % TRIG_TABLE_SIZE;
     
     return cos_table[index] + fraction * (cos_table[index_next] - cos_table[index]);
 }

@@ -76,9 +76,9 @@ void Inits()
 	Init_GPS_Setting(); //GPS初始化
 	Encoder_Init(); //编码器初始化
 	SPI_Init(); //SPI初始化
-	// SPI_InitSlave(); //SPI从模式初始化
+	SPI_InitSlave(); //SPI从模式初始化 //FIXME: 这个会导致串口uart的中断失效
 	ICM42688_Init(); //陀螺仪初始化
-	// LIS3MDL_Init();
+	LIS3MDL_Init();
 }
 
 void main()
@@ -86,12 +86,10 @@ void main()
 	unsigned char GPS_Init = 1;
 	Inits();
 	Delay100us();
-	
-	
+	UART_SendByte('S'); //Started!
 	while(1)
 	{
-		// UART_SendByte('S');
-		// UART_SendStr("Hello World!\0");
+		UART_SendStr("Hello World!\0");
 		// #pragma region GPS数据模块
 		// GPS_Message_Updater();
 		// if (GPS_Init == 1)
@@ -108,22 +106,25 @@ void main()
 		#pragma region 陀螺仪数据模块 //0d00
 		Gyro_Updater();
 		#pragma endregion
-		a = (float) gyro_data.accel_x_g;
-		b = (float) gyro_data.accel_y_g;
-		c = (float) gyro_data.accel_z_g;
-		value[0] = a;
-		value[1] = b;
-		value[2] = c;
-		UART_SendFloat(value);
+		#pragma region 编码器数据模块
+		Encoder_Update();
+		#pragma endregion
 		
-		// #pragma region 编码器数据模块
-		// Encoder_Update();
-		// #pragma endregion
+		
+		#pragma region 磁场计数据模块
+		LIS3MDL_ReadData(&mag_data); // 读取磁力计数据
+		#pragma endregion
 
+		// a = (float) mag_data.x_mag;
+		// b = (float) mag_data.y_mag;
+		// c = (float) mag_data.z_mag;
+		// value[0] = a;
+		// value[1] = b;
+		// value[2] = c;
+		// UART_SendByte(((unsigned char*)(&mag_data.x_mag))[0]);
+		// UART_SendByte(((unsigned char*)(&mag_data.x_mag))[1]);
 
-		// #pragma region 磁场计数据模块
-		// // LIS3MDL_ReadData(&mag_data); // 读取磁力计数据
-		// #pragma endregion
+		// UART_SendFloat(value);
 		// // UART_SendStr("数据读取完成!\0");
 		// if(UART_Available()) // 	这个是接收数据的函数
 		// {

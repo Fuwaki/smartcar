@@ -39,6 +39,6 @@
     void GPS_Calculate(NaturePosition *naturePosition, RMC_Data *rmc_data);
     void Init_GPS_Setting(void);
     unsigned char Init_GPS_Offset(NaturePosition *naturePosition, RMC_Data *rmc_data);
-    void UART_SendCommand(unsigned char *cmd, unsigned char length);
+    void GPS_SendCommand(unsigned char *cmd, unsigned char length);
     void GPS_Message_Updater(void);
 #endif

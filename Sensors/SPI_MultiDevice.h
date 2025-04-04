@@ -14,6 +14,12 @@
 #define SPI_MODE2 0x08 // CPOL=1, CPHA=0 - 空闲时时钟为高电平，数据在时钟下降沿采样
 #define SPI_MODE3 0x0C // CPOL=1, CPHA=1 - 空闲时时钟为高电平，数据在时钟上升沿采样
 
+#define SPI_CLOCK_DIV2 0x00 // 时钟分频2
+#define SPI_CLOCK_DIV4 0x01 // 时钟分频4
+#define SPI_CLOCK_DIV8 0x02 // 时钟分频8
+#define SPI_CLOCK_DIV16 0x03 // 时钟分频16
+#define SPI_CLOCK_DIV32 0x04 // 时钟分频32
+
 // 从设备定义结构体
 typedef struct
 {
@@ -63,10 +69,7 @@ void SPI_SetSlaveRxCallback(void (*callback)(unsigned char));
 void SPI_SetSlaveTxCallback(unsigned char (*callback)(void));
 void SPI_SlavePrepareTxData(unsigned char dataSend);
 
-// 新增: 准备发送浮点数数组的函数
-void SPI_PrepareSendFloats(float *values, unsigned char count);
-
-// 内部函数: 浮点数发送回调函数
-unsigned char SPI_FloatTxCallback(void);
-
+// SPI从模式接收回调函数
+void SPI_SlavePrepareFloatData(float value);
+unsigned char SPI_SlaveFloatTxCallback(void);
 #endif // __SPI_MULTIDEVICE_H__

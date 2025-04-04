@@ -3,19 +3,24 @@
 #include <intrins.h>
 #include <stdio.h>
 
-
 // 存储已注册的SPI从设备配置
 static spi_slave_config_t spi_slaves[MAX_SPI_SLAVES];
 static unsigned char slave_count = 0;
 static unsigned char current_slave = 0xFF; // 没有选中的从设备
-//那bro你应该单独封装gpio
+
+// 浮点数传输相关变量和函数
+static unsigned char float_tx_buffer[4]; // 浮点数传输缓冲区
+static unsigned char float_tx_index = 0; // 当前发送字节索引
+
+// SPI从模式回调函数指针
+static void (*spi_slave_rx_callback)(unsigned char) = NULL;
+static unsigned char (*spi_slave_tx_callback)(void) = NULL;
 
 // SPI从模式状态
 bit spi_slave_mode_enabled = 0; //0d00
 bit spi_master_rx = 0; // SPI接收标志位
 bit spi_master_tx = 0; // SPI发送标志位
-bit spi_slave_rx = 0; // SPI从设备接收标志位
-bit spi_slave_tx = 0; // SPI从设备发送标志位
+bit float_tx_active = 0; // 浮点数传输活动标志
 
 // 用于控制CS引脚
 static void SPI_SetPin(unsigned char port, unsigned char pin, bit value)
@@ -77,9 +82,9 @@ static void SPI_SetPin(unsigned char port, unsigned char pin, bit value)
 void SPI_Init(void)
 {
     unsigned char i;
-    SPCTL = 0x50;  // 设置为主模式, SSIG=0(SS引脚有效), SPEN=1(启用SPI)
-                   // 0x50 = 01010000b：
-                   // 位7(SSIG)=0：SS引脚有效
+    SPCTL = 0xD0;  // 设置为主模式, SSIG=0(SS引脚有效), SPEN=1(启用SPI)
+                   // 0x50 = 11010000b：
+                   // 位7(SSIG)=1：ss引脚无效（忽略SS引脚）
                    // 位6(SPEN)=1：启用SPI
                    // 位5-4：保留位
                    // 位3(DORD)=0：MSB先传输
@@ -101,7 +106,7 @@ unsigned char SPI_RegisterSlave(spi_slave_config_t *slave_config)
     {
         return 0xFF; // 达到最大设备数
     }
-    //CS PORT和CSPIN有啥区别
+
     // 复制配置
     spi_slaves[slave_count].cs_port = slave_config->cs_port;
     spi_slaves[slave_count].cs_pin = slave_config->cs_pin;
@@ -190,7 +195,7 @@ void SPI_ReleaseSlave(unsigned char slave_id)
 }
 
 // 通过SPI收发一个字节
-unsigned char SPI_TransferByte(unsigned char data_out)
+unsigned char SPI_TransferByte(unsigned char data_out) //?这里是否有问题？
 {
     while (spi_master_tx); // 等待之前的发送完成
     spi_master_tx = 1; // 设置发送标志位
@@ -280,20 +285,42 @@ void SPI_WriteMultiRegisters(unsigned char slave_id, unsigned char start_addr,
 
 
 #pragma region SPI从模式
-// SPI从模式回调函数指针
-static void (*spi_slave_rx_callback)(unsigned char) = NULL;
-static unsigned char (*spi_slave_tx_callback)(void) = NULL;
 
-// SPI从模式初始化函数 - 使用USART2和定时器1实现SPI从模式
+// SPI从模式初始化函数 - 使用USART2和定时器2实现SPI从模式
 void SPI_InitSlave(void)
 {
-// 首先将USART2重定向至P2口，必须在配置前设置
-    P_SW2 |= 0x80;        // 设置EAXFR=1，允许访问扩展SFR
-    S2SPI_S0 = 1;       /*P2.3(SS) - 片选信号
-                         P2.5(MOSI) - 主机输出/从机输入
-                         P2.6(MISO) - 主机输入/从机输出
-                         P2.7(SCLK) - 时钟信号*/
+    P_SW2 |= 0x80;     // 开启EAXFR访问权限
+    
+    // 设置USART2为SPI从模式映射到P2口
+    S2SPI_S0 = 1;       /*P2.4(SS) - 片选信号
+                        P2.5(MOSI) - 主机输出/从机输入
+                        P2.6(MISO) - 主机输入/从机输出
+                        P2.7(SCLK) - 时钟信号*/
+    P_SW3 = (P_SW3 & ~0x30) | 0x10;	//USART2_SPI: S2SS(P2.4), S2MOSI(P2.5), S2MISO(P2.6), S2SCLK(P2.7)
 
+    // 配置P2.4(SS)为输入模式
+    P2M1 |= (1 << 4);
+    P2M0 &= ~(1 << 4);
+
+    // 配置P2.5(MOSI)为输入模式 - 接收主机数据
+    P2M1 |= (1 << 5);
+    P2M0 &= ~(1 << 5);
+
+    // 配置P2.6(MISO) - 修改为推挽输出模式，并正确配置上拉电阻
+    P2M0 |= (1 << 6);  // 设置为1 
+    P2M1 &= ~(1 << 6); // 设置为0 -> 推挽输出模式
+    
+    // 注释掉可能导致问题的P2.6上拉电阻配置
+    // P_SW2 |= 0x80;     // 再次开启EAXFR访问权限用于配置上拉 //FIXME: 每次上拉P2.6就会导致USART2中断失效或者卡住单片机
+    // P2PU |= (1 << 6);  // 使能P2.6的上拉电阻限 
+
+    // 配置P2.7(SCLK)为输入模式 - 接收主机时钟信号
+    P2M1 |= (1 << 7);
+    P2M0 &= ~(1 << 7);
+    
+    P_SW2 &= ~0x80;     // 关闭EAXFR访问权限
+
+    
     // 配置USART2为SPI从模式
     USART2CR1 = 0x00;   // 先清除所有位
     USART2CR1 = (0 << 7) |   // LINEN=0 禁用lin
@@ -304,31 +331,12 @@ void SPI_InitSlave(void)
                 (1 << 2) |   // SPSLV=1（从模式）
                 (0 << 1) |   // CPOL=0 空闲时候低电平
                 (0 << 0);    // CPHA=0 第一个边缘采样
-    P_SW2 &= ~0x80;       // 恢复EAXFR=0    
     
-    // 配置P2.3(SS)为输入模式
-    P2M1 |= (1 << 3);
-    P2M0 &= ~(1 << 3);
-
-    // 配置P2.5(MOSI)为输入模式 - 接收主机数据
-    P2M1 |= (1 << 5);
-    P2M0 &= ~(1 << 5);
-
-    // 配置P2.6(MISO)为推挽输出模式 - 向主机发送数据
-    P2M1 &= ~(1 << 6);
-    P2M0 |= (1 << 6);
-    
-    // 配置P2.7(SCLK)为输入模式 - 接收主机时钟信号
-    P2M1 |= (1 << 7);
-    P2M0 &= ~(1 << 7);
-    
-    // 配置定时器1作为USART2的时钟源
-    TMOD &= ~0xF0;       // 清除T1相关设置
-    TMOD |= 0x20;        // T1为8位自动重装模式
-    AUXR &= ~(1 << 6);   // T1为1T模式
-    TH1 = 0xFF;          // 设置定时器初值为最大值以获得最高波特率
-    TL1 = 0xFF;          
-    TR1 = 1;             // 启动定时器1
+    // 配置定时器2作为USART2的时钟源
+    AUXR |= 0x04;        // T2为1T模式
+    T2L = 0xFF;          // 设置定时器初值为最大值以获得最高波特率
+    T2H = 0xFF;
+    AUXR |= 0x10;        // 启动定时器2
     
     // 配置USART2为同步模式
     S2CON = 0x10;        // S2SM0=0, S2SM1=0, S2REN=1: 同步移位寄存器模式且使能接收
@@ -349,8 +357,8 @@ void SPI_DisableSlave(void) //留在这里huh
     // 关闭USART2
     S2CON = 0x00;        // 关闭USART2
     
-    // 禁用T1时钟输出
-    TR1 = 0;             // 停止定时器1
+    // 禁用T2时钟输出
+    AUXR &= ~0x10;       // 停止定时器2
     
     // 禁用USART2中断
     IE2 &= ~0x01;        // 禁用串口2中断
@@ -379,21 +387,23 @@ void SPI_SlavePrepareTxData(unsigned char dataSend)
 // USART2中断服务程序 - 用于处理从P2口接收到的SPI数据
 void USART2_Isr() interrupt 8  // 使用中断8号 (UART2中断)
 {
-    if (S2CON & 0x01)  // S2RI: 接收中断标志
+    unsigned char received_data;
+    if (S2RI)  // S2RI: 接收中断标志
     {
-        unsigned char received_data = S2BUF;
-        S2CON &= ~0x01;  // 清除接收中断标志
+        received_data = S2BUF;
+        S2RI = 0;  // 清除接收中断标志
+
         
         // 如果注册了接收回调函数，则调用
         if (spi_slave_rx_callback)
         {
-            spi_slave_rx_callback(received_data);
+            spi_slave_rx_callback(received_data); // 调用接收回调函数
         }
     }
     
-    if (S2CON & 0x02)  // S2TI: 发送中断标志
+    if (S2TI)  // S2TI: 发送中断标志
     {
-        S2CON &= ~0x02;  // 清除发送中断标志
+        S2TI = 0;  // 清除发送中断标志
         
         // 如果注册了发送回调函数，则准备下一个要发送的数据
         if (spi_slave_tx_callback)
@@ -408,4 +418,59 @@ void USART2_Isr() interrupt 8  // 使用中断8号 (UART2中断)
     }
 }
 
+// 浮点数发送回调函数
+unsigned char SPI_SlaveFloatTxCallback(void)
+{
+    unsigned char data_byte;
+    
+    // 如果正在传输浮点数，则发送下一个字节
+    if (float_tx_active)
+    {
+        data_byte = float_tx_buffer[float_tx_index++];
+        
+        // 检查是否已完成全部4字节发送
+        if (float_tx_index >= 4)
+        {
+            float_tx_index = 0;
+            float_tx_active = 0; // 完成传输
+        }
+        
+        return data_byte;
+    }
+    
+    return 0xFF; // 默认发送值
+}
+
+// 准备发送浮点数数据
+void SPI_SlavePrepareFloatData(float value)
+{
+    unsigned char* p_float = (unsigned char*)&value;
+    unsigned char i;
+    
+    // 4个字节到发送缓冲区
+    for (i = 0; i < 4; i++)
+    {
+        float_tx_buffer[i] = p_float[i];
+    }
+    
+    float_tx_index = 0; // 重置发送索引
+    float_tx_active = 1; // 激活浮点数传输
+    
+    // 设置回调函数
+    SPI_SetSlaveTxCallback(SPI_SlaveFloatTxCallback);
+    
+    // 准备发送第一个字节
+    SPI_SlavePrepareTxData(float_tx_buffer[float_tx_index++]);
+}
+
 #pragma endregion SPI从模式
+
+/*主机端接受代码
+    unsigned char bytes[4];
+    // 接收4个字节
+    for(int i = 0; i < 4; i++) 
+    {
+        bytes[i] = SPI_TransferByte(0xFF);
+    }
+    float received_value = *((float*)bytes);
+*/
