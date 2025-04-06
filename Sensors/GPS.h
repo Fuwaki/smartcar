@@ -7,8 +7,10 @@
         float second;     // 秒
         char status;      // 定位状态，A=有效，V=无效
         double latitude;  // 纬度(度)
+        unsigned long latitude_decimal; // 纬度小数部分
         char ns;          // 纬度方向，N=北半球，S=南半球
         double longitude; // 经度(度)
+        unsigned long longitude_decimal;     // 纬度度数部分
         char ew;          // 经度方向，E=东经，W=西经
         float speed;      // 地面速度(节)
         float course;     // 地面航向角(度)
@@ -41,4 +43,7 @@
     unsigned char Init_GPS_Offset(NaturePosition *naturePosition, RMC_Data *rmc_data);
     void GPS_SendCommand(unsigned char *cmd, unsigned char length);
     void GPS_Message_Updater(void);
+    void GPS_Delay(void);
+    unsigned long get_decimal_part(double value);
+    void extract_gps_precision(RMC_Data *rmc_data);
 #endif

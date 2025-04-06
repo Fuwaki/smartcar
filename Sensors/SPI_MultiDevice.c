@@ -4,17 +4,23 @@
 #include <stdio.h>
 
 // 存储已注册的SPI从设备配置
-static spi_slave_config_t spi_slaves[MAX_SPI_SLAVES];
-static unsigned char slave_count = 0;
-static unsigned char current_slave = 0xFF; // 没有选中的从设备
+spi_slave_config_t spi_slaves[MAX_SPI_SLAVES];
+unsigned char slave_count = 0;
+unsigned char current_slave = 0xFF; // 没有选中的从设备
 
 // 浮点数传输相关变量和函数
-static unsigned char float_tx_buffer[4]; // 浮点数传输缓冲区
-static unsigned char float_tx_index = 0; // 当前发送字节索引
+unsigned char float_tx_buffer[4]; // 浮点数传输缓冲区
+unsigned char float_tx_index = 0; // 当前发送字节索引
+
+SENSOR_DATA* sensor_data_to_send = NULL; // 指向要发送的结构体
+unsigned char* sensor_data_ptr = NULL;   // 用于按字节访问结构体
+unsigned int sensor_data_size = 0;       // 结构体总大小
+unsigned int sensor_data_index = 0;      // 当前发送的字节索引
+bit sensor_data_tx_active = 0;           // 结构体传输活动标志
 
 // SPI从模式回调函数指针
-static void (*spi_slave_rx_callback)(unsigned char) = NULL;
-static unsigned char (*spi_slave_tx_callback)(void) = NULL;
+void (*spi_slave_rx_callback)(unsigned char) = NULL;
+unsigned char (*spi_slave_tx_callback)(void) = NULL;
 
 // SPI从模式状态
 bit spi_slave_mode_enabled = 0; //0d00
@@ -312,7 +318,7 @@ void SPI_InitSlave(void)
     
     // 注释掉可能导致问题的P2.6上拉电阻配置
     // P_SW2 |= 0x80;     // 再次开启EAXFR访问权限用于配置上拉 //FIXME: 每次上拉P2.6就会导致USART2中断失效或者卡住单片机
-    // P2PU |= (1 << 6);  // 使能P2.6的上拉电阻限 
+    // P2PU |= (1 << 6);  // 使能P2.6的上拉电阻限  //TODO 这个端口尝试在inits里配置
 
     // 配置P2.7(SCLK)为输入模式 - 接收主机时钟信号
     P2M1 |= (1 << 7);
@@ -334,7 +340,9 @@ void SPI_InitSlave(void)
     
     // 配置定时器2作为USART2的时钟源
     AUXR |= 0x04;        // T2为1T模式
-    T2L = 0xFF;          // 设置定时器初值为最大值以获得最高波特率
+    // 系统时钟40MHz，需要10MHz的SPI时钟，所以定时器2需要每4个周期溢出一次
+    // 65536 - (40MHz / 10MHz) = 65536 - 4 = 65532 = 0xFFFC
+    T2L = 0xFC;          // 设置定时器初值为0xFFFC以获得10MHz波特率
     T2H = 0xFF;
     AUXR |= 0x10;        // 启动定时器2
     
@@ -418,59 +426,99 @@ void USART2_Isr() interrupt 8  // 使用中断8号 (UART2中断)
     }
 }
 
-// 浮点数发送回调函数
-unsigned char SPI_SlaveFloatTxCallback(void)
+// 开始发送SENSOR_DATA结构体数据的函数
+void SPI_SlaveStartSendSensorData(SENSOR_DATA* connectData)
+{
+    if (!spi_slave_mode_enabled || !connectData)
+        return; //FKU SPI!
+    
+    // 设置要发送的结构体指针
+    sensor_data_to_send = connectData;
+    // 计算结构体大小
+    sensor_data_size = sizeof(SENSOR_DATA);
+    // 重置发送索引
+    sensor_data_index = 0;
+    // 获取结构体字节指针，用于按字节访问
+    sensor_data_ptr = (unsigned char*)connectData;
+    // 设置传输活动标志
+    sensor_data_tx_active = 1;
+    
+    // 注册发送回调函数
+    SPI_SetSlaveTxCallback(SPI_SlaveSendSensorDataByte);
+    
+    // 准备第一个字节发送
+    SPI_SlavePrepareTxData(sensor_data_ptr[0]);
+}
+
+// 结构体数据发送回调函数 - 每次主机读取一个字节时调用
+unsigned char SPI_SlaveSendSensorDataByte(void)
 {
     unsigned char data_byte;
     
-    // 如果正在传输浮点数，则发送下一个字节
-    if (float_tx_active)
+    if (!sensor_data_tx_active || !sensor_data_to_send)
     {
-        data_byte = float_tx_buffer[float_tx_index++];
-        
-        // 检查是否已完成全部4字节发送
-        if (float_tx_index >= 4)
-        {
-            float_tx_index = 0;
-            float_tx_active = 0; // 完成传输
-        }
-        
-        return data_byte;
+        return 0xFF; // 默认返回0xFF
     }
     
-    return 0xFF; // 默认发送值
+    // 获取当前要发送的字节
+    data_byte = sensor_data_ptr[sensor_data_index];
+    
+    // 增加索引，准备下一个字节
+    sensor_data_index++;
+    
+    // 检查是否发送完毕
+    if (sensor_data_index >= sensor_data_size) //restart?
+    {
+        sensor_data_tx_active = 0;
+        sensor_data_to_send = NULL;
+        sensor_data_ptr = NULL;
+        sensor_data_index = 0;
+        
+        // SPI_SetSlaveTxCallback(NULL); //如果你想要的话
+    }
+    
+    return data_byte;
 }
 
-// 准备发送浮点数数据
-void SPI_SlavePrepareFloatData(float value)
+// 检查结构体传输是否活动
+bit SPI_IsStructTransmissionActive(void)
 {
-    unsigned char* p_float = (unsigned char*)&value;
-    unsigned char i;
+    return sensor_data_tx_active;
+}
+
+// 取消当前的结构体传输
+void SPI_CancelStructTransmission(void)  //DEBUG使用
+{
+    EA = 0; // 禁用中断
     
-    // 4个字节到发送缓冲区
-    for (i = 0; i < 4; i++)
-    {
-        float_tx_buffer[i] = p_float[i];
-    }
+    // 重置所有传输相关变量
+    sensor_data_tx_active = 0;
+    sensor_data_to_send = NULL;
+    sensor_data_ptr = NULL;
+    sensor_data_index = 0;
     
-    float_tx_index = 0; // 重置发送索引
-    float_tx_active = 1; // 激活浮点数传输
+    // 恢复默认回调
+    SPI_SetSlaveTxCallback(NULL);
     
-    // 设置回调函数
-    SPI_SetSlaveTxCallback(SPI_SlaveFloatTxCallback);
-    
-    // 准备发送第一个字节
-    SPI_SlavePrepareTxData(float_tx_buffer[float_tx_index++]);
+    EA = 1; // 恢复中断
 }
 
 #pragma endregion SPI从模式
 
-/*主机端接受代码
-    unsigned char bytes[4];
-    // 接收4个字节
-    for(int i = 0; i < 4; i++) 
+void SPI_SlaveModeMessageUpdater(SENSOR_DATA* connectData)
+{
+    //我决定在这里更新数据!
+    // 这里可以添加代码来更新connectData中的数据
+    if (spi_slave_mode_enabled == 1)
     {
-        bytes[i] = SPI_TransferByte(0xFF);
+        
+        connectData->Mag_Adujsted_X = 0.0f;
+        connectData->Mag_Adujsted_Y = 0.0f;
+
     }
-    float received_value = *((float*)bytes);
-*/
+    else
+    {
+        // SPI从模式未启用,为节省资源,不更新数据
+        return;
+    }
+}

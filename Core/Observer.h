@@ -7,8 +7,8 @@
     typedef struct 
     {
         #pragma region GPS数据
-        float GPS_Raw_X;
-        float GPS_Raw_Y;
+        float GPS_Raw_X;//纬度
+        float GPS_Raw_Y;//经度
         float GPS_Nature_X;
         float GPS_Nature_Y;
         float GPS_Heading;
@@ -38,13 +38,20 @@
         #pragma region 编码器数据
         float Encoder_Speed;
         #pragma endregion 编码器数据
-    };SENSOR_DATA;
-    
+    }SENSOR_DATA;
 
+    extern SENSOR_DATA sensor_data; // 声明全局变量
 
     void InitObserver(void);
-    void PushToBuffer(unsigned char data);
     unsigned char PopFromBuffer(void);
     bit IsDataAvailable(void);
+    unsigned char GetBufferCount(void);
+    void ReadSPIToBuffer(void);
+    void PushToBuffer(unsigned char dataPush);
+    void ReadMultiSPIToBuffer(unsigned char count);
+    void ParseSensorData(SENSOR_DATA* sensor_data);
     
+    // 新增的缓冲区管理和数据更新函数
+    void DiscardData(unsigned char count);
+    short UpdateSensorData(void);
 #endif

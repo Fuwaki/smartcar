@@ -43,7 +43,6 @@ void GPS_UART_Init()
 
     GPSwptr = 0x00;
     GPSrptr = 0x00;
-    //? 验证是否正确
 }
 
 #pragma region 输出信号

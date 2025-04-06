@@ -29,6 +29,43 @@ typedef struct
     unsigned char clock_div; // 时钟分频 (2/4/8/16/32/64/128)
 } spi_slave_config_t;
 
+typedef struct 
+{
+    #pragma region GPS数据
+    float GPS_Raw_X;//纬度
+    float GPS_Raw_Y;//经度
+    float GPS_Nature_X;
+    float GPS_Nature_Y;
+    float GPS_Heading;
+    float GPS_Speed;
+    #pragma endregion GPS数据
+
+    #pragma region IMU数据
+    float IMU_Acc_X;
+    float IMU_Acc_Y;
+    float IMU_Acc_Z;
+    float IMU_Gyro_X; //dps
+    float IMU_Gyro_Y;
+    float IMU_Gyro_Z;
+    float IMU_Temperature;
+    #pragma endregion IMU数据
+
+    #pragma region Mag数据
+    float Mag_Raw_X;
+    float Mag_Raw_Y;
+    float Mag_Raw_Z;
+    float Mag_Adujsted_X;
+    float Mag_Adujsted_Y;
+    float Mag_Adujsted_Z;
+    float Mag_Heading;
+    #pragma endregion Mag数据
+
+    #pragma region 编码器数据
+    float Encoder_Speed;
+    #pragma endregion 编码器数据
+}SENSOR_DATA; //发送结构体
+extern SENSOR_DATA sensor_data; //声明结构体变量
+
 // 初始化SPI主机
 void SPI_Init(void);
 
@@ -69,7 +106,12 @@ void SPI_SetSlaveRxCallback(void (*callback)(unsigned char));
 void SPI_SetSlaveTxCallback(unsigned char (*callback)(void));
 void SPI_SlavePrepareTxData(unsigned char dataSend);
 
-// SPI从模式接收回调函数
-void SPI_SlavePrepareFloatData(float value);
-unsigned char SPI_SlaveFloatTxCallback(void);
+
+
+// SENSOR_DATA结构体传输相关函数
+void SPI_SlaveStartSendSensorData(SENSOR_DATA* connectData);
+unsigned char SPI_SlaveSendSensorDataByte(void);
+bit SPI_IsStructTransmissionActive(void);
+void SPI_CancelStructTransmission(void);
+void SPI_SlaveModeMessageUpdater(SENSOR_DATA* connectData);
 #endif // __SPI_MULTIDEVICE_H__

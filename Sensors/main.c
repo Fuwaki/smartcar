@@ -63,7 +63,7 @@ void Inits()
 
 	P0M1 = 0x00;P0M0 = 0x00;
 	P1M1 = 0x00;P1M0 = 0x00;
-	P2M1 = 0x00;P2M0 = 0x00;
+    P2M0 = 0x40; P2M1 = 0x00; //为SPI从模式 P2.6为输入模式
 	P3M1 = 0x00;P3M0 = 0x00;
 	P4M1 = 0x00;P4M0 = 0x00;
 	P5M1 = 0x00;P5M0 = 0x00;
@@ -71,7 +71,7 @@ void Inits()
 	P7M1 = 0x00;P7M0 = 0x00;
 	
 	Timer0_Init(); //定时器0初始化
-	UART_Init(); //Debug串口初始化
+	UART_Init(); //串口初始化
 	GPS_UART_Init(); //GPS串口初始化
 	Init_GPS_Setting(); //GPS初始化
 	Encoder_Init(); //编码器初始化
@@ -97,23 +97,23 @@ void main()
 		// 	GPS_Init = Init_GPS_Offset(&naturePosition, &rmc_data);
 		// 	if (GPS_Init == 0)
 		// 	{
-		// 		UART_SendStr("GPS偏移量初始化成功!\0"); //yoshino sama
+		// 		UART_SendStr("GPS偏移量初始化成功!\0");
 		// 		GPS_Init = 0;
 		// 	}
 		// }
 		// #pragma endregion
 		
-		#pragma region 陀螺仪数据模块 //0d00
-		Gyro_Updater();
-		#pragma endregion
-		#pragma region 编码器数据模块
-		Encoder_Update();
-		#pragma endregion
+		// #pragma region 陀螺仪数据模块 //0d00
+		// Gyro_Updater();
+		// #pragma endregion
+		// #pragma region 编码器数据模块
+		// Encoder_Update();
+		// #pragma endregion
 		
 		
-		#pragma region 磁场计数据模块
-		LIS3MDL_ReadData(&mag_data); // 读取磁力计数据
-		#pragma endregion
+		// #pragma region 磁场计数据模块
+		// LIS3MDL_ReadData(&mag_data); // 读取磁力计数据
+		// #pragma endregion
 
 		// a = (float) mag_data.x_mag;
 		// b = (float) mag_data.y_mag;

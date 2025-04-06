@@ -183,11 +183,34 @@ void parse_rmc(char *sentence, RMC_Data *rmc_data)
     rmc_data->valid = (rmc_data->status == 'A');
 }
 
+unsigned long get_decimal_part(double value)//为GPS坐标提取小数部分
+{
+    double decimal_part, result; // 小数部分
+    unsigned long integer_part; // 整数部分
+    integer_part = floor(fabs(value));  // 取绝对值
+    decimal_part = fabs(value) - integer_part;  // 获取小数部分
+    
+    result = (unsigned long)(decimal_part * pow(10, 5));
+
+    return result; // 返回小数部分
+}
+
+// 提取GPS坐标的小数部分用于精确定位
+void extract_gps_precision(RMC_Data *rmc_data)
+{
+    // 提取纬度和经度的小数点后6位
+    rmc_data->latitude_decimal = get_decimal_part(rmc_data->latitude);
+    rmc_data->longitude_decimal = get_decimal_part(rmc_data->longitude);
+}
+
 void GPS_Calculate(NaturePosition *naturePosition, RMC_Data *rmc_data)
 {
     // 计算当前位置
-    naturePosition->x = rmc_data->latitude - naturePosition->offsetX;
-    naturePosition->y = rmc_data->longitude - naturePosition->offsetY;
+    naturePosition->x = rmc_data->latitude_decimal - naturePosition->offsetX;
+    naturePosition->y = rmc_data->longitude_decimal - naturePosition->offsetY;
+    
+    // 提取精确度信息
+    extract_gps_precision(rmc_data);
 }
 
 // 修改函数定义，添加参数类型和输出参数
@@ -210,7 +233,7 @@ void GPS_SendCommand(unsigned char *cmd, unsigned char length)
     }
 }
 
-void Init_GPS_Setting() //FIXME :这里和uart有冲突
+void Init_GPS_Setting()
 {
     naturePosition.x = 0;
     naturePosition.y = 0;
@@ -262,8 +285,8 @@ unsigned char Init_GPS_Offset(NaturePosition *naturePosition, RMC_Data *rmc_data
         return 1; // 返回错误，数据无效
     }
     // 设置偏移量为当前GPS数据
-    naturePosition->offsetX = rmc_data->latitude;
-    naturePosition->offsetY = rmc_data->longitude;
+    naturePosition->offsetX = rmc_data->latitude_decimal;
+    naturePosition->offsetY = rmc_data->longitude_decimal;
     naturePosition->x = 0;
     naturePosition->y = 0;
     return 0; // 返回成功

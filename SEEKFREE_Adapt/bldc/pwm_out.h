@@ -30,11 +30,11 @@
 #define PWM_A_L_PIN     P54
 
 //PWM3
-#define PWM_B_H_PIN     P15
-#define PWM_B_L_PIN     P14
+#define PWM_B_H_PIN     P17
+#define PWM_B_L_PIN     P16
 //PWN4
-#define PWM_C_H_PIN     P17
-#define PWM_C_L_PIN     P16
+#define PWM_C_H_PIN     P15
+#define PWM_C_L_PIN     P14
 
 
 

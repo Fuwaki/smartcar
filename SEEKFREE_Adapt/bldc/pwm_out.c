@@ -88,7 +88,6 @@ void pwm_close_output(void)
 //-------------------------------------------------------------------------------------------------------------------
 // A对应PWM2
 void pwm_a_bn_output(uint8 use_comp)
-
 {
 
 	pwm_close_output();
@@ -101,12 +100,11 @@ void pwm_a_bn_output(uint8 use_comp)
 	}
 	else
 	{
-		PWMA_CCER1 = 0x30;
-		PWMA_CCER2 = 0x00;
-		PWMA_ENO = 1 << 2;
+		PWMA_CCER1 = 0x00;
+		PWMA_CCER2 = 0x30;
+		PWMA_ENO = 1 << 6;		//PWM4P
 	}
 	PWM_A_H_PIN = 1;
-	// PWM_B_L_PIN = 1;
 	comparator_select_c();
 }
 
@@ -128,9 +126,9 @@ void pwm_a_cn_output(uint8 use_comp)
 	}
 	else
 	{
-		PWMA_CCER1 = 0x30;
-		PWMA_CCER2 = 0x00;
-		PWMA_ENO = 1 << 4;
+		PWMA_CCER1 = 0x00;
+		PWMA_CCER2 = 0x03;
+		PWMA_ENO = 1 << 4;	//PWM3P
 	}
 	PWM_A_H_PIN = 1;
 	comparator_select_b();
@@ -157,8 +155,7 @@ void pwm_b_cn_output(uint8 use_comp)
 	{
 		PWMA_CCER1 = 0x00;
 		PWMA_CCER2 = 0x03;
-		PWMA_ENO = 1 << 4;
-		// PWMA_ENO=0xff;
+		PWMA_ENO = 1 << 4;		//PWM3P
 	}
 	PWM_B_H_PIN = 1;
 	comparator_select_a();
@@ -182,9 +179,9 @@ void pwm_b_an_output(uint8 use_comp)
 	}
 	else
 	{
-		PWMA_CCER1 = 0x00;
-		PWMA_CCER2 = 0x03;
-		PWMA_ENO = 3 << 2;
+		PWMA_CCER1 = 0x30;
+		PWMA_CCER2 = 0x00;
+		PWMA_ENO = 1<<2;			//PWM2P
 	}
 	PWM_B_H_PIN = 1;
 	comparator_select_c();
@@ -209,9 +206,9 @@ void pwm_c_an_output(uint8 use_comp)
 	}
 	else
 	{
-		PWMA_CCER1 = 0x00;
-		PWMA_CCER2 = 0x30;
-		PWMA_ENO = 3 << 2;
+		PWMA_CCER1 = 0x30;
+		PWMA_CCER2 = 0x00;
+		PWMA_ENO = 1 << 2;		//PWM2P
 	}
 	PWM_C_H_PIN = 1;
 	comparator_select_b();
@@ -290,6 +287,9 @@ void pwm_out_duty_update(uint16 duty)
 
 	PWMA_CCR4H = temp_h;
 	PWMA_CCR4L = temp_l;
+
+	PWMA_CCR4H = temp_h;
+	PWMA_CCR4L = temp_l;
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -301,6 +301,7 @@ void pwm_out_duty_update(uint16 duty)
 //-------------------------------------------------------------------------------------------------------------------
 void pwm_out_init(void)
 {
+	pwm_close_output();
 	pwm_close_output();
 	// 初始化低边为推挽输出
 	gpio_mode(P5_4, GPO_PP);

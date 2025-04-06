@@ -359,6 +359,16 @@
               <FileType>5</FileType>
               <FilePath>.\Muti_SPI_Device.h</FilePath>
             </File>
+            <File>
+              <FileName>Observer.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Observer.c</FilePath>
+            </File>
+            <File>
+              <FileName>Observer.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\Observer.h</FilePath>
+            </File>
           </Files>
         </Group>
       </Groups>

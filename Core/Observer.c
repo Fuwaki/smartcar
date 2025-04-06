@@ -3,13 +3,14 @@
 #include "Observer.h"
 
 // 配置SPI数据缓冲区
-#define SPI_BUFFER_SIZE 64 // 缓冲区大小，可以根据需要调整
-
+#define SPI_BUFFER_SIZE 256 // 缓冲区大小，可以根据需要调整
+SENSOR_DATA sensor_data; // 声明全局变量，用于存储传感器数据    
 SPI_Device *spi_dev;                              // 用于存储SPI设备指针
-static unsigned char spi_buffer[SPI_BUFFER_SIZE]; // SPI数据缓冲区
-static unsigned char buffer_write_index = 0;      // 写入指针
-static unsigned char buffer_read_index = 0;       // 读取指针
-static unsigned char buffer_count = 0;            // 缓冲区中的数据数量
+unsigned char spi_buffer[SPI_BUFFER_SIZE]; // SPI数据缓冲区
+unsigned char buffer_write_index = 0;      // 写入指针
+unsigned char buffer_read_index = 0;       // 读取指针
+unsigned char buffer_count = 0;            // 缓冲区中的数据数量
+bit swich = 0; // 用于标记是否需要中断SPI接收数据
 
 // 初始化SPI和观察者
 void InitObserver(void)
@@ -19,32 +20,29 @@ void InitObserver(void)
 }
 
 // 将一个字节写入缓冲区
-static void PushToBuffer(unsigned char data)
+void PushToBuffer(unsigned char dataPush)
 {
     if (buffer_count < SPI_BUFFER_SIZE)
     {
-        // 缓冲区未满，可以写入
-        spi_buffer[buffer_write_index] = data;
-        buffer_write_index = (buffer_write_index + 1) % SPI_BUFFER_SIZE; // 循环缓冲区
+        spi_buffer[buffer_write_index] = dataPush;
+        buffer_write_index = (buffer_write_index + 1) % SPI_BUFFER_SIZE;
         buffer_count++;
-    }
-    // 如果缓冲区满，则新数据会被丢弃
+    } 
 }
 
 // 从缓冲区读取一个字节
 unsigned char PopFromBuffer(void)
 {
-    unsigned char data = 0;
+    unsigned char dataBuffer = 0;
 
     if (buffer_count > 0)
     {
-        // 有数据可读
-        data = spi_buffer[buffer_read_index];
-        buffer_read_index = (buffer_read_index + 1) % SPI_BUFFER_SIZE; // 循环缓冲区
+        dataBuffer = spi_buffer[buffer_read_index];
+        buffer_read_index = (buffer_read_index + 1) % SPI_BUFFER_SIZE;
         buffer_count--;
     }
 
-    return data;
+    return dataBuffer;
 }
 
 // 检查缓冲区是否有数据可读
@@ -62,21 +60,16 @@ unsigned char GetBufferCount(void)
 // 从SPI读取一个字节并存储到缓冲区
 void ReadSPIToBuffer(void)
 {
-    unsigned char data = 0;
+    unsigned char dataRead = 0;
 
     if (spi_dev)
-    { // 确保SPI设备已成功注册
+    {
         // 选择SPI设备
         SPI_Select(spi_dev);
-
-        // 读取数据
-        data = SPI_Read();
-
-        // 释放SPI设备
-        SPI_Release(spi_dev);
-
+        dataRead = SPI_Read();
+        SPI_Deselect(spi_dev);
         // 存储到缓冲区
-        PushToBuffer(data);
+        PushToBuffer(dataRead);
     }
 }
 
@@ -97,6 +90,60 @@ void ReadMultiSPIToBuffer(unsigned char count)
         }
 
         // 释放SPI设备
-        SPI_Release(spi_dev);
+        SPI_Deselect(spi_dev);
     }
+}
+
+// 从SPI缓冲区解析fk到SENSOR_DATA结构体
+void ParseSensorData(SENSOR_DATA* sensor_data)
+{
+    unsigned char* dst;
+    unsigned int i;
+    // 使用指针指向结构体首地址，便于按字节填充
+    dst = (unsigned char*)sensor_data;
+    swich = 0; // 解析完成后重置开关
+    // Check if the buffer has enough data
+    if (!sensor_data || GetBufferCount() < sizeof(SENSOR_DATA))
+    {
+        return; //FUCK U SPI!
+    }
+
+    // 逐字节从缓冲区读取数据并填入结构体
+    for (i = 0; i < sizeof(SENSOR_DATA); i++)
+    {
+        *dst++ = PopFromBuffer();
+    }
+
+    swich = 1;//解析完成
+}
+
+// 丢弃指定数量的数据
+void DiscardData(unsigned char count)
+{
+    unsigned char i;
+    for(i = 0; i < count && buffer_count > 0; i++)
+    {
+        PopFromBuffer();
+    }
+}
+
+short UpdateSensorData(void)
+{
+    if (swich = 1)
+        ReadSPIToBuffer();
+
+    if (GetBufferCount() >= sizeof(SENSOR_DATA))
+    {
+        // 解析数据
+        ParseSensorData(&sensor_data);
+        return 1; // 成功更新
+    }
+
+    if (GetBufferCount() > sizeof(SENSOR_DATA)* 3/2) //出问题了qwq
+    {
+        DiscardData(GetBufferCount());
+        return -1;
+    }
+    
+    return 0; // 未能更新
 }
