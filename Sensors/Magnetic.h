@@ -44,7 +44,7 @@
     extern MagneticData mag_data;  // 磁力计数据
 
     // 函数声明
-    void LIS3MDL_Init(void);
+    unsigned char LIS3MDL_Init(void);
     unsigned char LIS3MDL_ReadReg(unsigned char reg);
     void LIS3MDL_WriteReg(unsigned char reg, unsigned char value);
     void LIS3MDL_ReadMultiRegisters(unsigned char reg, unsigned char *buffer, unsigned char len);

@@ -9,6 +9,7 @@
 #define PI 3.14159265358979323846 // 这么长怎么你了!
 #define LIS3MDL_READ 0x80  // 读操作最高位为1
 #define LIS3MDL_WRITE 0x00 // 写操作最高位为0
+#define LIS3MDL_MS 0x40    // 多字节读取模式标识位
 unsigned char current_scale = LIS3MDL_FS_4GAUSS;
 unsigned char lis3mdl_spi_id = 0xFF; //初始值为0xFF表示未注册
 
@@ -66,7 +67,7 @@ void LIS3MDL_InitCalibration(void)
 }
 
 // LIS3MDL初始化函数
-void LIS3MDL_Init(void)
+unsigned char LIS3MDL_Init(void)
 {
     unsigned char device_id;
     // 配置SPI从设备
@@ -82,7 +83,7 @@ void LIS3MDL_Init(void)
     if (lis3mdl_spi_id == 0xFF)
     {
         // 注册失败处理
-        return;
+        return 0;
     }
 
     // 适当延时以确保SPI总线稳定
@@ -98,7 +99,7 @@ void LIS3MDL_Init(void)
     if (device_id != 0x3D)
     { // LIS3MDL的WHO_AM_I寄存器值应为0x3D
         // 设备ID错误，可以在此添加错误处理代码
-        return; //这就是错误处理代码qwq
+        return 1; //这就是错误处理代码qwq
     }
 
     //配置传感器
@@ -121,6 +122,7 @@ void LIS3MDL_Init(void)
     Mag_Delay(); // 等待配置完成
     // 初始化校准参数
     // LIS3MDL_InitCalibration();
+    return 2;
 }
 
 // 读取LIS3MDL寄存器
@@ -150,8 +152,8 @@ void LIS3MDL_ReadMultiRegisters(unsigned char reg, unsigned char *buffer, unsign
 {
     unsigned char i;
     SPI_SelectSlave(lis3mdl_spi_id);
-    // 发送起始地址，最高位置1表示读操作
-    SPI_TransferByte(reg | LIS3MDL_READ);
+    // 发送起始地址，最高位置1表示读操作，增加0x40表示多字节读取
+    SPI_TransferByte(reg | LIS3MDL_READ | 0x40); // 添加0x40位用于自动地址增量
     // 连续读取多个寄存器数据
     for(i = 0; i < len; i++)
     {
@@ -170,8 +172,9 @@ unsigned char LIS3MDL_ReadData(MagneticData *dataM) //用这个函数来判断sp
         
     // 检查数据是否准备好
     if (!(LIS3MDL_ReadReg(LIS3MDL_STATUS_REG) & 0x08))
-        return 0; // 数据未准备好，返回0表示读取失败
+        return 2; // 数据未准备好，返回0表示读取失败
 
+    Mag_Delay(); // 等待数据准备好
     // 为确保数据的稳定性，添加一个短暂延时
 
     // 使用连续读取函数读取所有数据

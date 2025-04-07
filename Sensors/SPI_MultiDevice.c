@@ -18,6 +18,8 @@ unsigned int sensor_data_size = 0;       // 结构体总大小
 unsigned int sensor_data_index = 0;      // 当前发送的字节索引
 bit sensor_data_tx_active = 0;           // 结构体传输活动标志
 
+SENSOR_DATA senddata; // 结构体实例，用于存储传感器数据
+
 // SPI从模式回调函数指针
 void (*spi_slave_rx_callback)(unsigned char) = NULL;
 unsigned char (*spi_slave_tx_callback)(void) = NULL;
@@ -295,65 +297,71 @@ void SPI_WriteMultiRegisters(unsigned char slave_id, unsigned char start_addr,
 // SPI从模式初始化函数 - 使用USART2和定时器2实现SPI从模式
 void SPI_InitSlave(void)
 {
-    P_SW2 |= 0x80;     // 开启EAXFR访问权限
+    // 开启EAXFR访问权限
+    P_SW2 |= 0x80;     
     
-    // 设置USART2为SPI从模式映射到P2口
-    S2SPI_S0 = 1;       /*P2.4(SS) - 片选信号
-                        P2.5(MOSI) - 主机输出/从机输入
-                        P2.6(MISO) - 主机输入/从机输出
-                        P2.7(SCLK) - 时钟信号*/
+    // 设置USART2的SPI功能映射到P2口
     P_SW3 = (P_SW3 & ~0x30) | 0x10;	//USART2_SPI: S2SS(P2.4), S2MOSI(P2.5), S2MISO(P2.6), S2SCLK(P2.7)
 
-    // 配置P2.4(SS)为输入模式
-    P2M1 |= (1 << 4);
-    P2M0 &= ~(1 << 4);
+    // 配置SPI从机的引脚模式
+    // P2.4(SS)为输入模式 - 必须是上拉输入
+    P2M1 |= (1 << 4);   // 设为1
+    P2M0 &= ~(1 << 4);  // 设为0 -> 高阻输入
+    P2PU |= (1 << 4);   // 开启上拉电阻
 
-    // 配置P2.5(MOSI)为输入模式 - 接收主机数据
-    P2M1 |= (1 << 5);
-    P2M0 &= ~(1 << 5);
+    // P2.5(MOSI)为输入模式 - 必须是上拉输入
+    P2M1 |= (1 << 5);   // 设为1
+    P2M0 &= ~(1 << 5);  // 设为0 -> 高阻输入
+    P2PU |= (1 << 5);   // 开启上拉电阻
 
-    // 配置P2.6(MISO) - 修改为推挽输出模式，并正确配置上拉电阻
-    P2M0 |= (1 << 6);  // 设置为1 
-    P2M1 &= ~(1 << 6); // 设置为0 -> 推挽输出模式
-    
-    // 注释掉可能导致问题的P2.6上拉电阻配置
-    // P_SW2 |= 0x80;     // 再次开启EAXFR访问权限用于配置上拉 //FIXME: 每次上拉P2.6就会导致USART2中断失效或者卡住单片机
-    // P2PU |= (1 << 6);  // 使能P2.6的上拉电阻限  //TODO 这个端口尝试在inits里配置
+    // P2.6(MISO)为推挽输出 - 作为从机的输出
+    P2M1 &= ~(1 << 6);  // 设为0
+    P2M0 |= (1 << 6);   // 设为1 -> 推挽输出
 
-    // 配置P2.7(SCLK)为输入模式 - 接收主机时钟信号
-    P2M1 |= (1 << 7);
-    P2M0 &= ~(1 << 7);
-    
-    P_SW2 &= ~0x80;     // 关闭EAXFR访问权限
+    // P2.7(SCLK)为输入模式 - 必须是上拉输入
+    P2M1 |= (1 << 7);   // 设为1
+    P2M0 &= ~(1 << 7);  // 设为0 -> 高阻输入
+    P2PU |= (1 << 7);   // 开启上拉电阻
 
+    // 停止定时器2
+    AUXR &= ~0x10;
     
     // 配置USART2为SPI从模式
-    USART2CR1 = 0x00;   // 先清除所有位
-    USART2CR1 = (0 << 7) |   // LINEN=0 禁用lin
-                (0 << 6) |   // DORD=0（MSB优先）高位优先
-                (0 << 5) |   // CLKEN=0 禁用时钟
-                (1 << 4) |   // SPMOD=1 使能SPI模式
-                (1 << 3) |   // SPIEN=1 使能SPI功能
-                (1 << 2) |   // SPSLV=1（从模式）
-                (0 << 1) |   // CPOL=0 空闲时候低电平
-                (0 << 0);    // CPHA=0 第一个边缘采样
-    
-    // 配置定时器2作为USART2的时钟源
-    AUXR |= 0x04;        // T2为1T模式
-    // 系统时钟40MHz，需要10MHz的SPI时钟，所以定时器2需要每4个周期溢出一次
-    // 65536 - (40MHz / 10MHz) = 65536 - 4 = 65532 = 0xFFFC
-    T2L = 0xFC;          // 设置定时器初值为0xFFFC以获得10MHz波特率
+    // 注意：USART2CR1和SxCR1这些寄存器需要查阅STC32G12K128的datasheet确认
+    USART2CR1 = 0x1C;   // 0x1C = 00011100b:
+                        // bit7-6: 保留位
+                        // bit5: 0 - 禁用时钟
+                        // bit4: 1 - 使能SPI模式
+                        // bit3: 1 - 使能SPI功能
+                        // bit2: 1 - 从模式
+                        // bit1: 0 - CPOL=0空闲时时钟为低电平
+                        // bit0: 0 - CPHA=0第一个时钟边沿采样
+
+    // 配置定时器2为USART2的波特率发生器
+    AUXR |= 0x04;      // T2为1T模式
+    // 重新计算波特率
+    // 对于SPI从模式，定时器2的设置不那么关键，但仍需设置合适的值
+    T2L = 0xFC;        // 设置时钟较快以确保从机能跟上主机
     T2H = 0xFF;
-    AUXR |= 0x10;        // 启动定时器2
     
-    // 配置USART2为同步模式
-    S2CON = 0x10;        // S2SM0=0, S2SM1=0, S2REN=1: 同步移位寄存器模式且使能接收
+    // 启动定时器2
+    AUXR |= 0x10;
+    
+    // 配置USART2工作模式和接收使能
+    S2CON = 0x10;      // 0x10 = 00010000b:
+                      // bit7-5: 000 - 采用P_SW3选择引脚映射
+                      // bit4: 1 - 允许接收
+                      // bit3-0: 0 - 相关控制位清0
+
+    // 清除可能的中断标志
+    S2TI = 0;
+    S2RI = 0;
     
     // 使能USART2中断
-    IE2 |= 0x01;         // ES2=1: 使能串口2中断
-    EA = 1;              // 总中断使能
+    IE2 |= 0x01;       // ES2=1: 使能串口2中断
+    EA = 1;            // 总中断使能
     
-    // 准备接收缓冲区，初始化发送数据为默认值
+    // 初始化发送缓冲区，准备好第一个默认值
     S2BUF = 0xFF;
     
     spi_slave_mode_enabled = 1;
@@ -514,6 +522,9 @@ void SPI_SlaveModeMessageUpdater(SENSOR_DATA* connectData)
         
         connectData->Mag_Adujsted_X = 0.0f;
         connectData->Mag_Adujsted_Y = 0.0f;
+        connectData->Mag_Adujsted_Z = 0.0f;
+        connectData->Mag_Heading = 0.0f;
+        connectData->Encoder_Speed = 0.0f;
 
     }
     else

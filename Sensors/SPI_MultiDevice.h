@@ -60,11 +60,11 @@ typedef struct
     float Mag_Heading;
     #pragma endregion Mag数据
 
-    #pragma region 编码器数据
+    #pragma region encoder数据
     float Encoder_Speed;
-    #pragma endregion 编码器数据
+    #pragma endregion encoder数据
 }SENSOR_DATA; //发送结构体
-extern SENSOR_DATA sensor_data; //声明结构体变量
+extern SENSOR_DATA senddata; //声明结构体变量
 
 // 初始化SPI主机
 void SPI_Init(void);

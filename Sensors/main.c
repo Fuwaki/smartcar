@@ -25,6 +25,7 @@
 
 
 
+unsigned char j;
 float a, b, c;
 float value[3] = {1.0, 0.0, 0.0};
 
@@ -76,20 +77,29 @@ void Inits()
 	Init_GPS_Setting(); //GPS初始化
 	Encoder_Init(); //编码器初始化
 	SPI_Init(); //SPI初始化
-	SPI_InitSlave(); //SPI从模式初始化 //FIXME: 这个会导致串口uart的中断失效
+	SPI_InitSlave(); //SPI从模式初始化
 	ICM42688_Init(); //陀螺仪初始化
 	LIS3MDL_Init();
 }
 
 void main()
 {
+	float baba = 0;
 	unsigned char GPS_Init = 1;
 	Inits();
 	Delay100us();
 	UART_SendByte('S'); //Started!
 	while(1)
 	{
-		UART_SendStr("Hello World!\0");
+		SPI_SlaveModeMessageUpdater(&senddata); //更新数据
+		
+		// 只有在上一次传输完成后才启动新的传输
+		if(!SPI_IsStructTransmissionActive())
+		{
+			SPI_SlaveStartSendSensorData(&senddata); //开始发送数据
+		}
+		
+		// UART_SendStr("Hello World!\0");
 		// #pragma region GPS数据模块
 		// GPS_Message_Updater();
 		// if (GPS_Init == 1)
@@ -112,7 +122,7 @@ void main()
 		
 		
 		// #pragma region 磁场计数据模块
-		// LIS3MDL_ReadData(&mag_data); // 读取磁力计数据
+		// baba = LIS3MDL_ReadData(&mag_data); // 读取磁力计数据
 		// #pragma endregion
 
 		// a = (float) mag_data.x_mag;
@@ -120,11 +130,13 @@ void main()
 		// c = (float) mag_data.z_mag;
 		// value[0] = a;
 		// value[1] = b;
-		// value[2] = c;
-		// UART_SendByte(((unsigned char*)(&mag_data.x_mag))[0]);
-		// UART_SendByte(((unsigned char*)(&mag_data.x_mag))[1]);
-
+		// value[2] = baba;
 		// UART_SendFloat(value);
+
+
+		// // UART_SendByte(((unsigned char*)(&mag_data.x_mag))[0]);
+		// // UART_SendByte(((unsigned char*)(&mag_data.x_mag))[1]);
+
 		// // UART_SendStr("数据读取完成!\0");
 		// if(UART_Available()) // 	这个是接收数据的函数
 		// {
