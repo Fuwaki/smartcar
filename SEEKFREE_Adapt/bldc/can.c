@@ -1,7 +1,9 @@
 #include "can.h"
 #include <common.h>
+
 typedef unsigned char u8;
 typedef unsigned int u16;
+
 // can的所有寄存器需要间接获取
 void can_set_reg(u8 addr, u8 dat)
 {
@@ -20,6 +22,17 @@ enum CAN_FRAME_TYPE
     CAN_DATA_FRAME = 0,
     CAN_REMOTE_FRAME = 1,
 };
+//mask为1代表着不care
+void can_set_filter(unsigned int cr,unsigned int mask){
+    can_set_reg(ACR0,(u8)(cr>>3));
+    can_set_reg(ACR1,(u8)(cr<<5));
+    can_set_reg(AMR0,(u8)(mask>>3));
+    can_set_reg(AMR1,(u8)(mask<<5)|0x1f);
+    can_set_reg(ACR2,0);
+    can_set_reg(ACR3,0);
+    can_set_reg(AMR2,0xff);
+    can_set_reg(AMR3,0xff);
+}
 void can_read_rx_fifo(u8 *array)
 {
     array[0] = can_get_reg(RX_BUF0);
@@ -51,6 +64,7 @@ void can_send_pack(u8 *dat, u8 len)
 // 标准帧的信息长度都是8
 void can_init()
 {
+    CANSEL=0;       //选择第一组can
     // TODO: 设置波特率
     can_set_baudrate();
 
@@ -59,6 +73,7 @@ void can_init()
     CAN_S0 = 0;
     CANICR = 0x02; // 启用CAN中断
     CANEN = 1;     // 启用CAN模块
+    
 }
 // 返回的size就是数据的size 不包含头 请保证dat足够大
 enum CAN_FRAME_TYPE can_recv_msg(u8 *dat, u8 *size)
@@ -66,7 +81,7 @@ enum CAN_FRAME_TYPE can_recv_msg(u8 *dat, u8 *size)
     u8 len = 0;
     short i;
     can_read_rx_fifo(dat);
-    len = (dat[0] & 0xf) - 1; // 我只要低端的四位 而且已经读过一个字节了
+    len = (dat[0] & 0xf) - 1; // 我只要低端的四位
     *size = len + 1;
     for (i = 0; i < len + 4; i += 4)
     {
@@ -79,14 +94,14 @@ void can_interrupt() interrupt 28
 {
     u8 isr;
     isr = can_get_reg(ISR);
-    if ((isr) & (1 << 2) == (1 << 2))
+    if ((isr) & (1 << 2))
     {
         // 发送完成中断
         // 响应中断
         CANAR = ISR;
         CANDR = 0x04;
     }
-    if ((isr) & (1 << 3) == (1 << 3))
+    if ((isr) & (1 << 3))
     {
         // 信息接受中断
         // 响应中断
@@ -111,11 +126,12 @@ void can_send_remote_frame(u16 canid)
 can数据帧
 前三个字节是信息，后8个字节是数据
 */
-// 发送消息 确保length小于等于8
+// 发送消息 确保length小于等于8 否则这个函数会直接返回
 void can_send_msg(u16 canid, u8 *dat, u8 len)
 {
     short i;
     u8 buffer[16] = {0}; // 不可能比16大
+    if(len>8) return;
     for (i = 0; i < len; i++)
     {
         buffer[2 + i] = dat[i];
@@ -137,9 +153,5 @@ u16 can_extract_id(u8 *dat)
     return canid;
 }
 
-// 关于遥控帧
-/*
-01 设置转速
-00 获得转速
-10 获得电流
-*/
+
+

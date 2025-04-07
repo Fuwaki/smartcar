@@ -54,10 +54,10 @@ void sine_init(void)
 	
 	// 开启PWM输出
 	PWMA_CCER1 = 0xFF;		// 开启比较输出, 低电平有效
-	PWMA_CCER2 = 0x0F;		// 开启比较输出, 低电平有效
+	PWMA_CCER2 = 0xFF;		// 开启比较输出, 低电平有效
 	
 	// 使能PWM所有通道
-	PWMA_ENO = 0x3F;
+	PWMA_ENO = 0xFF;
 
 
 }

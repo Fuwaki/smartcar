@@ -1,6 +1,7 @@
 #ifndef __TRACK_H
 #define __TRACK_H
 #include "Motor.h"
+
 struct BoatState{
     float M;            //扭矩
     float An;           //法向加速度
