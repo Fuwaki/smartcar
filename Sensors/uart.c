@@ -85,13 +85,13 @@ void Uart_SendByLength(unsigned char *p,int length)
     }
 }
 
-void UART_SendFloat(float value[3])
+void UART_SendFloat(float value[18]) // 发送浮点数数据
 {
     unsigned char *p;
     unsigned int i, j;
     
     // 发送浮点数数据（以字节方式）
-    for (i = 0; i < 3; i++)
+    for (i = 0; i < 18; i++)
     {
         Uart_SendByLength((unsigned char *)&value[i], 4); //?nnd stc51的寄存器真是恶心
     }

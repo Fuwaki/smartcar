@@ -4,6 +4,9 @@
 #include "Muti_SPI_Device.h"
 #include "uart.h"
 #include "Track.h"
+
+
+sbit fk = P1^5;
 //QWQing
 // enum State{
 //     INIT=0,
@@ -33,6 +36,8 @@ void Init(){
     P4M1 = 0x00;
     P5M0 = 0x00;
     P5M1 = 0x00;
+	    P2M0 |= 0x80; P2M1 &= ~0x80; 
+
     Uart3Init();
     ES3 = 1;
     EA = 1;
@@ -102,13 +107,28 @@ void Delay100ms(void)	//@35.000MHz
 	while (i) i--;
 }
 
+void Delay100us(void)	//@35.000MHz
+{
+	unsigned long edata i;
+
+	_nop_();
+	_nop_();
+	_nop_();
+	i = 873UL;
+	while (i) i--;
+}
+
+
 
 void main()
 {
     Init();
+	fk = 1;
     while (1)
     {
         // Running();
+		fk =~ fk;
+		Delay100us();
 
     }
 }

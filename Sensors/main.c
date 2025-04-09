@@ -23,12 +23,13 @@
 // 	SPI_SEND(s);
 // }
 
-
+sbit fk = P2^4; //FK开关
 
 unsigned char j;
 float a, b, c;
 float value[3] = {1.0, 0.0, 0.0};
 
+float datatosend[18] = {0.0};
 
 unsigned char receive_buffer0d00[32];
 unsigned char receive_buffer0d01[32];
@@ -64,7 +65,7 @@ void Inits()
 
 	P0M1 = 0x00;P0M0 = 0x00;
 	P1M1 = 0x00;P1M0 = 0x00;
-    P2M0 = 0x40; P2M1 = 0x00; //为SPI从模式 P2.6为输入模式
+    P2M0 = 0x00; P2M1 = 0x00; //为SPI从模式 P2.6为输入模式
 	P3M1 = 0x00;P3M0 = 0x00;
 	P4M1 = 0x00;P4M0 = 0x00;
 	P5M1 = 0x00;P5M0 = 0x00;
@@ -80,6 +81,44 @@ void Inits()
 	SPI_InitSlave(); //SPI从模式初始化
 	ICM42688_Init(); //陀螺仪初始化
 	LIS3MDL_Init();
+	P2M0 |= 0x10; P2M1 |= 0x10; 
+	fk = 0; //FK开关打开
+}
+
+void messageUpdaterWithUart()
+{
+	#pragma region GPS数据
+	datatosend[0] = rmc_data.latitude_decimal; // 纬度数据
+	datatosend[1] = rmc_data.longitude_decimal;
+	datatosend[2] = naturePosition.x; // 纬度数据
+	datatosend[3] = naturePosition.y; // 经度数据
+	datatosend[4] = rmc_data.course; // 航向数据
+	datatosend[5] = rmc_data.speed; // 速度数据
+	#pragma endregion GPS数据
+
+	#pragma region 陀螺仪
+	datatosend[6] = gyro_data.accel_x;
+	datatosend[7] = gyro_data.accel_y;
+	datatosend[8] = gyro_data.accel_z;
+	datatosend[9] = gyro_data.gyro_x_dps;
+	datatosend[10] = gyro_data.gyro_y_dps;
+	datatosend[11] = gyro_data.gyro_z_dps;
+	datatosend[12] = gyro_data.temp; // 温度数据
+	#pragma endregion 陀螺仪
+
+	#pragma region 磁场计数据
+	datatosend[13] = mag_data.x_mag; //改
+	datatosend[14] = mag_data.y_mag; //改
+	datatosend[15] = mag_data.z_mag; //改
+	datatosend[16] = mag_data.heading;
+	#pragma endregion 磁场计数据
+
+
+	#pragma region 编码器数据
+	// connectData->Encoder_Speed = encoder_data.speed; // 速度数据
+	// datatosend[17] = encoder_data.speed; // 速度数据
+	#pragma endregion 编码器数据
+	
 }
 
 void main()
@@ -91,13 +130,14 @@ void main()
 	UART_SendByte('S'); //Started!
 	while(1)
 	{
-		SPI_SlaveModeMessageUpdater(&senddata); //更新数据
+
+		// SPI_SlaveModeMessageUpdater(&senddata); //更新数据
 		
-		// 只有在上一次传输完成后才启动新的传输
-		if(!SPI_IsStructTransmissionActive())
-		{
-			SPI_SlaveStartSendSensorData(&senddata); //开始发送数据
-		}
+		// // // 只有在上一次传输完成后才启动新的传输
+		// if(!SPI_IsStructTransmissionActive())
+		// {
+		// 	SPI_SlaveStartSendSensorData(&senddata); //开始发送数据
+		// }
 		
 		// UART_SendStr("Hello World!\0");
 		// #pragma region GPS数据模块
@@ -113,9 +153,9 @@ void main()
 		// }
 		// #pragma endregion
 		
-		// #pragma region 陀螺仪数据模块 //0d00
-		// Gyro_Updater();
-		// #pragma endregion
+		#pragma region 陀螺仪//0d00
+		Gyro_Updater();
+		#pragma endregion
 		// #pragma region 编码器数据模块
 		// Encoder_Update();
 		// #pragma endregion
@@ -149,5 +189,6 @@ void main()
 		// 		UART_SendStr(receive_buffer0d00);
 		// 	}
 		// }
+		UART_SendFloat(datatosend); //发送数据
 	}
 }

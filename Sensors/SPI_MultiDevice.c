@@ -2,6 +2,10 @@
 #include <AI8051U.H>
 #include <intrins.h>
 #include <stdio.h>
+#include "Magnetic.h"
+#include "Gyroscope.h"
+#include "Encoder.h"
+#include "GPS.h"
 
 // 存储已注册的SPI从设备配置
 spi_slave_config_t spi_slaves[MAX_SPI_SLAVES];
@@ -29,6 +33,9 @@ bit spi_slave_mode_enabled = 0; //0d00
 bit spi_master_rx = 0; // SPI接收标志位
 bit spi_master_tx = 0; // SPI发送标志位
 bit float_tx_active = 0; // 浮点数传输活动标志
+
+sbit S1MISO = P2^5; // SPI主设备输入引脚
+sbit S1SCLK = P2^7; // SPI时钟引脚
 
 // 用于控制CS引脚
 static void SPI_SetPin(unsigned char port, unsigned char pin, bit value)
@@ -299,66 +306,64 @@ void SPI_InitSlave(void)
 {
     // 开启EAXFR访问权限
     P_SW2 |= 0x80;     
-    
     // 设置USART2的SPI功能映射到P2口
     P_SW3 = (P_SW3 & ~0x30) | 0x10;	//USART2_SPI: S2SS(P2.4), S2MOSI(P2.5), S2MISO(P2.6), S2SCLK(P2.7)
+    
+    // 配置USART2工作模式和接收使能
+    S2CON = 0x50;      // 0x10 = 00010000b:
+                      // bit7-5: 000 - 采用P_SW3选择引脚映射
+                      // bit4: 1 - 允许接收
+                      // bit3-0: 0 - 相关控制位清0
 
     // 配置SPI从机的引脚模式
-    // P2.4(SS)为输入模式 - 必须是上拉输入
-    P2M1 |= (1 << 4);   // 设为1
-    P2M0 &= ~(1 << 4);  // 设为0 -> 高阻输入
-    P2PU |= (1 << 4);   // 开启上拉电阻
+    // // P2.4(SS)为输入模式 - 必须是上拉输入
+    // P2M1 |= (1 << 4);   // 设为1
+    // P2M0 &= ~(1 << 4);  // 设为0 -> 高阻输入
+    // P2PU |= (1 << 4);   // 开启上拉电阻
 
     // P2.5(MOSI)为输入模式 - 必须是上拉输入
     P2M1 |= (1 << 5);   // 设为1
     P2M0 &= ~(1 << 5);  // 设为0 -> 高阻输入
     P2PU |= (1 << 5);   // 开启上拉电阻
+    P2NCS |= (1 << 5);  // 开启施密特触发
 
     // P2.6(MISO)为推挽输出 - 作为从机的输出
     P2M1 &= ~(1 << 6);  // 设为0
     P2M0 |= (1 << 6);   // 设为1 -> 推挽输出
+    P2SR &= ~(1 << 6);  // 设置为快速翻转模式
 
     // P2.7(SCLK)为输入模式 - 必须是上拉输入
     P2M1 |= (1 << 7);   // 设为1
     P2M0 &= ~(1 << 7);  // 设为0 -> 高阻输入
     P2PU |= (1 << 7);   // 开启上拉电阻
-
-    // 停止定时器2
-    AUXR &= ~0x10;
+    P2NCS |= (1 << 7);  // 开启施密特触发
     
     // 配置USART2为SPI从模式
-    // 注意：USART2CR1和SxCR1这些寄存器需要查阅STC32G12K128的datasheet确认
     USART2CR1 = 0x1C;   // 0x1C = 00011100b:
                         // bit7-6: 保留位
                         // bit5: 0 - 禁用时钟
                         // bit4: 1 - 使能SPI模式
                         // bit3: 1 - 使能SPI功能
                         // bit2: 1 - 从模式
-                        // bit1: 0 - CPOL=0空闲时时钟为低电平
+                        // bit1: 1 - CPOL=1空闲时时钟为高
                         // bit0: 0 - CPHA=0第一个时钟边沿采样
-
+    USART2CR4 = 0x00;                   //SPI速度为SYSCLK/4
+    USART2CR1 |= 0x08;                  //使能SPI功能
     // 配置定时器2为USART2的波特率发生器
     AUXR |= 0x04;      // T2为1T模式
-    // 重新计算波特率
-    // 对于SPI从模式，定时器2的设置不那么关键，但仍需设置合适的值
-    T2L = 0xFC;        // 设置时钟较快以确保从机能跟上主机
+    T2L = 0xFC;        // 设置定时器2初值为0xFC，定时器2计数到0x00时产生中断
     T2H = 0xFF;
     
     // 启动定时器2
     AUXR |= 0x10;
-    
-    // 配置USART2工作模式和接收使能
-    S2CON = 0x10;      // 0x10 = 00010000b:
-                      // bit7-5: 000 - 采用P_SW3选择引脚映射
-                      // bit4: 1 - 允许接收
-                      // bit3-0: 0 - 相关控制位清0
 
     // 清除可能的中断标志
     S2TI = 0;
     S2RI = 0;
     
     // 使能USART2中断
-    IE2 |= 0x01;       // ES2=1: 使能串口2中断
+    // IE2 |= 0x01;       // ES2=1: 使能串口2中断
+    ES2 = 1;         // 使能USART2接收中断
     EA = 1;            // 总中断使能
     
     // 初始化发送缓冲区，准备好第一个默认值
@@ -373,11 +378,11 @@ void SPI_DisableSlave(void) //留在这里huh
     // 关闭USART2
     S2CON = 0x00;        // 关闭USART2
     
-    // 禁用T2时钟输出
-    AUXR &= ~0x10;       // 停止定时器2
+    // // 禁用T2时钟输出
+    // AUXR &= ~0x10;       // 停止定时器2
     
     // 禁用USART2中断
-    IE2 &= ~0x01;        // 禁用串口2中断
+    ES2 = 0; //  禁用USART2接收中断
     
     spi_slave_mode_enabled = 0;
 }
@@ -401,7 +406,7 @@ void SPI_SlavePrepareTxData(unsigned char dataSend)
 }
 
 // USART2中断服务程序 - 用于处理从P2口接收到的SPI数据
-void USART2_Isr() interrupt 8  // 使用中断8号 (UART2中断)
+void USART2_Isr() interrupt UART2_VECTOR  // 使用中断8号 (UART2中断)
 {
     unsigned char received_data;
     if (S2RI)  // S2RI: 接收中断标志
@@ -519,13 +524,35 @@ void SPI_SlaveModeMessageUpdater(SENSOR_DATA* connectData)
     // 这里可以添加代码来更新connectData中的数据
     if (spi_slave_mode_enabled == 1)
     {
-        
-        connectData->Mag_Adujsted_X = 0.0f;
-        connectData->Mag_Adujsted_Y = 0.0f;
-        connectData->Mag_Adujsted_Z = 0.0f;
-        connectData->Mag_Heading = 0.0f;
-        connectData->Encoder_Speed = 0.0f;
+        #pragma region 陀螺仪
+        connectData->IMU_Acc_X = gyro_data.accel_x;
+        connectData->IMU_Acc_Y = gyro_data.accel_y;
+        connectData->IMU_Acc_Z = gyro_data.accel_z;
+        connectData->IMU_Temperature = gyro_data.temp; // 温度数据
+        connectData->IMU_Gyro_X = gyro_data.gyro_x;
+        connectData->IMU_Gyro_Y = gyro_data.gyro_y;
+        connectData->IMU_Gyro_Z = gyro_data.gyro_z;
+        #pragma endregion 陀螺仪
 
+        #pragma region GPS数据
+        connectData->GPS_Raw_X = rmc_data.latitude; // 纬度数据
+        connectData->GPS_Raw_Y = rmc_data.longitude; // 经度数据
+        connectData->GPS_Nature_X = naturePosition.x; // 纬度数据
+        connectData->GPS_Nature_Y = naturePosition.y; // 经度数据
+        connectData->GPS_Heading = rmc_data.course; // 航向数据
+        connectData->GPS_Speed = rmc_data.speed; // 速度数据
+        #pragma endregion GPS数据
+
+        #pragma region 编码器数据
+        // connectData->Encoder_Speed = encoder_data.speed; // 速度数据
+        #pragma endregion 编码器数据
+        
+        #pragma region 磁场计数据
+        connectData->Mag_Adujsted_X = mag_data.x_mag; //改
+        connectData->Mag_Adujsted_Y = mag_data.y_mag; //改
+        connectData->Mag_Adujsted_Z = mag_data.z_mag; //改
+        connectData->Mag_Heading = mag_data.heading;
+        #pragma endregion 磁场计数据
     }
     else
     {
