@@ -104,11 +104,13 @@ unsigned char LIS3MDL_Init(void)
 
     //配置传感器
     // CTRL_REG1: 温度传感器使能, XY轴高性能模式, 80Hz输出速率
+    //TODO:可以启用FAST_ODR来达到超高速率
     LIS3MDL_WriteReg(LIS3MDL_CTRL_REG1, 0xFC);
     Mag_Delay(); // 等待配置完成
 
     // CTRL_REG2: 设置量程为±4高斯
     LIS3MDL_WriteReg(LIS3MDL_CTRL_REG2, LIS3MDL_FS_4GAUSS);
+    
     current_scale = LIS3MDL_FS_4GAUSS;
     Mag_Delay(); // 等待配置完成
     // CTRL_REG3: 连续转换模式
@@ -179,7 +181,7 @@ unsigned char LIS3MDL_ReadData(MagneticData *dataM) //用这个函数来判断sp
 
     // 使用连续读取函数读取所有数据
     LIS3MDL_ReadMultiRegisters(LIS3MDL_OUT_X_L, buffer, 6);
-
+    //TODO:考虑short是否可用
     dataM->x_mag = (short)((buffer[1] << 8) | buffer[0]);
     dataM->y_mag = (short)((buffer[3] << 8) | buffer[2]);
     dataM->z_mag = (short)((buffer[5] << 8) | buffer[4]);

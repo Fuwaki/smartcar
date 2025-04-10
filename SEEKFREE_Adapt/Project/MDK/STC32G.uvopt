@@ -823,24 +823,48 @@
     <File>
       <GroupNumber>6</GroupNumber>
       <FileNumber>52</FileNumber>
-      <FileType>1</FileType>
+      <FileType>5</FileType>
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
-      <PathWithFileName>..\..\bldc\can.c</PathWithFileName>
-      <FilenameWithoutPath>can.c</FilenameWithoutPath>
+      <PathWithFileName>..\..\..\library\can.h</PathWithFileName>
+      <FilenameWithoutPath>can.h</FilenameWithoutPath>
       <RteFlg>0</RteFlg>
       <bShared>0</bShared>
     </File>
     <File>
       <GroupNumber>6</GroupNumber>
       <FileNumber>53</FileNumber>
+      <FileType>1</FileType>
+      <tvExp>0</tvExp>
+      <tvExpOptDlg>0</tvExpOptDlg>
+      <bDave2>0</bDave2>
+      <PathWithFileName>..\..\..\library\can.c</PathWithFileName>
+      <FilenameWithoutPath>can.c</FilenameWithoutPath>
+      <RteFlg>0</RteFlg>
+      <bShared>0</bShared>
+    </File>
+    <File>
+      <GroupNumber>6</GroupNumber>
+      <FileNumber>54</FileNumber>
+      <FileType>1</FileType>
+      <tvExp>0</tvExp>
+      <tvExpOptDlg>0</tvExpOptDlg>
+      <bDave2>0</bDave2>
+      <PathWithFileName>..\..\bldc\communication.c</PathWithFileName>
+      <FilenameWithoutPath>communication.c</FilenameWithoutPath>
+      <RteFlg>0</RteFlg>
+      <bShared>0</bShared>
+    </File>
+    <File>
+      <GroupNumber>6</GroupNumber>
+      <FileNumber>55</FileNumber>
       <FileType>5</FileType>
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
-      <PathWithFileName>..\..\bldc\can.h</PathWithFileName>
-      <FilenameWithoutPath>can.h</FilenameWithoutPath>
+      <PathWithFileName>..\..\bldc\communication.h</PathWithFileName>
+      <FilenameWithoutPath>communication.h</FilenameWithoutPath>
       <RteFlg>0</RteFlg>
       <bShared>0</bShared>
     </File>

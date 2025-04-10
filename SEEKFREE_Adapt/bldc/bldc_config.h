@@ -32,7 +32,7 @@
 	
 #define BLDC_BEEP_VOLUME                (50 )    	 	// 电机鸣叫声音大小 0-100
 
-#define BLDC_MOTOR_ANGLE				(25)			// 马达进角，进入比较器中断后，延时多少度进行换相
+#define BLDC_MOTOR_ANGLE				(20)			// 马达进角，进入比较器中断后，延时多少度进行换相
 														// 范围0-30度
 
 #define BLDC_USE_SINE_START             (0)   			// 使用正弦启动

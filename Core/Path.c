@@ -1,23 +1,26 @@
 #include "Path.h"
 //曲线
 Point2D catmull_rom(PointGroup pg,float t) {
-  float t2 = t * t;
-  float t3 = t2 * t;
+    float t2 = t * t;
+    float t3 = t2 * t;
 
-  Point2D* p0=pg.p0;
-  Point2D* p1=pg.p1;
-  Point2D *p2=pg.p2;
-  Point2D* p3=pg.p3;
+    Point2D* p0=pg.p0;
+    Point2D* p1=pg.p1;
+    Point2D* p2=pg.p2;
+    Point2D* p3=pg.p3;
+
+    Point2D result;
 
 
-  // 计算混合系数
-  float a0 = -0.5f * t3 + t2 - 0.5f * t;
-  float a1 = 1.5f * t3 - 2.5f * t2 + 1.0f;
-  float a2 = -1.5f * t3 + 2.0f * t2 + 0.5f * t;
-  float a3 = 0.5f * t3 - 0.5f * t2;
+    // 计算混合系数
+    float a0 = -0.5f * t3 + t2 - 0.5f * t;
+    float a1 = 1.5f * t3 - 2.5f * t2 + 1.0f;
+    float a2 = -1.5f * t3 + 2.0f * t2 + 0.5f * t;
+    float a3 = 0.5f * t3 - 0.5f * t2;
 
-  return (Point2D){.x = a0 * p0->x + a1 * p1->x + a2 * p2->x + a3 * p3->x,
-                   .y = a0 * p0->y + a1 * p1->y + a2 * p2->y + a3 * p3->y};
+    result.x = a0 * p0->x + a1 * p1->x + a2 * p2->x + a3 * p3->x;
+    result.y = a0 * p0->y + a1 * p1->y + a2 * p2->y + a3 * p3->y;
+    return result;
 }
 //一阶导
 Point2D catmull_rom_derivative(PointGroup pg, float t) {
@@ -25,8 +28,10 @@ Point2D catmull_rom_derivative(PointGroup pg, float t) {
 
   Point2D* p0=pg.p0;
   Point2D* p1=pg.p1;
-  Point2D *p2=pg.p2;
+  Point2D* p2=pg.p2;
   Point2D* p3=pg.p3;
+
+  Point2D result;
 
   // 计算导数系数
   float da0 = -1.5f * t2 + 2.0f * t - 0.5f;
@@ -34,24 +39,29 @@ Point2D catmull_rom_derivative(PointGroup pg, float t) {
   float da2 = -4.5f * t2 + 4.0f * t + 0.5f;
   float da3 = 1.5f * t2 - 1.0f * t;
 
-  return (Point2D){.x = da0 * p0->x + da1 * p1->x + da2 * p2->x + da3 * p3->x,
-                   .y = da0 * p0->y + da1 * p1->y + da2 * p2->y + da3 * p3->y};
-}
+  result.x= da0 * p0->x + da1 * p1->x + da2 * p2->x + da3 * p3->x;
+  result.y=da0 * p0->y + da1 * p1->y + da2 * p2->y + da3 * p3->y;
+    return result;
+  }
 //二阶导
 Point2D catmull_rom_second_derivative(PointGroup pg, float t) {
     Point2D* p0=pg.p0;
     Point2D* p1=pg.p1;
     Point2D *p2=pg.p2;
     Point2D* p3=pg.p3;
-  // 计算二阶导数系数
-  float dda0 = -3.0f * t + 2.0f;
-  float dda1 = 9.0f * t - 5.0f;
-  float dda2 = -9.0f * t + 4.0f;
-  float dda3 = 3.0f * t - 1.0f;
+    // 计算二阶导数系数
+    float dda0 = -3.0f * t + 2.0f;
+    float dda1 = 9.0f * t - 5.0f;
+    float dda2 = -9.0f * t + 4.0f;
+    float dda3 = 3.0f * t - 1.0f;
 
-  return (Point2D){
-      .x = dda0 * p0->x + dda1 * p1->x + dda2 * p2->x + dda3 * p3->x,
-      .y = dda0 * p0->y + dda1 * p1->y + dda2 * p2->y + dda3 * p3->y};
+    Point2D result;
+
+
+  
+    result.x = dda0 * p0->x + dda1 * p1->x + dda2 * p2->x + dda3 * p3->x;
+    result.y = dda0 * p0->y + dda1 * p1->y + dda2 * p2->y + dda3 * p3->y;
+    return result;
 }
 PointGroup select_group(Point2D *list,float t){
     //TODO: t大小的错误处理

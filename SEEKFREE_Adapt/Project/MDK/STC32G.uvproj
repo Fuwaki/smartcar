@@ -605,14 +605,24 @@
               <FilePath>..\..\bldc\bldc_config.h</FilePath>
             </File>
             <File>
-              <FileName>can.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\bldc\can.c</FilePath>
-            </File>
-            <File>
               <FileName>can.h</FileName>
               <FileType>5</FileType>
-              <FilePath>..\..\bldc\can.h</FilePath>
+              <FilePath>..\..\..\library\can.h</FilePath>
+            </File>
+            <File>
+              <FileName>can.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\library\can.c</FilePath>
+            </File>
+            <File>
+              <FileName>communication.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\bldc\communication.c</FilePath>
+            </File>
+            <File>
+              <FileName>communication.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\bldc\communication.h</FilePath>
             </File>
           </Files>
         </Group>
