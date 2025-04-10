@@ -1,6 +1,16 @@
 #include "can.h"
 #include <STC32G.H>
 
+#define TSG1    2		//0~15
+#define TSG2    2		//1~7 (TSG2 不能设置为0)
+#define BRP     4		//0~63
+//24000000/((1+3+2)*4*2)=500KHz
+
+#define SJW     0		//重新同步跳跃宽度
+
+//总线波特率100KHz以上设置为 0; 100KHz以下设置为 1
+#define SAM     1		//总线电平采样次数： 0:采样1次; 1:采样3次
+
 static can_receive_callback_t can_receive_callback = 0;
 int count = 0;
 void can_set_receive_callback(can_receive_callback_t callback)
@@ -48,8 +58,12 @@ void can_read_rx_fifo(unsigned char *array)
 void can_set_baudrate(void) // 800Kbps@35MHz
 {
     can_set_reg(MR, 0x04);   // 使能Reset模式
-    can_set_reg(BTR0, 0x00); // SJW(0), BRP(6)
-    can_set_reg(BTR1, 0xcf); // SAM(0), TSG2(2), TSG1(15)
+    // can_set_reg(BTR0, 0x00); // SJW(0), BRP(6)
+    // can_set_reg(BTR1, 0xcf); // SAM(0), TSG2(2), TSG1(15)
+    // 	CanWriteReg(BTR0,(SJW << 6) + BRP);
+	// CanWriteReg(BTR1,(SAM << 7) + (TSG2 << 4) + TSG1);
+    can_set_reg(BTR0, (SJW << 6) + BRP);
+    can_set_reg(BTR1, (SAM << 7) + (TSG2 << 4) + TSG1);
     can_set_reg(MR, 0x00);   // 退出Reset模式
 }
 // 发送封装好的数据包
@@ -95,7 +109,7 @@ void can_init()
     PCANH=1;
     PCANL=1;
 
-    CANICR = 0x02; // 启用CAN中断
+    CANIE = 1; // 启用CAN中断
 }
 // 返回的size就是数据的size 不包含头 请保证dat足够大
 enum CAN_FRAME_TYPE can_recv_msg(unsigned char *dat, unsigned char *size)
@@ -112,7 +126,7 @@ enum CAN_FRAME_TYPE can_recv_msg(unsigned char *dat, unsigned char *size)
     return dat[0] & (1 << 6) ? CAN_REMOTE_FRAME : CAN_DATA_FRAME;
 }
 // 使用标准帧就好
-void can_interrupt() interrupt 28
+void can_interrupt(void) interrupt CAN1_VECTOR
 {
     unsigned char isr;
     unsigned char arTemp;
@@ -123,51 +137,55 @@ void can_interrupt() interrupt 28
                     // 后产生中断，在中断里修改了 CANAR 内容
 
     isr = can_get_reg(ISR);
-    // for(i=0;i<isr;i++){
-    // }
-    P40=~P40;
-
+    // for(i=0;i<isr;i++)
+    // {
+        // }
+        
     if ((isr & 0x04) == 0x04) // TI
     {
         CANAR = ISR;
-        CANDR |= 0x04; // CLR FLAG
+        CANDR = 0x04; // CLR FLAG
     }
-
+    
     if ((isr & 0x08) == 0x08) // RI
     {
         CANAR = ISR;
-        CANDR |= 0x08; // CLR FLAG
-        can_read_rx_fifo(buffer);
+        // can_read_rx_fifo(buffer);
+        CANDR = 0x08; // CLR FLAG
+        P40=~P40;
+
     }
+    
 
     if ((isr & 0x40) == 0x40) // ALI
     {
         CANAR = ISR;
-        CANDR |= 0x40; // CLR FLAG
+        CANDR = 0x40; // CLR FLAG
     }
 
     if ((isr & 0x20) == 0x20) // EWI
     {
         CANAR = ISR;
-        CANDR |= 0x20; // CLR FLAG
+        CANDR = 0x20; // CLR FLAG
     }
 
     if ((isr & 0x10) == 0x10) // EPI
     {
         CANAR = ISR;
-        CANDR |= 0x10; // CLR FLAG
+        CANDR = 0x10; // CLR FLAG
     }
 
     if ((isr & 0x02) == 0x02) // BEI
     {
         CANAR = ISR;
-        CANDR |= 0x02; // CLR FLAG
+        CANDR = 0x02; // CLR FLAG
     }
 
     if ((isr & 0x01) == 0x01) // DOI
     {
         CANAR = ISR;
-        CANDR |= 0x01; // CLR FLAG
+        CANDR = 0x01; // CLR FLAG
+        P40=~P40;
     }
 
     CANAR = arTemp; // CANAR现场恢复
@@ -175,6 +193,7 @@ void can_interrupt() interrupt 28
 void can_debug()
 {
     unsigned char sr = can_get_reg(SR);
+    //TODO:看看ECC RMC的数值
     unsigned int i;
     for (i = 0; i < sr; i++)
     {
