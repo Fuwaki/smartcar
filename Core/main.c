@@ -112,8 +112,7 @@ void main()
 
     while (1)
     {
-        P33 = ~P33;
-
+        P33 = ~P33;        
         // Running();
         // can_send_msg(100,dat , 0);
         // can_debug();

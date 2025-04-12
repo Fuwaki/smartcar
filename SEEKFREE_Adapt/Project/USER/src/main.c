@@ -66,20 +66,20 @@ void main()
 
     // // 此处编写用户代码(例如：外设初始化代码等)
     // // battery_init();         // 电池电压检测初始化
-    // led_init();             // LED初始化
+    led_init();             // LED初始化
     // pwm_input_init();       // PWM输入捕获初始化·
-    // comparator_init();      // 比较器初始化
-    // motor_init();           // 电机相关初始化
+    comparator_init();      // 比较器初始化
+    motor_init();           // 电机相关初始化
     
-
-    // // PWM初始化务必放在电机电机初始化函数之后，否则会烧毁电机
-    // // PWM初始化务必放在电机电机初始化函数之后，否则会烧毁电机
-    // // PWM初始化务必放在电机电机初始化函数之后，否则会烧毁电机
     
-    // pwm_out_init();      	// PWM初始化 采用中心对齐
-    // pit_timer_init();       // 周期定时器初始化
-    // EnableGlobalIRQ();		// 开启总中断
+    // // PWM初始化务必放在电机电机初始化函数之后，否则会烧毁电机
+    // // PWM初始化务必放在电机电机初始化函数之后，否则会烧毁电机
+    // // PWM初始化务必放在电机电机初始化函数之后，否则会烧毁电机
     Init_Listen();
+    
+    pwm_out_init();      	// PWM初始化 采用中心对齐
+    pit_timer_init();       // 周期定时器初始化
+    EnableGlobalIRQ();		// 开启总中断
 
     while (1)
     {

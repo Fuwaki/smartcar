@@ -312,7 +312,6 @@ void pit_motor_control()
     {
         //读取比较器数值
         pin_state = (CMPCR1 & 0x01);
-        P41=~P41;
 
         // 通过PA2引脚的电平状态，进行堵转检测
         if (oled_pin_state != pin_state)
