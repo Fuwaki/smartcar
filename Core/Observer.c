@@ -4,7 +4,7 @@
 
 // 配置SPI数据缓冲区
 #define SPI_BUFFER_SIZE 256 // 缓冲区大小，可以根据需要调整
-SENSOR_DATA sensor_data; // 声明全局变量，用于存储传感器数据    
+// SENSOR_DATA sensor_data; // 声明全局变量，用于存储传感器数据    
 SPI_Device *spi_dev;                              // 用于存储SPI设备指针
 unsigned char spi_buffer[SPI_BUFFER_SIZE]; // SPI数据缓冲区
 unsigned char buffer_write_index = 0;      // 写入指针

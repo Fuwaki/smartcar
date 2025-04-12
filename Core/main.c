@@ -6,8 +6,9 @@
 #include "uart.h"
 #include "Track.h"
 
-
 sbit fk = P1^5;
+float tester[18] = {0};
+
 //QWQing
 // enum State{
 //     INIT=0,
@@ -39,8 +40,8 @@ void Init(){
     P5M1 = 0x00;
     P2M0 |= 0x80; P2M1 &= ~0x80; 
 
-    Uart3Init();
-    ES3 = 1;
+    // Uart3Init();
+    Uart1Init();
     EA = 1;
 }
 // void Change_State(enum State new_state){
@@ -98,6 +99,32 @@ void Init(){
 //     }
 
 // }
+void messageUpdater()
+{
+    tester[0] = sensor_data.GPS_Raw_X;
+    tester[1] = sensor_data.GPS_Raw_Y;
+    tester[2] = sensor_data.GPS_Nature_X;
+    tester[3] = sensor_data.GPS_Nature_Y;
+    tester[4] = sensor_data.GPS_Heading;
+    tester[5] = sensor_data.GPS_Speed;
+
+    tester[6] = sensor_data.IMU_Acc_X;
+    tester[7] = sensor_data.IMU_Acc_Y;
+    tester[8] = sensor_data.IMU_Acc_Z;
+    tester[9] = sensor_data.IMU_Gyro_X;
+    tester[10] = sensor_data.IMU_Gyro_Y;
+    tester[11] = sensor_data.IMU_Gyro_Z;
+    tester[12] = sensor_data.IMU_Temperature;
+
+    tester[13] = sensor_data.Mag_Adujsted_X;
+    tester[14] = sensor_data.Mag_Adujsted_Y;
+    tester[15] = sensor_data.Mag_Adujsted_Z;
+    tester[16] = sensor_data.Mag_Heading;
+
+    tester[17] = sensor_data.Encoder_Speed;
+}
+
+
 void Delay100ms(void) //@35.000MHz
 {
     unsigned long edata i;
@@ -109,16 +136,30 @@ void Delay100ms(void) //@35.000MHz
         i--;
 }
 
+void Delay100us(void)	//@35.000MHz
+{
+	unsigned long edata i;
+
+	_nop_();
+	_nop_();
+	_nop_();
+	i = 873UL;
+	while (i) i--;
+}
+
+
 void main()
 {
-    unsigned char dat[4] = {11, 45, 14, 19};
-    P40 = 0;
-    P33 = 0;
     Init();
 	fk = 1;
     while (1)
     {
-		Uart3ReceiveSensorData();
-
+        ES = 0; // 禁用串口中断
+        UartReceiveSensorData(); // 接收传感器数据
+        ES = 1; // 使能串口中断
+        messageUpdater(); // 更新传感器数据
+        UART_SendFloat(tester); // 发送数据
+        Delay100us(); // 延时100us
+        // UartSendStr("Hello World!"); // 发送字符串
     }
 }
