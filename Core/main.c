@@ -1,6 +1,9 @@
+#include <STC32G.H>
+#include <intrins.h>
 #include "../library/can.h"
 #include "AR_PF.h"
 #include "Muti_SPI_Device.h"
+#include "uart.h"
 #include "Track.h"
 
 
@@ -34,7 +37,7 @@ void Init(){
     P4M1 = 0x00;
     P5M0 = 0x00;
     P5M1 = 0x00;
-	    P2M0 |= 0x80; P2M1 &= ~0x80; 
+    P2M0 |= 0x80; P2M1 &= ~0x80; 
 
     Uart3Init();
     ES3 = 1;
@@ -115,10 +118,7 @@ void main()
 	fk = 1;
     while (1)
     {
-        P33 = ~P33;        
-        // Running();
-		fk =~ fk;
-		Delay100us();
+		Uart3ReceiveSensorData();
 
     }
 }

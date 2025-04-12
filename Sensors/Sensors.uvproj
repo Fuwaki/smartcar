@@ -195,7 +195,7 @@
             <uocRom>0</uocRom>
             <uocXRAM>0</uocXRAM>
             <uSrcBin>1</uSrcBin>
-            <uFrame4>0</uFrame4>
+            <uFrame4>1</uFrame4>
             <hadIRAM>1</hadIRAM>
             <hadXRAM>1</hadXRAM>
             <hadIROM>1</hadIROM>

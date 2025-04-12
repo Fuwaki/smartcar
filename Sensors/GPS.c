@@ -206,8 +206,8 @@ void extract_gps_precision(RMC_Data *rmc_data)
 void GPS_Calculate(NaturePosition *naturePosition, RMC_Data *rmc_data)
 {
     // 计算当前位置
-    naturePosition->x = rmc_data->latitude_decimal - naturePosition->offsetX;
-    naturePosition->y = rmc_data->longitude_decimal - naturePosition->offsetY;
+    naturePosition->y = rmc_data->latitude_decimal - naturePosition->offsetX;
+    naturePosition->x = rmc_data->longitude_decimal - naturePosition->offsetY;
     
     // 提取精确度信息
     extract_gps_precision(rmc_data);
@@ -285,8 +285,8 @@ unsigned char Init_GPS_Offset(NaturePosition *naturePosition, RMC_Data *rmc_data
         return 1; // 返回错误，数据无效
     }
     // 设置偏移量为当前GPS数据
-    naturePosition->offsetX = rmc_data->latitude_decimal;
-    naturePosition->offsetY = rmc_data->longitude_decimal;
+    naturePosition->offsetY = rmc_data->latitude_decimal;
+    naturePosition->offsetX = rmc_data->longitude_decimal;
     naturePosition->x = 0;
     naturePosition->y = 0;
     return 0; // 返回成功

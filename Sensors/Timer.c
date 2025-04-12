@@ -2,11 +2,11 @@
 
 float timestamp = 0;
 
-void Timer0_Init(void) // 100us的定时器
+void Timer0_Init(void) // 1ms的定时器
 {
     TMOD |= 0x01;
-    TH0 = 0xF2;
-    TL0 = 0xA4;
+	TL0 = 0xD8;				//设置定时初始值
+	TH0 = 0xFF;				//设置定时初始值
     ET0 = 1;
     EA = 1;
     TR0 = 1;
@@ -14,8 +14,8 @@ void Timer0_Init(void) // 100us的定时器
 
 void Timer0_ISR(void) interrupt 1
 {
-    TH0 = 0xF2;
-    TL0 = 0xA4;
+	TL0 = 0xD8;				//设置定时初始值
+	TH0 = 0xFF;				//设置定时初始值
     
-    timestamp = timestamp + 0.0001;
+    timestamp = timestamp + 0.01f;
 }

@@ -11,5 +11,6 @@
     void UART_SendStr(char *p);
     void Uart3SendStr(char *p);
     void Uart3SendByLength(unsigned char *p,int length);
-    
+    void Uart3ReceiveSensorData(void);
+    void UART_SendFloat(float value[18]); // 发送浮点数数据
 #endif

@@ -40,6 +40,8 @@ sbit S1SCLK = P2^7; // SPI时钟引脚
 // 用于控制CS引脚
 static void SPI_SetPin(unsigned char port, unsigned char pin, bit value)
 {
+    P_SW2 |= 0x80; // 设置EAXFR为1，使能扩展RAM区域
+
     switch (port)
     {
     case 0: // P0

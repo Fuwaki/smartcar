@@ -82,7 +82,7 @@ void Uart3SendByLength(unsigned char *p,int length)
 void Uart3ReceiveSensorData(void)
 {
     unsigned char data_byte;
-    unsigned char check_frame[4] = {0x00, 0x00, 0x80, 0x7F}; // FireWater协议帧尾
+    unsigned char check_frame[4] = {0x00, 0x00, 0x80, 0x7F}; 
     
     while (rptr != wptr)
     {
@@ -108,6 +108,7 @@ void Uart3ReceiveSensorData(void)
                     for (i = 0; i < 18; i++)
                     {
                         // 对于每个浮点数（4字节）进行反向处理
+                        // TODO : 查看是否需要反向处理
                         p[i*4] = receive_buffer[i*4+3];
                         p[i*4+1] = receive_buffer[i*4+2];
                         p[i*4+2] = receive_buffer[i*4+1];
@@ -128,4 +129,22 @@ void Uart3ReceiveSensorData(void)
             receive_state = 0; // 状态错误，重置
         }
     }
+}
+
+void UART_SendFloat(float value[18]) // 发送浮点数数据
+{
+    unsigned char *p;
+    unsigned int i, j;
+    
+    // 发送浮点数数据（以字节方式）
+    for (i = 0; i < 18; i++)
+    {
+        Uart_SendByLength((unsigned char *)&value[i], 4); //?nnd stc51的寄存器真是恶心
+    }
+    
+    // 发送FireWater协议帧尾 (0x00, 0x00, 0x80, 0x7F)
+    UART_SendByte(0x00);
+    UART_SendByte(0x00);
+    UART_SendByte(0x80);
+    UART_SendByte(0x7F);
 }

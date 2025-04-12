@@ -2,11 +2,11 @@
 #define __ENCODER_H__
     struct EncoderData
     {
-        unsigned char direction; // 编码器旋转方向
+        char direction; // 编码器旋转方向
         float position;          // 编码器位置
         float speed;             // 编码器速度
     };
-    extern struct EncoderData encoder_data;
+    extern struct EncoderData encoder;
     
     void Encoder_Init(void);
     void Encoder_InterruptEnable(unsigned char intType);

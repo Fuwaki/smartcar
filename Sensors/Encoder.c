@@ -6,21 +6,23 @@
 sbit ENCODER_PULSE = P1 ^ 2; // 编码器脉冲信号 - PWMA通道2捕获引脚
 sbit ENCODER_DIR = P1 ^ 0;   // 编码器方向信号 1为正转，0为反转
 sbit ENCODER_ZERO = P0 ^ 1;  // 编码器零点信号 Z相
+sbit ENCODER_ENABLE = P0^3; // 编码器使能信号 - 1为使能，0为禁用
 
 // 编码器常量定义
-#define PWM_PSC 1                                // PWM预分频系数
+#define PWM_PSC 0                                // PWM预分频系数
 #define ENCODER_LINES 1024                       // 编码器线数
-#define ANGLE_PER_PULSE (180.0f / ENCODER_LINES) // 每个脉冲的角度，除以2是因为上升沿和下降沿都会计数
+#define ANGLE_PER_PULSE (3.1415f / ENCODER_LINES) // 每个脉冲的角度，除以2是因为上升沿和下降沿都会计数
 
 // unsigned char ENABLE_ZERO_DETECT = 1; // 是否启用零点检测
 float timestamp_previous = 0; // 上一个时间戳
 static int lastPosition = 0;
 static int lastCount = 0;
+static unsigned int totalCount = 0; // 用于记录上次计数值
 // static unsigned long totalPulses = 0; // 用于记录总脉冲数
 
 struct EncoderData
 {
-    unsigned char direction; // 编码器旋转方向
+    char direction; // 编码器旋转方向
     float position;          // 编码器位置
     float speed;             // 编码器速度
 };
@@ -62,13 +64,18 @@ float _normalizeAngle(float angle)
 
 void Encoder_Init()
 {
+    P_SW2 |= 0x80; // 设置EAXFR为1，使能扩展RAM区域
+    P1M0 &= ~0x07; P1M1 |= 0x07;  // 设置P1.0、P1.1、P1.2为开漏输入
+    P0M0 |= 0x08; P0M1 &= ~0x08; // 设置P0.3为推挽输出
+    ENCODER_ENABLE = 1; // 使能编码器
     PWMA_PSCRH = (int)(PWM_PSC >> 8); // 设置PWM预分频系数
     PWMA_PSCRL = (int)(PWM_PSC);
 
     PWMA_ENO = 0x00; // 禁用所有PWM输出
 
-    //PWMA_CCMR1 = 0x01; // 不再设置通道1为输入捕获模式
-    PWMA_CCMR2 = 0x01; // 设置通道2为输入捕获模式(0x01)，如果想启用输入滤波就+(0x40)
+    PWMA_CCER1 = 0x00; // 禁用通道1捕获功能
+
+    PWMA_CCMR2 = 0x41; // 设置通道2为输入捕获模式(0x01)，如果想启用输入滤波就+(0x40)
 
     // 只设置通道2捕获模式：只捕获上升沿和下降沿
     // 0x30 = 0011 0000b，其中:
@@ -80,26 +87,30 @@ void Encoder_Init()
     PWMA_CNTRH = 0;
     PWMA_CNTRL = 0;
 
-    // 不再初始化通道1捕获寄存器
-    //PWMA_CCR1H = 0;
-    //PWMA_CCR1L = 0;
+    PWMA_ARRH = 0xff; // 设置自动重载寄存器高位
+    PWMA_ARRL = 0xff; // 设置自动重载寄存器低位
+
+    PWMA_CCR1H = 0;
+    PWMA_CCR1L = 0;
     
     PWMA_CCR2H = 0; // 初始化通道2捕获寄存器高位
     PWMA_CCR2L = 0; // 初始化通道2捕获寄存器低位
+
+    EA = 1; // 使能总中断
 
     // 清除中断标志
     PWMA_SR1 = 0;
     PWMA_SR2 = 0;
 
     Encoder_InterruptEnable(0x01); // 使能更新中断
-    //Encoder_InterruptEnable(0x02); // 不再使能通道1捕获中断
-    Encoder_InterruptEnable(0x04); // 使能通道2捕获中断
+    //Encoder_InterruptEnable(0x02); // 不使能通道1捕获中断
+    Encoder_InterruptEnable(0x04); // 使能通道2捕获中断 - 重要！需要启用此中断
 
     // 启动定时器
     PWMA_CR1 = 0x01; // 使能PWM定时器
 
     // 初始化编码器数据
-    encoder.direction = 0;
+    encoder.direction = ENCODER_DIR ? 1 : -1;
     encoder.position = 0;
     encoder.speed = 0;
 
@@ -111,7 +122,6 @@ void Encoder_Init()
 int Encoder_Read(unsigned char channel)
 {
     int encoderValue = 0;
-
     switch (channel)
     {
     case 1:
@@ -152,7 +162,7 @@ void Encoder_Clear(unsigned char channel)
 
 void Encoder_DetectZero(void)
 {
-    if (ENCODER_ZERO == 0)
+    if (ENCODER_ZERO == 1)
     {
         Encoder_Clear(2); // 清零通道2
         lastPosition = 0;
@@ -168,8 +178,11 @@ void Encoder_DetectZero(void)
 void Encoder_Update()
 {
     // 获取当前计数值
-    int currentCount = Encoder_Read(2); // 读取通道2的计数值
-    int deltaPulses = currentCount - lastCount;
+    int currentCount;
+    int deltaPulses;
+
+    currentCount =  Encoder_Read(2); // 读取通道2的计数值
+    deltaPulses = currentCount - lastCount; // 计算增量脉冲数
 
     // 处理溢出情况
     if (deltaPulses > 32767)
@@ -198,6 +211,8 @@ void Encoder_Update()
     // 如果中断频率是1ms
     // encoder.speed = deltaPulses * encoder.direction * ANGLE_PER_PULSE * 1000; // 角度/秒
     encoder.speed = (encoder.position - lastPosition)/(timestamp - timestamp_previous); //d theta/dt
+    // encoder.speed = encoder.position; //d theta/dt
+
 
     // 更新上次计数值
     lastCount = currentCount;
@@ -221,6 +236,23 @@ void PWMA_Interrupt() interrupt PWMA_VECTOR
     if (PWMA_SR1 & 0x04)  // 捕获比较通道2中断
     {
         PWMA_SR1 &= ~0x04;  // 清除中断标志
+        if (encoder.direction == 1)
+        {
+            totalCount ++;
+        }
+        else
+        {
+            totalCount --;
+        }
+
+        if (totalCount >= 2048)
+        {
+            Encoder_DetectZero(); // 检测零点
+            totalCount = 0; // 清零计数器
+        }
+
+        // 当发生捕获事件时，我们可以在此处理脉冲计数
+        // 但实际上计数已经由PWMA硬件自动完成，我们只需确保中断标志被清除
     }
 }
 

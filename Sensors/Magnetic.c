@@ -7,7 +7,7 @@
 #include "SPI_MultiDevice.h"
 
 #define PI 3.14159265358979323846 // 这么长怎么你了!
-#define LIS3MDL_READ 0x80  // 读操作最高位为1
+#define LIS3MDL_READ 0xC0  // 读操作最高位为1
 #define LIS3MDL_WRITE 0x00 // 写操作最高位为0
 #define LIS3MDL_MS 0x40    // 多字节读取模式标识位
 unsigned char current_scale = LIS3MDL_FS_4GAUSS;
@@ -105,7 +105,7 @@ unsigned char LIS3MDL_Init(void)
     //配置传感器
     // CTRL_REG1: 温度传感器使能, XY轴高性能模式, 80Hz输出速率
     //TODO:可以启用FAST_ODR来达到超高速率
-    LIS3MDL_WriteReg(LIS3MDL_CTRL_REG1, 0xFC);
+    LIS3MDL_WriteReg(LIS3MDL_CTRL_REG1, 0xFE);
     Mag_Delay(); // 等待配置完成
 
     // CTRL_REG2: 设置量程为±4高斯
@@ -149,19 +149,25 @@ void LIS3MDL_WriteReg(unsigned char reg, unsigned char value)
     SPI_ReleaseSlave(lis3mdl_spi_id);
 }
 
-// 连续读取多个LIS3MDL寄存器
-void LIS3MDL_ReadMultiRegisters(unsigned char reg, unsigned char *buffer, unsigned char len)
+// // 连续读取多个LIS3MDL寄存器
+// void LIS3MDL_ReadMultiRegisters(unsigned char reg, unsigned char *buffer, unsigned char len)
+// {
+//     unsigned char i;
+//     SPI_SelectSlave(lis3mdl_spi_id);
+//     // 发送起始地址，最高位置1表示读操作，增加0x40表示多字节读取
+//     SPI_TransferByte(reg | LIS3MDL_READ | 0x40); // 添加0x40位用于自动地址增量
+//     // 连续读取多个寄存器数据
+//     for(i = 0; i < len; i++)
+//     {
+//         buffer[i] = SPI_TransferByte(0xFF);
+//     }
+//     SPI_ReleaseSlave(lis3mdl_spi_id);
+// }
+
+void LIS3MDL_ReadMultiRegisters(unsigned char slave_id, unsigned char start_addr,
+    unsigned char *buffer, unsigned int count)
 {
-    unsigned char i;
-    SPI_SelectSlave(lis3mdl_spi_id);
-    // 发送起始地址，最高位置1表示读操作，增加0x40表示多字节读取
-    SPI_TransferByte(reg | LIS3MDL_READ | 0x40); // 添加0x40位用于自动地址增量
-    // 连续读取多个寄存器数据
-    for(i = 0; i < len; i++)
-    {
-        buffer[i] = SPI_TransferByte(0xFF);
-    }
-    SPI_ReleaseSlave(lis3mdl_spi_id);
+    SPI_ReadMultiRegisters(slave_id, start_addr | LIS3MDL_READ, buffer, count);
 }
 
 // 读取LIS3MDL三轴磁场数据
@@ -176,15 +182,11 @@ unsigned char LIS3MDL_ReadData(MagneticData *dataM) //用这个函数来判断sp
     if (!(LIS3MDL_ReadReg(LIS3MDL_STATUS_REG) & 0x08))
         return 2; // 数据未准备好，返回0表示读取失败
 
-    Mag_Delay(); // 等待数据准备好
-    // 为确保数据的稳定性，添加一个短暂延时
-
     // 使用连续读取函数读取所有数据
-    LIS3MDL_ReadMultiRegisters(LIS3MDL_OUT_X_L, buffer, 6);
-    //TODO:考虑short是否可用
-    dataM->x_mag = (short)((buffer[1] << 8) | buffer[0]);
-    dataM->y_mag = (short)((buffer[3] << 8) | buffer[2]);
-    dataM->z_mag = (short)((buffer[5] << 8) | buffer[4]);
+    LIS3MDL_ReadMultiRegisters(lis3mdl_spi_id ,LIS3MDL_OUT_X_L, buffer, 6);
+    dataM->x_mag = (buffer[1] << 8) | buffer[0];
+    dataM->y_mag = (buffer[3] << 8) | buffer[2];
+    dataM->z_mag = (buffer[5] << 8) | buffer[4];
 
     // 计算实际磁场值
     LIS3MDL_CalcMagneticField(dataM, current_scale);
