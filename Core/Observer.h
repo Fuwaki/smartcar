@@ -26,9 +26,6 @@
         #pragma endregion IMU数据
 
         #pragma region Mag数据
-        float Mag_Raw_X;
-        float Mag_Raw_Y;
-        float Mag_Raw_Z;
         float Mag_Adujsted_X;
         float Mag_Adujsted_Y;
         float Mag_Adujsted_Z;

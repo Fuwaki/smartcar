@@ -6,6 +6,7 @@
         float position;          // 编码器位置
         float speed;             // 编码器速度
     };
+    extern struct EncoderData encoder_data;
     
     void Encoder_Init(void);
     void Encoder_InterruptEnable(unsigned char intType);
