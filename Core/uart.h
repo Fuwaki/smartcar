@@ -34,6 +34,12 @@
     }SENSOR_DATA;
     extern SENSOR_DATA sensor_data; // 声明全局变量h
 
+    typedef struct 
+    {
+        unsigned char Motor_ID;
+        float Motor_Speed;
+    } MOTOR_CONTROL_FRAME;
+
     // 串口初始化
     void Uart3Init();
     void Uart1Init();

@@ -10,7 +10,7 @@
 bit busy3;
 unsigned char wptr3;
 unsigned char rptr3;
-char buffer3[128];
+char buffer3[16];
 
 bit busy;
 char wptr;
@@ -18,6 +18,7 @@ char rptr;
 char buffer[128];
 
 SENSOR_DATA sensor_data; // 临时传感器数据结构体
+MOTOR_CONTROL_FRAME motor_control_frame; // 电机控制帧结构体
 
 unsigned char receive_buffer[128]; // 接收缓冲区
 unsigned char receive_state = 0;   // 接收状态
@@ -141,18 +142,13 @@ void UartSendByLength(unsigned char *p,int length)
     {
         UartSend(*(p--));
     }
-
-    // for(i=0;i<length;i++)
-    // {
-    //     UartSend(*(p++));
-    // }
 }
 
 // 接收 vofaFireWater 协议数据，并存入 SENSOR_DATA 结构体
 void UartReceiveSensorData(void)
 {
     unsigned char data_byte;
-    unsigned char check_frame[4] = {0x00, 0x00, 0x80, 0x7F}; 
+    unsigned char check_frame[4] = {0x00, 0x00, 0x80, 0x7f}; // 帧头
     // 将数据存入SENSOR_DATA结构体
     unsigned char *p = (unsigned char *)&sensor_data;
     unsigned int i;
@@ -162,43 +158,55 @@ void UartReceiveSensorData(void)
         data_byte = buffer[rptr++];
         rptr %= 128; // 循环缓冲区指针
         
-        if (receive_state < 72) // 接收18个浮点数 (18 * 4 = 72字节)
+        if (receive_state < 4) // 检查帧头
         {
-            receive_buffer[receive_state++] = data_byte;
-        }
-        else if (receive_state < 76) // 检查帧尾
-        {
-            if (data_byte == check_frame[receive_state - 72])
+            if (data_byte == check_frame[receive_state])
             {
                 receive_state++;
-                if (receive_state == 76) // 帧尾接收完成
+                if (receive_state == 4) // 帧头接收完成
                 {
-                    
-                    // 由于发送时使用的是小端模式反向发送，接收时需要反向处理
-                    for (i = 0; i < 18; i++)
-                    {
-                        // 对于每个浮点数（4字节）进行反向处理
-                        // TODO : 查看是否需要反向处理
-                        p[i*4] = receive_buffer[i*4+3];
-                        p[i*4+1] = receive_buffer[i*4+2];
-                        p[i*4+2] = receive_buffer[i*4+1];
-                        p[i*4+3] = receive_buffer[i*4];
-                    }
-
-                    // memcpy(p, receive_buffer, 18*4); // 将接收到的数据存入SENSOR_DATA结构体
-                    
-                    receive_state = 0; // 重置状态
+                    // 重置接收缓冲区索引，准备接收数据
+                    receive_state = 4;
                 }
             }
             else
             {
-                // 帧尾不匹配，重置状态
+                // 帧头不匹配，重置状态
                 receive_state = 0;
+                // 如果当前字节可能是帧头的第一个字节，需要重新检查
+                if (data_byte == check_frame[0])
+                {
+                    receive_state = 1;
+                }
+            }
+        }
+        else if (receive_state >= 4 && receive_state < 76) // 接收18个浮点数 (4帧头 + 18*4=72字节)
+        {
+            receive_buffer[receive_state - 4] = data_byte;
+            receive_state++;
+            
+            if (receive_state == 76) // 数据接收完成
+            {
+                // 由于发送时使用的是小端模式反向发送，接收时需要反向处理
+                for (i = 0; i < 18; i++)
+                {
+                    p[i*4] = receive_buffer[i*4+3];
+                    p[i*4+1] = receive_buffer[i*4+2];
+                    p[i*4+2] = receive_buffer[i*4+1];
+                    p[i*4+3] = receive_buffer[i*4];
+                }
+                
+                receive_state = 0; // 重置状态，准备接收下一帧
             }
         }
         else
         {
             receive_state = 0; // 状态错误，重置
+            // 检查是否是新帧头的开始
+            if (data_byte == check_frame[0])
+            {
+                receive_state = 1;
+            }
         }
     }
 }
@@ -217,4 +225,15 @@ void UART_SendFloat(float value[18]) // 发送浮点数数据
     UartSend(0x00);
     UartSend(0x80);
     UartSend(0x7F);
+}
+
+void UART3_SendCommandToMotor()
+{
+    unsigned char *p = (unsigned char *)&motor_control_frame;
+    
+    Uart3SendByLength(p, sizeof(MOTOR_CONTROL_FRAME));
+    Uart3Send(0x00);
+    Uart3Send(0x00);
+    Uart3Send(0x80);
+    Uart3Send(0x7F);
 }

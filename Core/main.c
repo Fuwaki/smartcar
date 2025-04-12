@@ -152,11 +152,10 @@ void main()
 {
     Init();
 	fk = 1;
+    ES = 1; // 使能串口中断
     while (1)
     {
-        ES = 0; // 禁用串口中断
         UartReceiveSensorData(); // 接收传感器数据
-        ES = 1; // 使能串口中断
         messageUpdater(); // 更新传感器数据
         UART_SendFloat(tester); // 发送数据
         Delay100us(); // 延时100us

@@ -69,21 +69,21 @@ void UART2_Isr() interrupt 8
 }
 
 
-//UART3中断
-void UART3_Isr() interrupt 17
-{
-    if(UART3_GET_TX_FLAG)
-	{
-        UART3_CLEAR_TX_FLAG;
-		busy[3] = 0;
-	}
-    if(UART3_GET_RX_FLAG)
-	{
-        UART3_CLEAR_RX_FLAG;
-		//接收数据寄存器为：S3BUF
+// //UART3中断
+// void UART3_Isr() interrupt 17
+// {
+//     if(UART3_GET_TX_FLAG)
+// 	{
+//         UART3_CLEAR_TX_FLAG;
+// 		busy[3] = 0;
+// 	}
+//     if(UART3_GET_RX_FLAG)
+// 	{
+//         UART3_CLEAR_RX_FLAG;
+// 		//接收数据寄存器为：S3BUF
 
-	}
-}
+// 	}
+// }
 
 
 //UART4中断
