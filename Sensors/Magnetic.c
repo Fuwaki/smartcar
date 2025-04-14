@@ -97,14 +97,12 @@ unsigned char LIS3MDL_Init(void)
     // 验证设备ID
     device_id = LIS3MDL_ReadReg(LIS3MDL_WHO_AM_I);
     if (device_id != 0x3D)
-    { // LIS3MDL的WHO_AM_I寄存器值应为0x3D
-        // 设备ID错误，可以在此添加错误处理代码
+    {
         return 1; //这就是错误处理代码qwq
     }
 
     //配置传感器
     // CTRL_REG1: 温度传感器使能, XY轴高性能模式, 80Hz输出速率
-    //TODO:可以启用FAST_ODR来达到超高速率
     LIS3MDL_WriteReg(LIS3MDL_CTRL_REG1, 0xFE);
     Mag_Delay(); // 等待配置完成
 

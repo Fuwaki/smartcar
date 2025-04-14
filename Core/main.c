@@ -2,11 +2,12 @@
 #include <intrins.h>
 #include "../library/can.h"
 #include "AR_PF.h"
-#include "Muti_SPI_Device.h"
 #include "uart.h"
 #include "Track.h"
+#include "Motor.h"
+#include "i2c.h"
+#include "Oled.h"
 
-sbit fk = P1^5;
 float tester[18] = {0};
 
 //QWQing
@@ -42,6 +43,7 @@ void Init(){
 
     // Uart3Init();
     Uart1Init();
+    I2C_Init(); // 初始化I2C
     EA = 1;
 }
 // void Change_State(enum State new_state){
@@ -151,7 +153,6 @@ void Delay100us(void)	//@35.000MHz
 void main()
 {
     Init();
-	fk = 1;
     ES = 1; // 使能串口中断
     while (1)
     {

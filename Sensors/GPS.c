@@ -190,7 +190,11 @@ unsigned long get_decimal_part(double value)//为GPS坐标提取小数部分
     integer_part = floor(fabs(value));  // 取绝对值
     decimal_part = fabs(value) - integer_part;  // 获取小数部分
     
-    result = (unsigned long)(decimal_part * pow(10, 5));
+    result = (unsigned long)(decimal_part * 10e5); // 将小数部分转换为整数
+    if (value < 0) // 如果原值为负数，则小数部分也为负数
+    {
+        result = -result;
+    }
 
     return result; // 返回小数部分
 }
@@ -205,12 +209,11 @@ void extract_gps_precision(RMC_Data *rmc_data)
 
 void GPS_Calculate(NaturePosition *naturePosition, RMC_Data *rmc_data)
 {
+    // 提取精确度信息
+    extract_gps_precision(rmc_data);
     // 计算当前位置
     naturePosition->y = rmc_data->latitude_decimal - naturePosition->offsetX;
     naturePosition->x = rmc_data->longitude_decimal - naturePosition->offsetY;
-    
-    // 提取精确度信息
-    extract_gps_precision(rmc_data);
 }
 
 // 修改函数定义，添加参数类型和输出参数

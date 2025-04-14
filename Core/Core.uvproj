@@ -350,54 +350,19 @@
               <FilePath>.\AR_PF.h</FilePath>
             </File>
             <File>
-              <FileName>Muti_SPI_Device.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\Muti_SPI_Device.c</FilePath>
-            </File>
-            <File>
-              <FileName>Muti_SPI_Device.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>.\Muti_SPI_Device.h</FilePath>
-            </File>
-            <File>
               <FileName>Controller.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Controller.c</FilePath>
             </File>
             <File>
+              <FileName>Controller.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\Controller.h</FilePath>
+            </File>
+            <File>
               <FileName>Error.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Error.c</FilePath>
-            </File>
-            <File>
-              <FileName>Math.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\Math.c</FilePath>
-            </File>
-            <File>
-              <FileName>Motor.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\Motor.c</FilePath>
-            </File>
-            <File>
-              <FileName>Path.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\Path.c</FilePath>
-            </File>
-            <File>
-              <FileName>Track.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\Track.c</FilePath>
-            </File>
-            <File>
-              <FileName>Communication.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>.\Communication.h</FilePath>
-            </File>
-            <File>
-              <FileName>config.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>.\config.h</FilePath>
             </File>
             <File>
               <FileName>Error.h</FileName>
@@ -410,9 +375,24 @@
               <FilePath>.\Math.h</FilePath>
             </File>
             <File>
+              <FileName>Math.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Math.c</FilePath>
+            </File>
+            <File>
+              <FileName>Motor.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Motor.c</FilePath>
+            </File>
+            <File>
               <FileName>Motor.h</FileName>
               <FileType>5</FileType>
               <FilePath>.\Motor.h</FilePath>
+            </File>
+            <File>
+              <FileName>Path.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Path.c</FilePath>
             </File>
             <File>
               <FileName>Path.h</FileName>
@@ -420,14 +400,19 @@
               <FilePath>.\Path.h</FilePath>
             </File>
             <File>
-              <FileName>PID.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>.\PID.h</FilePath>
-            </File>
-            <File>
               <FileName>Track.h</FileName>
               <FileType>5</FileType>
               <FilePath>.\Track.h</FilePath>
+            </File>
+            <File>
+              <FileName>Track.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Track.c</FilePath>
+            </File>
+            <File>
+              <FileName>config.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\config.h</FilePath>
             </File>
             <File>
               <FileName>PID.c</FileName>
@@ -435,9 +420,24 @@
               <FilePath>.\PID.c</FilePath>
             </File>
             <File>
+              <FileName>PID.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\PID.h</FilePath>
+            </File>
+            <File>
               <FileName>Communication.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Communication.c</FilePath>
+            </File>
+            <File>
+              <FileName>Communication.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\Communication.h</FilePath>
+            </File>
+            <File>
+              <FileName>can.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\library\can.c</FilePath>
             </File>
             <File>
               <FileName>can.h</FileName>
@@ -445,9 +445,24 @@
               <FilePath>..\library\can.h</FilePath>
             </File>
             <File>
-              <FileName>can.c</FileName>
+              <FileName>Oled.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\library\can.c</FilePath>
+              <FilePath>.\Oled.c</FilePath>
+            </File>
+            <File>
+              <FileName>Oled.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\Oled.h</FilePath>
+            </File>
+            <File>
+              <FileName>i2c.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\i2c.c</FilePath>
+            </File>
+            <File>
+              <FileName>i2c.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\i2c.h</FilePath>
             </File>
           </Files>
         </Group>

@@ -148,7 +148,6 @@ void main()
 		// 	SPI_SlaveStartSendSensorData(&senddata); //开始发送数据
 		// }
 		
-		// UART_SendStr("Hello World!\0");
 		// #pragma region GPS数据模块
 		// GPS_Message_Updater();
 		// if (GPS_Init == 1)
