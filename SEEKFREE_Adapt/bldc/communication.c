@@ -57,33 +57,44 @@ void OnCommandSpeed(float speed)
 //     // }
 // }
 
-void Timer3_Init(void) // 100ms@35.000MHz
+//void Timer3_Init(void) // 100ms@35.000MHz
+//{
+//    T4T3M |= 0x02; // 定时器时钟1T模式
+//   T3L = 0x54;    // 设置定时初始值
+//    T3H = 0xF2;    // 设置定时初始值
+//    T4T3M |= 0x08; // 定时器3开始计时
+//    ET3 = 1;
+//}
+void Timer3_Init(void)		//100毫秒@35.000MHz
 {
-    T4T3M |= 0x02; // 定时器时钟1T模式
-    T3L = 0x54;    // 设置定时初始值
-    T3H = 0xF2;    // 设置定时初始值
-    T4T3M |= 0x08; // 定时器3开始计时
-    ET3 = 1;
+	TM3PS = 0x04;			//设置定时器时钟预分频 ( 注意:并非所有系列都有此寄存器,详情请查看数据手册 )
+	T4T3M &= 0xFD;			//定时器时钟12T模式
+	T3L = 0x23;				//设置定时初始值
+	T3H = 0x1C;				//设置定时初始值
+	T4T3M |= 0x08;			//定时器3开始计时
 }
-
 // 定时器3的中断函数
 void TM3_Isr() interrupt TMR3_VECTOR
 {
+	T3L = 0x23;				//设置定时初始值
+	T3H = 0x1C;				//设置定时初始值
     // alive ++;
     MotorCommander();
     P41 = ~P41;
     // if(alive>=10){
     //     motor.duty = 0; // 3秒没有收到命令就停止电机
     // }
+
 }
 
 void Init_Listen()
 {
-    can_init();
+    //can_init();
     // can_set_filter(((unsigned int)CANID)<<8,0xff);      //只关心前3位的id
     // can_set_receive_callback(OnMsgRecv);
     Timer3_Init();
     Uart3_Init(); // 初始化串口3
+	//motor.duty=200;
 }
 
 void Uart3_Isr(void) interrupt 17
@@ -116,6 +127,8 @@ void Uart3_Init(void) // 115200bps@35.000MHz
 
     ES3 = 1; // 使能串口3中断
     EA = 1;  // 使能总中断
+    wptr=0;
+    rptr=0;
 }
 
 void Uart3Send(char dat)

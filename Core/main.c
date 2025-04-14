@@ -156,8 +156,8 @@ void main()
     while (1)
     {
         UartReceiveSensorData(); // 接收传感器数据
-        messageUpdater(); // 更新传感器数据
-        UART_SendFloat(tester); // 发送数据
+        // messageUpdater(); // 更新传感器数据
+        // UART_SendFloat(tester); // 发送数据
         Delay100us(); // 延时100us
         // UartSendStr("Hello World!"); // 发送字符串
     }
