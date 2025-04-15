@@ -100,7 +100,7 @@ void main()
 
     while (1)
     {
-        Delay100ms();
-        P41 = ~P41;
+        // Delay100ms();
+        Listen_Update();
     }
 }

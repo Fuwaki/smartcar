@@ -39,6 +39,6 @@
 
 #define BLDC_SINE_START_DUTY            (3)   		    // 正弦启动占空比 1-32 ,值越大正弦启动力越大。
 
-
+#define MOTOR_ID 						0x11
 #endif
 
