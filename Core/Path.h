@@ -14,5 +14,8 @@ typedef struct {
 
 }Path;
 
+void Path_Init(Path *path, Point2D *pointlist, int pointcount);
+void Path_Update(Path *path,Point2D * now_position);
+void Path_GetDirection(Path* path,float *angular_deviation,Point2D *way_to_path);
 
 #endif

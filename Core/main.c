@@ -7,21 +7,12 @@
 #include "Motor.h"
 #include "i2c.h"
 #include "Oled.h"
+#include "Error.h"
+int flag=0;
+//这么写是为了后面布局各种周期不同的任务
+bit shouldUpdateControl=0;
 
-float tester[18] = {0};
 
-//QWQing
-// enum State{
-//     INIT=0,
-//     RUNNING1,           //惯性导航主导的寻迹
-//     RUNNING2,           //视觉导航主导的寻迹
-//     SENSOR_FAULT,
-//     CAMERA_FAULT,
-//     TRACKING_FAULT,
-//     STOPPING,
-//     STOPPED,
-// };
-// enum State state = INIT;
 void Init(){
     EAXFR = 1;    // 使能访问 XFR,没有冲突不用关闭
     CKCON = 0x00; // 设置外部数据总线速度为最快
@@ -46,108 +37,54 @@ void Init(){
     I2C_Init(); // 初始化I2C
     EA = 1;
 }
-// void Change_State(enum State new_state){
-//     switch(state){
-//         case INIT:
-//         Init();
-//         break;
-//         case RUNNING1:
-//         break;
-//         case RUNNING2:
-//         case SENSOR_FAULT:
-//         break;
-//         case CAMERA_FAULT:
-//         break;
-//         case TRACKING_FAULT:
-//         break;
-//         case STOPPED:
-//         break;
-//     }
-//     state = new_state;
-// }
-// void Running(){
-//     switch(state){
-//         case INIT:
-//         //给传感器和摄像头发唤起命令
-//         //等待传感器和摄像头初始化完成 等待贝塞尔曲线节点
-//         break;
-//         case RUNNING1:{
-//             struct Boat_State bs=Track_Update();
-//             struct Motor_State ms=Track_Control(bs);
-//             Motor_Apply_State(ms);
-//             break;
-//         }
-//         case RUNNING2:
-//         //获取ccd误差
-//         break;
-//         case SENSOR_FAULT:
-//         //状态显示
-//         Change_State(STOPPING);
-//         break;
-//         case CAMERA_FAULT:
-//         //状态显示
-//         Change_State(STOPPING);
-//         break;
-//         case TRACKING_FAULT:
-//         //状态显示
-//         Change_State(STOPPING);
-//         break;
-//         case STOPPING:
+//检测状态是否需要切换
+void StatusSwitch(){
 
-//         break;
-//         case STOPPED:
-
-//         break;
-//     }
-
-// }
-void messageUpdater()
-{
-    tester[0] = sensor_data.GPS_Raw_X;
-    tester[1] = sensor_data.GPS_Raw_Y;
-    tester[2] = sensor_data.GPS_Nature_X;
-    tester[3] = sensor_data.GPS_Nature_Y;
-    tester[4] = sensor_data.GPS_Heading;
-    tester[5] = sensor_data.GPS_Speed;
-
-    tester[6] = sensor_data.IMU_Acc_X;
-    tester[7] = sensor_data.IMU_Acc_Y;
-    tester[8] = sensor_data.IMU_Acc_Z;
-    tester[9] = sensor_data.IMU_Gyro_X;
-    tester[10] = sensor_data.IMU_Gyro_Y;
-    tester[11] = sensor_data.IMU_Gyro_Z;
-    tester[12] = sensor_data.IMU_Temperature;
-
-    tester[13] = sensor_data.Mag_Adujsted_X;
-    tester[14] = sensor_data.Mag_Adujsted_Y;
-    tester[15] = sensor_data.Mag_Adujsted_Z;
-    tester[16] = sensor_data.Mag_Heading;
-
-    tester[17] = sensor_data.Encoder_Speed;
+}
+//传感器数据更新
+struct Posture SensorUpdate(){
+    
+    UartReceiveSensorData();
 }
 
+//控制函数执行超时
+void OnControlUpdateTimeout(){
+    //TODO：当控制函数超过1s没有被调用 那么触发这个函数 触发停机保护
+}
+void ControlUpdate(){
+    if(shouldUpdateControl){
+        struct Posture posture;
+        struct BoatState boat_state ;
+        struct Motor_State motor_state;
 
-void Delay100ms(void) //@35.000MHz
-{
-    unsigned long edata i;
+        posture=SensorUpdate();
+        boat_state = Track_Update(posture);
+        motor_state= Track_Control(boat_state);
+        Motor_Apply_State(motor_state);
 
-    _nop_();
-    _nop_();
-    i = 874998UL;
-    while (i)
-        i--;
+        shouldUpdateControl=0;
+    }
+}
+void DebugUpdate(){
+    //按钮调参+屏幕显示
 }
 
-void Delay100us(void)	//@35.000MHz
-{
-	unsigned long edata i;
-
-	_nop_();
-	_nop_();
-	_nop_();
-	i = 873UL;
-	while (i) i--;
+void Run(){
+    switch(flag){
+        case 0:
+            ControlUpdate();
+            break;
+        case 1:
+            DebugUpdate();
+            break;
+        case 2:
+            // Track_Update();
+            break;
+        default:
+            break;
+    }
 }
+
 
 
 void main()
@@ -156,10 +93,13 @@ void main()
     ES = 1; // 使能串口中断
     while (1)
     {
-        UartReceiveSensorData(); // 接收传感器数据
-        // messageUpdater(); // 更新传感器数据
-        // UART_SendFloat(tester); // 发送数据
-        Delay100us(); // 延时100us
-        // UartSendStr("Hello World!"); // 发送字符串
+        if(error_flag){
+            //响应ERROR.c中收到的错误
+            //error_msg是字符串 看看要不要输出到oled
+        }else{
+            //正常运行
+            StatusSwitch();
+            Run();
+        }
     }
 }

@@ -80,7 +80,8 @@ void TM3_Isr() interrupt TMR3_VECTOR
 	T3H = 0x1C;				//设置定时初始值
     // alive ++;
     MotorCommander();
-    P41 = ~P41;
+    motor.duty=400;
+    // P41 = ~P41;
     // if(alive>=10){
     //     motor.duty = 0; // 3秒没有收到命令就停止电机
     // }

@@ -43,6 +43,23 @@
 // 旧电调需要拆掉C27、C28、C29三颗滤波电容
 
 
+void Delay100ms(void)	//@35.000MHz
+{
+	unsigned char data i, j, k;
+
+	_nop_();
+	_nop_();
+	i = 14;
+	j = 77;
+	k = 153;
+	do
+	{
+		do
+		{
+			while (--k);
+		} while (--j);
+	} while (--i);
+}
 
 void main()
 {
@@ -83,6 +100,7 @@ void main()
 
     while (1)
     {
-
+        Delay100ms();
+        P41 = ~P41;
     }
 }
