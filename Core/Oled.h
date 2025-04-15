@@ -5,6 +5,7 @@
 #include "i2c.h"
 #include "stdlib.h"
 #include "string.h"
+#include "uart.h"
 // SSD1306 OLED 显示屏配置
 #define OLED_ADDRESS 0x78 // OLED的I2C地址，通常为0x78或0x7A
 #define OLED_WIDTH 128    // OLED宽度
@@ -93,5 +94,7 @@ void OLED_Rotate180(unsigned char rotate);
 
 // 休眠模式控制
 void OLED_Sleep(unsigned char sleep);
+
+extern double timestamp;
 
 #endif /* __OLED_H__ */

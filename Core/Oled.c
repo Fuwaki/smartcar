@@ -1,4 +1,6 @@
 #include "Oled.h"
+#include <stdio.h>
+#include <string.h>
 
 // 显示缓冲区
 unsigned char OLED_Buffer[OLED_WIDTH * OLED_HEIGHT / 8];
@@ -6,6 +8,23 @@ unsigned char OLED_Buffer[OLED_WIDTH * OLED_HEIGHT / 8];
 // 当前光标位置
 unsigned char OLED_CursorX = 0;
 unsigned char OLED_CursorY = 0;
+double timestamp = 0; //单位是10ms
+unsigned char VALUE_FOR_SWITCH = 10; //开关值
+
+struct OledState
+{
+    unsigned char States;
+    unsigned char LastStates;
+};
+struct OledState OledState = {0, 0};
+
+
+sbit SW1 = P5 ^ 2;
+sbit SW2 = P0 ^ 4;
+sbit SW3 = P0 ^ 3;
+sbit SW4 = P0 ^ 2;
+sbit SW5 = P4 ^ 6;
+sbit SW6 = P4 ^ 5;
 
 // 字体数据 - 6x8像素 ASCII字符集
 static const unsigned char Font6x8[] = {
@@ -205,7 +224,10 @@ void OLED_WriteChar(char ch)
 {
     unsigned char i;
     unsigned char j;
-    if (ch < 32 || ch > 126)
+    if (ch < 32 || ch > 126) //目前只支持ASCII字符32到126
+    {
+        return;
+    }
     {
         return;
     }
@@ -213,12 +235,12 @@ void OLED_WriteChar(char ch)
     if (OLED_CursorX + 6 > OLED_WIDTH)
     {
         OLED_CursorX = 0;
-        OLED_CursorY += 8;
+        OLED_CursorY += 8; // 换行
     }
 
-    if (OLED_CursorY + 8 > OLED_HEIGHT)
+    if (OLED_CursorY + 8 > OLED_HEIGHT) // 超出屏幕高度
     {
-        OLED_CursorY = 0;
+        OLED_CursorY = 0; // 重置光标位置
     }
 
     for (i = 0; i < 6; i++)
@@ -403,4 +425,97 @@ void OLED_Sleep(unsigned char sleep)
     {
         OLED_WriteCommand(SSD1306_DISPLAY_ON);
     }
+}
+
+void SwitchUpdater()
+{
+    static unsigned char detectedTimes = 0; // 记录按键按下的次数
+    char buffer[64];    
+    OLED_Clear(); // 清空屏幕 确保刷新率足够快
+    #pragma region  检测开关状态
+    if (SW1 == 0 || SW2 == 0 || SW3 == 0 || SW4 == 0 || SW5 == 0 || SW6 == 0) //请不要当傻逼,同时按下多个开关
+    {
+        detectedTimes++;
+    }
+
+    if (SW1 == 0 && detectedTimes > VALUE_FOR_SWITCH)
+    {
+        // OLED_WriteString("SW1 Pressed");
+        OledState.States = 1; // 设置状态为1
+    }
+    else if (SW2 == 0 && detectedTimes > VALUE_FOR_SWITCH)
+    {
+        OledState.States = 2; // 设置状态为2
+    }
+    else if (SW3 == 0 && detectedTimes > VALUE_FOR_SWITCH)
+    {
+        OledState.States = 3; // 设置状态为3
+    }
+    else if (SW4 == 0 && detectedTimes > VALUE_FOR_SWITCH)
+    {
+        OledState.States = 4; // 设置状态为4
+    }
+    else if (SW5 == 0 && detectedTimes > VALUE_FOR_SWITCH)
+    {
+        OledState.States = 5; // 设置状态为5
+    }
+    else if (SW6 == 0 && detectedTimes > VALUE_FOR_SWITCH)
+    {
+        OledState.States = 6; // 设置状态为6
+    }
+    else
+    {
+        detectedTimes = 0;
+    }
+    #pragma endregion 
+
+
+    #pragma region  显示状态
+
+    switch (OledState.States)
+    {
+        case 1:
+            OLED_SetCursor(11, 45); // 设置光标位置取决你想放where
+            sprintf(buffer, "Count:%d Th:%d", detectedTimes, VALUE_FOR_SWITCH);//对啊用sprintf函数来格式化字符串
+            OLED_WriteString(buffer);
+            break;
+        case 2:
+            OLED_SetCursor(0 , 0);
+            sprintf(buffer, "Sensor:%d Th:%d", sensor_data.IMU_Acc_X, sensor_data.IMU_Acc_Y);
+            OLED_WriteString(buffer);
+            break;
+        case 3:
+            OLED_WriteString("SW3 Pressed");
+            break;
+        case 4:
+            OLED_WriteString("SW4 Pressed");
+            break;
+        case 5:
+            OLED_WriteString("SW5 Pressed");
+            break;
+        case 6:
+            OLED_WriteString("SW6 Pressed");
+            break;
+        default:
+            break;
+    }
+
+    #pragma endregion
+}
+
+
+void Timer2_Init(void)		//100微秒@35.000MHz
+{
+	AUXR |= 0x04;			//定时器时钟1T模式
+	T2L = 0x54;				//设置定时初始值
+	T2H = 0xF2;				//设置定时初始值
+	AUXR |= 0x10;			//定时器2开始计时
+}
+
+void Timer2_Isr(void) interrupt 12
+{
+    timestamp += 0.01; // 每次中断增加0.1ms
+
+    SwitchUpdater(); // 检测开关状态并更新显示
+
 }
