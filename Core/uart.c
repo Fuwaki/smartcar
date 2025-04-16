@@ -180,12 +180,12 @@ void UartReceiveSensorData(void)
                 }
             }
         }
-        else if (receive_state >= 4 && receive_state < 76) // 接收18个浮点数 (4帧头 + 18*4=72字节)
+        else if (receive_state >= 4 && receive_state < 80) // 接收18个浮点数 (4帧头 + 19*4=76字节)
         {
             receive_buffer[receive_state - 4] = data_byte;
             receive_state++;
             
-            if (receive_state == 76) // 数据接收完成
+            if (receive_state == 80) // 数据接收完成
             {
                 // 由于发送时使用的是小端模式反向发送，接收时需要反向处理
                 for (i = 0; i < 18; i++)

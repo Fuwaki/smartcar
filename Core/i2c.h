@@ -29,4 +29,4 @@ unsigned char I2C_ReadBytes(unsigned char addr, unsigned char reg, unsigned char
 // I2C发送一个字节到指定地址
 void I2C_SendByteToAddr(unsigned char addr, unsigned char reg, unsigned char dat);
 
-#endif /* __I2C_H */
+#endif /* __I2C_H__ */

@@ -19,6 +19,7 @@
         float IMU_Gyro_Y;
         float IMU_Gyro_Z;
         float IMU_Temperature;
+        float IMU_Heading; // 角度
         #pragma endregion IMU数据
 
         #pragma region Mag数据

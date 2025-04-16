@@ -1,5 +1,6 @@
 #include <intrins.h>
 #include <stdio.h>
+#include "GPS.h"
 #include "Gyroscope.h"
 #include "SPI_MultiDevice.h"
 
@@ -10,6 +11,7 @@ static unsigned char icm42688_spi_id = 0xFF;
 
 icm42688_data_t gyro_data;
 
+bit allowUpdate = 0; //允许陀螺仪更新航向角数据
 
 void Gyrp_Delay(void)	//@40.000MHz 10ms延时
 {
@@ -75,6 +77,8 @@ unsigned char ICM42688_Init()
     //TODO: 选择合适的量程
     ICM42688_SetGyroRange(GYRO_RANGE_125_DPS);     
     ICM42688_SetAccelRange(ACCEL_RANGE_4G);
+
+    gyro_data.true_yaw_angle = 0.0f; // 初始化偏航角为0.0f
 
     return 0; // 初始化成功
 }
@@ -248,6 +252,7 @@ void Gyro_Updater()
 {
     // 在这里处理传感器数据
 
+
     // static icm42688_data_t filtered_data;
     // static kalman_filter_t kf_accel_x, kf_accel_y, kf_accel_z;
     // static kalman_filter_t kf_gyro_x, kf_gyro_y, kf_gyro_z;
@@ -262,6 +267,8 @@ void Gyro_Updater()
     
     // 读取传感器数据
     ICM42688_ReadSensorData(&gyro_data);
+
+
     
     // 应用卡尔曼滤波
     // apply_kalman_filter(&sensor_data, &filtered_data, 
@@ -362,3 +369,23 @@ void apply_kalman_filter(icm42688_data_t *raw_data, icm42688_data_t *filtered_da
 //I'm not sure if it's a good idea to use this code or not. I'm not sure if it's a good idea to use this code or not.
 //EDITED by UNIKOZERA!
 //Ciallo! I'm UNIKOZERA
+
+#pragma region yaw_Calculation //!yaw的陀螺仪累加已经在timer中实现
+void yaw_angle_init()
+{
+    static float yaw_angle_offset = 0.0f; // 偏航角偏移量
+    static float yaw_angle_sum = 0.0f; // 偏航角累加值
+    static unsigned char i = 0;
+    if (rmc_data.valid && i <= 50 && !allowUpdate)
+    {
+        yaw_angle_sum += rmc_data.course;
+        i ++;
+    }
+    else if (rmc_data.valid && i > 50 && !allowUpdate)
+    {
+        yaw_angle_offset = yaw_angle_sum / 50.0f; // 计算偏航角偏移量
+        gyro_data.true_yaw_angle = yaw_angle_offset;
+        allowUpdate = 1; // 允许更新航向角数据
+    } //成功初始化
+}
+#pragma endregion

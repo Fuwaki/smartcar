@@ -89,9 +89,12 @@
         float gyro_y_dps;
         float gyro_z_dps;
         float temp_c;
+
+        float true_yaw_angle; //! 真航向角
     } icm42688_data_t;
 
     extern icm42688_data_t gyro_data; // 声明传感器数据结构体
+    extern bit allowUpdate; // 允许更新航向角数据的标志位
 
     // 初始化ICM42688-P传感器
     // 返回：0-成功，1-失败
@@ -140,5 +143,7 @@
                             kalman_filter_t *kf_gyro_x, kalman_filter_t *kf_gyro_y, kalman_filter_t *kf_gyro_z);
     void init_gyro_kalman_filters(kalman_filter_t *kf_accel_x, kalman_filter_t *kf_accel_y, kalman_filter_t *kf_accel_z,
                                 kalman_filter_t *kf_gyro_x, kalman_filter_t *kf_gyro_y, kalman_filter_t *kf_gyro_z);
+
+    void yaw_angle_init(); // 初始化航向角
 
 #endif // __GYROSCOPE_H__

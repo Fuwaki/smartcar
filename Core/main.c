@@ -13,6 +13,8 @@ int flag = 0;
 // 这么写是为了后面布局各种周期不同的任务
 bit shouldUpdateControl = 0;
 
+sbit led = P4^0;
+
 void Init()
 {
     EAXFR = 1;    // 使能访问 XFR,没有冲突不用关闭
@@ -31,12 +33,12 @@ void Init()
     P4M1 = 0x00;
     P5M0 = 0x00;
     P5M1 = 0x00;
-    P2M0 |= 0x80;
-    P2M1 &= ~0x80;
 
     // Uart3Init();
     Uart1Init();
     I2C_Init(); // 初始化I2C
+    OLED_Init(); // 初始化OLED
+    Timer2_Init(); // 初始化定时器2
     EA = 1;
 }
 // 检测状态是否需要切换
@@ -99,23 +101,26 @@ void main()
 {
     Init();
     ES = 1; // 使能串口中断
+    led = 1;
     while (1)
     {
-        SensorUpdate(); // 传感器数据更新
+        led =~led; // 反转LED灯
+        // SensorUpdate(); // 传感器数据更新
+        SwitchUpdater(); // 检测开关状态并更新显示
         if (timestamp == floor(timestamp))
             shouldUpdateControl = 1; // 1ms更新一次控制函数
 
 
-        if (error_flag)
-        {
-            // 响应ERROR.c中收到的错误
-            // error_msg是字符串 看看要不要输出到oled
-        }
-        else
-        {
-            // 正常运行
-            StatusSwitch();
-            Run();
-        }
+        // if (error_flag)
+        // {
+        //     // 响应ERROR.c中收到的错误
+        //     // error_msg是字符串 看看要不要输出到oled
+        // }
+        // else
+        // {
+        //     // 正常运行
+        //     StatusSwitch();
+        //     Run();
+        // }
     }
 }

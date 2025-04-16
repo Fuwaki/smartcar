@@ -25,7 +25,7 @@
 
 unsigned char j;
 
-float datatosend[18] = {0.0};
+float datatosend[19] = {0.0};
 
 unsigned char receive_buffer0d00[32];
 unsigned char receive_buffer0d01[32];
@@ -111,18 +111,19 @@ void messageUpdaterWithUart()
 	datatosend[10] = gyro_data.gyro_y_dps;
 	datatosend[11] = gyro_data.gyro_z_dps;
 	datatosend[12] = gyro_data.temp; // 温度数据
+	datatosend[13] = gyro_data.true_yaw_angle; // 真航向角数据
 	#pragma endregion 陀螺仪
 
 	#pragma region 磁场计数据
-	datatosend[13] = mag_data.x_gauss;
-	datatosend[14] = mag_data.y_gauss;
-	datatosend[15] = mag_data.z_gauss;
-	datatosend[16] = mag_data.heading;
+	datatosend[14] = mag_data.x_gauss;
+	datatosend[15] = mag_data.y_gauss;
+	datatosend[16] = mag_data.z_gauss;
+	datatosend[17] = mag_data.heading;
 	#pragma endregion 磁场计数据
 
 
 	#pragma region 编码器数据
-	datatosend[17] = encoder.position; // 速度数据
+	datatosend[18] = encoder.position; // 速度数据
 	#pragma endregion 编码器数据
 	
 }
@@ -136,30 +137,29 @@ void main()
 	// UART_SendByte('S'); //Started!
 	while(1)
 	{
+		yaw_angle_init(); //航向角初始化
 		Encoder_Update(); //更新编码器数据
 		messageUpdaterWithUart(); //更新数据
 		UART_SendFloat(datatosend); //发送数据
-		// SPI_SlaveModeMessageUpdater(&senddata); //更新数据
-		// UART_SendByte('S'); //Started!
-
+		//// SPI_SlaveModeMessageUpdater(&senddata); //更新数据
 		// // // 只有在上一次传输完成后才启动新的传输
-		// if(!SPI_IsStructTransmissionActive())
-		// {
-		// 	SPI_SlaveStartSendSensorData(&senddata); //开始发送数据
-		// }
+		//// if(!SPI_IsStructTransmissionActive())
+		//// {
+		//// 	SPI_SlaveStartSendSensorData(&senddata); //开始发送数据
+		//// }
 		
-		// #pragma region GPS数据模块
-		// GPS_Message_Updater();
-		// if (GPS_Init == 1)
-		// {
-		// 	GPS_Init = Init_GPS_Offset(&naturePosition, &rmc_data);
-		// 	if (GPS_Init == 0)
-		// 	{
-		// 		UART_SendStr("GPS偏移量初始化成功!\0");
-		// 		GPS_Init = 0;
-		// 	}
-		// }
-		// #pragma endregion
+		#pragma region GPS数据模块
+		GPS_Message_Updater();
+		if (GPS_Init == 1)
+		{
+			GPS_Init = Init_GPS_Offset(&naturePosition, &rmc_data);
+			if (GPS_Init == 0)
+			{
+				UART_SendStr("GPS偏移量初始化成功!\0");
+				GPS_Init = 0;
+			}
+		}
+		#pragma endregion
 		
 		#pragma region 陀螺仪//0d00
 		Gyro_Updater();
