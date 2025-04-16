@@ -11,7 +11,7 @@ unsigned char receive_buffer[16]; // 接收缓冲区
 unsigned char receive_state = 0;  // 接收状态
 
 MOTOR_CONTROL_FRAME motor_control_frame; // 临时传感器数据结构体
-static int alive = 1;
+static unsigned long alive = 1;
 
 void OnCommandLive()
 {
@@ -26,7 +26,7 @@ void OnCommandLive()
 
 void OnCommandSpeed(float speed)
 {
-    if (speed > 1.0f || speed <= 0.0f || !alive)
+    if (speed > 1.0f || speed <= 0.0f )
     {
         motor.duty = 0;
     }
@@ -80,7 +80,7 @@ void TM3_Isr() interrupt TMR3_VECTOR
 	T3H = 0x1C;				//设置定时初始值
     // alive ++;
     MotorCommander();
-    motor.duty=400;
+    motor.duty=60;
     // P41 = ~P41;
     // if(alive>=10){
     //     motor.duty = 0; // 3秒没有收到命令就停止电机
@@ -88,12 +88,14 @@ void TM3_Isr() interrupt TMR3_VECTOR
 
 }
 
+
+
 void Init_Listen()
 {
     //can_init();
     // can_set_filter(((unsigned int)CANID)<<8,0xff);      //只关心前3位的id
     // can_set_receive_callback(OnMsgRecv);
-    Timer3_Init();
+    // Timer3_Init();
     Uart3_Init(); // 初始化串口3
 	//motor.duty=200;
 }
@@ -131,7 +133,24 @@ void Uart3_Init(void) // 115200bps@35.000MHz
     wptr=0;
     rptr=0;
 }
-
+void Listen_Update(){
+    int has_new_data=MotorCommander();
+    //FIXME:这个定时方式太简陋了 电机转速不同的时候alive的时间也不同
+    if(alive>300000){
+        motor.duty = 0; // 若干时间后没有收到命令就停止电机
+    }else{
+        alive++;
+    }
+    if(has_new_data){
+        if(motor_control_frame.Motor_ID!=MOTOR_ID){
+            return;
+        }
+        alive=0;
+        OnCommandSpeed(motor_control_frame.Motor_Speed);
+    }
+    P41=~P41;
+    
+}
 void Uart3Send(char dat)
 {
     while (busy114)
@@ -158,8 +177,9 @@ void Uart3SendByLength(unsigned char *p, int length)
     }
 }
 
-void MotorCommander()
+int MotorCommander()
 {
+    int flag=0;
     unsigned char data_byte;
     unsigned char check_frame[4] = {0x00, 0x00, 0x80, 0x7f}; // 帧头
     unsigned char *p = (unsigned char *)&motor_control_frame;
@@ -200,11 +220,12 @@ void MotorCommander()
             if (receive_state == 9) // 帧头接收完成
             {
                 receive_state = 0;        // 重置状态，准备接收下一帧
-                p[0] = receive_buffer[3]; // 电机ID
-                p[1] = receive_buffer[7];
-                p[2] = receive_buffer[6];
-                p[3] = receive_buffer[5];
+                p[0] = receive_buffer[0]; // 电机ID
+                p[1] = receive_buffer[1];
+                p[2] = receive_buffer[2];
+                p[3] = receive_buffer[3];
                 p[4] = receive_buffer[4];
+                flag=1;
             }
         }
         else
@@ -216,4 +237,5 @@ void MotorCommander()
             }
         }
     }
+    return flag;
 }
