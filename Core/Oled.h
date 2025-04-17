@@ -97,7 +97,7 @@ void OLED_Sleep(unsigned char sleep);
 
 void Timer2_Init(void);
 
-void SwitchUpdater(void);
+// void SwitchUpdater(void);
 
 extern double timestamp;
 

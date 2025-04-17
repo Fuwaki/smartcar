@@ -61,5 +61,5 @@
 
     void UartReceiveSensorData(void);
     void UART3_SendCommandToMotor(MOTOR_CONTROL_FRAME frame);
-    void UART_SendFloat(float value[18]); // 发送浮点数数据
+    void UART_SendFloat(float value[19]); // 发送浮点数数据
 #endif

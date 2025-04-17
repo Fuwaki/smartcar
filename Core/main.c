@@ -108,15 +108,10 @@ void Init()
     Uart3Init();
     Uart1Init();
     I2C_Init();    // 初始化I2C
-    OLED_Init();   // 初始化OLED
-    Timer2_Init(); // 初始化定时器2
-    // Motor_Init();  // 初始化电机
+    // OLED_Init();   // 初始化OLED
+    // Timer2_Init(); // 初始化定时器2
+    Motor_Init();  // 初始化电机
     EA = 1;
-}
-// 检测状态是否需要切换
-void StatusSwitch()
-{
-    SwitchUpdater(); // 检测开关状态并更新显示
 }
 
 // 传感器数据更新

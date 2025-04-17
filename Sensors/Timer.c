@@ -24,7 +24,7 @@ void TRUE_YAW_GET()
         return;
 
     // 计算真实航向角
-    gyro_data.true_yaw_angle += gyro_data.gyro_z_dps * 0.001f * 23.4375; // 更新真实航向角
+    gyro_data.true_yaw_angle += gyro_data.gyro_z_dps * 0.001f * 23.4375f; // 更新真实航向角
     if (gyro_data.true_yaw_angle >= 360.0f) gyro_data.true_yaw_angle = 0.0f; // 限制在0到360度之间
     if (gyro_data.true_yaw_angle < 0.0f) gyro_data.true_yaw_angle = 360.0f; // 限制在0到360度之间
 

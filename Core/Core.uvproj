@@ -445,16 +445,6 @@
               <FilePath>..\library\can.h</FilePath>
             </File>
             <File>
-              <FileName>Oled.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\Oled.c</FilePath>
-            </File>
-            <File>
-              <FileName>Oled.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>.\Oled.h</FilePath>
-            </File>
-            <File>
               <FileName>i2c.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\i2c.c</FilePath>
@@ -463,6 +453,16 @@
               <FileName>i2c.h</FileName>
               <FileType>5</FileType>
               <FilePath>.\i2c.h</FilePath>
+            </File>
+            <File>
+              <FileName>Timer.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Timer.c</FilePath>
+            </File>
+            <File>
+              <FileName>Timer.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\Timer.h</FilePath>
             </File>
           </Files>
         </Group>
