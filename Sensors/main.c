@@ -72,6 +72,7 @@ void Inits()
 	SPI_Init(); //SPI初始化
 	UART_Init(); //串口初始化
 	GPS_UART_Init(); //GPS串口初始化
+	NOP(40); //延时
 	Init_GPS_Setting(); //GPS初始化
 	Encoder_Init(); //编码器初始化
 	// SPI_InitSlave(); //SPI从模式初始化
@@ -110,7 +111,7 @@ void messageUpdaterWithUart()
 	datatosend[9] = gyro_data.gyro_x_dps;
 	datatosend[10] = gyro_data.gyro_y_dps;
 	datatosend[11] = gyro_data.gyro_z_dps;
-	datatosend[12] = gyro_data.temp; // 温度数据
+	datatosend[12] = gyro_data.temp_c; // 温度数据
 	datatosend[13] = gyro_data.true_yaw_angle; // 真航向角数据
 	#pragma endregion 陀螺仪
 
@@ -130,17 +131,17 @@ void messageUpdaterWithUart()
 
 void main()
 {
-	float baba = 0;
 	unsigned char GPS_Init = 1;
 	Inits();
 	Delay100us();
 	// UART_SendByte('S'); //Started!
+	// allowUpdate = 1; // 初始化允许更新航向角数据的标志位
 	while(1)
 	{
 		yaw_angle_init(); //航向角初始化
 		Encoder_Update(); //更新编码器数据
 		messageUpdaterWithUart(); //更新数据
-		UART_SendFloat(datatosend); //发送数据
+		// UART_SendFloat(datatosend); //发送数据
 		//// SPI_SlaveModeMessageUpdater(&senddata); //更新数据
 		// // // 只有在上一次传输完成后才启动新的传输
 		//// if(!SPI_IsStructTransmissionActive())
@@ -153,11 +154,6 @@ void main()
 		if (GPS_Init == 1)
 		{
 			GPS_Init = Init_GPS_Offset(&naturePosition, &rmc_data);
-			if (GPS_Init == 0)
-			{
-				UART_SendStr("GPS偏移量初始化成功!\0");
-				GPS_Init = 0;
-			}
 		}
 		#pragma endregion
 		
@@ -170,7 +166,7 @@ void main()
 		
 		
 		#pragma region 磁场计数据模块
-		baba = LIS3MDL_ReadData(&mag_data); // 读取磁力计数据
+		LIS3MDL_ReadData(&mag_data); // 读取磁力计数据
 		#pragma endregion
 
 		// a = (float) mag_data.x_mag;

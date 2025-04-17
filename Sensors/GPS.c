@@ -8,9 +8,9 @@
 #include "GPS.h"
 #include "uart.h"
 
-unsigned char gps_receive_buffer[64];
+unsigned char gps_receive_buffer[128];
 unsigned char set_rate_10hz[] = {0xF1, 0xD9, 0x06, 0x42, 0x14, 0x00, 0x00, 0x0A, 0x05,
-                                 0x00, 0x64, 0x00, 0x00, 0x00, 0x60, 0xEA, 0x00, 0x00, 0xD0, 0x07, 0x00, 0x00,0xC8, 0x00, 0x00, 0x00, 0xB8, 0xED};
+                                 0x00, 0x64, 0x00, 0x00, 0x00, 0x60, 0xEA, 0x00, 0x00, 0xD0, 0x07, 0x00, 0x00, 0xC8, 0x00, 0x00, 0x00, 0xB8, 0xED};
 
 unsigned char cmd_gga[] = {0xF1, 0xD9, 0x06, 0x01, 0x03, 0x00, 0xF0, 0x00, 0x00, 0xFA, 0x0F};
 unsigned char cmd_gll[] = {0xF1, 0xD9, 0x06, 0x01, 0x03, 0x00, 0xF0, 0x01, 0x00, 0xFB, 0x11};
@@ -53,10 +53,17 @@ void parse_rmc(char *sentence, RMC_Data *rmc_data)
     int field_count = 0;
     int i = 0;
     char *ptr;
-
+    
+    // 判断是否为RMC语句（兼容$GNRMC和$GPRMC）
+    // if (!(strncmp(sentence, "$GNRMC", 6) == 0 || strncmp(sentence, "$GPRMC", 6) == 0)) {
+    //     rmc_data->valid = 0;
+    //     return;
+    // }
+    
     // 初始化数据
     for (i = 0; i < sizeof(RMC_Data); i++)
         ((char *)rmc_data)[i] = 0;
+        //memset
     rmc_data->valid = 0;
 
     // 复制语句以便进行处理
@@ -183,10 +190,10 @@ void parse_rmc(char *sentence, RMC_Data *rmc_data)
     rmc_data->valid = (rmc_data->status == 'A');
 }
 
-unsigned long get_decimal_part(double value)//为GPS坐标提取小数部分
+long get_decimal_part(double value)//为GPS坐标提取小数部分
 {
-    double decimal_part, result; // 小数部分
-    unsigned long integer_part; // 整数部分
+    long decimal_part, result; // 小数部分
+    long integer_part; // 整数部分
     integer_part = floor(fabs(value));  // 取绝对值
     decimal_part = fabs(value) - integer_part;  // 获取小数部分
     
@@ -276,7 +283,6 @@ void Init_GPS_Setting()
     GPS_SendCommand(cmd_zda, sizeof(cmd_zda));
     GPS_Delay();
     GPS_SendCommand(cmd_gst, sizeof(cmd_gst));
-    UART_SendStr("GPS初始化成功!\0");
 }
 
 unsigned char Init_GPS_Offset(NaturePosition *naturePosition, RMC_Data *rmc_data)
@@ -284,7 +290,6 @@ unsigned char Init_GPS_Offset(NaturePosition *naturePosition, RMC_Data *rmc_data
     // 初始化偏移量
     if (rmc_data->valid == 0)
     {
-        UART_SendStr("GPS数据无效!\0");
         return 1; // 返回错误，数据无效
     }
     // 设置偏移量为当前GPS数据
@@ -299,17 +304,19 @@ void GPS_Message_Updater()
 {
     if (GPS_UART_Available())
     {
-        unsigned char len = GPS_UART_Read(gps_receive_buffer, 32);
+
+        unsigned char len = GPS_UART_Read(gps_receive_buffer);
         if (len > 0)
         {
+            gps_receive_buffer[len] = '\0'; // 添加字符串结束符
             GPS_Message_Inputer(gps_receive_buffer, &rmc_data, &naturePosition);
-            //? UART_SendStr("GPS数据更新成功!\0"); 后面有了发送F的函数，就不需要这个了
+            UART_SendStr(gps_receive_buffer);
         }
     }
-    else
-    {
-        UART_SendByte('F'); // 无数据
-    }
+    // else
+    // {
+    //     // UART_SendByte('F'); // 无数据
+    // }
 }
 
 // 算法部分写完辣！！！！！！！ 10/3/2025 16:47

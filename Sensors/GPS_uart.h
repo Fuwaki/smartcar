@@ -6,5 +6,5 @@
     void GPS_UART_SendString(unsigned char *str);
     unsigned short int GPS_UART_Available(void);
     unsigned char GPS_UART_ReadByte(void);
-    unsigned char GPS_UART_Read(unsigned char *buf, unsigned char len);
+    unsigned char GPS_UART_Read(unsigned char *buf);
 #endif

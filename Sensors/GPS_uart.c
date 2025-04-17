@@ -5,7 +5,7 @@
 #define FOSC 40000000L
 #define BAUD 115200
 #define UART_BAUD 115200
-#define GPS_UART_BUF_SIZE 64                          // 定义接收缓冲区大小，避免与UART_BUF_SIZE冲突
+#define GPS_UART_BUF_SIZE 128                          // 定义接收缓冲区大小，避免与UART_BUF_SIZE冲突
 unsigned char GPSwptr;                               // 写指针
 unsigned char GPSrptr;                               // 读指针
 unsigned char xdata GPS_UART_RxBuffer[GPS_UART_BUF_SIZE]; // 接收数据缓冲区，避免与UART3_RxBuffer冲突
@@ -103,11 +103,11 @@ unsigned char GPS_UART_ReadByte(void)
 }
 
 // 读取接收缓冲区中的多个字节
-unsigned char GPS_UART_Read(unsigned char *buf, unsigned char len)
+unsigned char GPS_UART_Read(unsigned char *buf)
 {
     unsigned char i = 0;
 
-    while (GPS_UART_Available() && i < len)
+    while (GPS_UART_Available())
     {
         buf[i++] = GPS_UART_ReadByte();
     }
