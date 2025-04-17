@@ -16,26 +16,26 @@ sbit led = P4 ^ 0;
 
 int flag = 0; // 0待机 1控制闭环 -1过渡态
 typedef void (*TransitionUpdateFunc)();
-TransitionUpdateFunc TransitionUpdate = NULL;
+TransitionUpdateFunc TransitionUpdate = 0;
 float launch_progress = 0.0;
 
 // 抬升电机达到制定转速 其他电机起码要启动起来 怠速状态
-#define TARGET_LIFTING_SPEED 0.5
+#define TARGET_LIFTING_SPEED 0.7
 #define TARGET_IDLE_SPEED 0.1
-#define LAUNCH_SPEED 0.00001 // 每次进度推进多少
+#define LAUNCH_SPEED 0.001 // 每次进度推进多少
 
 void MildLaunch()
 {
     struct Motor_State motor_state;
     if (launch_progress < 0.0)
     {
-        ERROR(2, "launch_progress out of range");
+        // ERROR(2, "launch_progress out of range");
         return;
     }
     if (launch_progress > 1.0)
     {
         flag = 1;           //启动完成
-        TransitionUpdate = NULL; // 过渡完成
+        TransitionUpdate = 0; // 过渡完成
         return;
     }
     motor_state.bottom_right = motor_state.bottom_left = TARGET_LIFTING_SPEED * launch_progress;
@@ -43,12 +43,23 @@ void MildLaunch()
 
     Motor_Apply_State(motor_state);
     launch_progress += LAUNCH_SPEED;
+    //100微秒延时
+    {
+	unsigned long edata i;
+
+	_nop_();
+	_nop_();
+	_nop_();
+	i = 873UL;
+	while (i) i--;
+    }
+
 }
 
 // 响应按钮实现的函数
 void Start()
 {
-    launch_progress=0.0;
+    launch_progress=0.2;
     TransitionUpdate = MildLaunch;
     flag = -1;
 }
@@ -99,7 +110,7 @@ void Init()
     I2C_Init();    // 初始化I2C
     OLED_Init();   // 初始化OLED
     Timer2_Init(); // 初始化定时器2
-    Motor_Init();  // 初始化电机
+    // Motor_Init();  // 初始化电机
     EA = 1;
 }
 // 检测状态是否需要切换
@@ -161,7 +172,7 @@ void Run()
     switch (flag)
     {
     case -1:
-        if (TransitionUpdate != NULL)
+        if (TransitionUpdate != 0)
         {
             TransitionUpdate();
         }
@@ -170,10 +181,10 @@ void Run()
             ERROR(1, "TransitionUpdate is NULL");
         }
     case 1:
-        ControlUpdate();
+        // ControlUpdate();
         break;
     case 0:
-        IdleUpdate();
+        // IdleUpdate();
         break;
     default:
         break;
@@ -182,39 +193,31 @@ void Run()
 
 void main()
 {
-    struct Motor_State motor_state;
-    motor_state.bottom_right = 0.2f;
-    motor_state.bottom_left = 0.2f;
-    motor_state.back_left = 0.0f;
-    motor_state.back_right = 0.0f;
-    motor_state.left = 0.0f;
-    motor_state.right = 0.0f;
+
     
     Init();
     ES = 1; // 使能串口中断
     led = 1;
-    Start();
     
     while (1)
     {
-        Motor_Apply_State(motor_state);
 
         led = ~led;     // 反转LED灯
-        // Uart3Send(0x00);
 
-        // if (timestamp == floor(timestamp))
-        //     shouldUpdateControl = 1; // 1ms更新一次控制函数
+        if (timestamp == floor(timestamp))
+            shouldUpdateControl = 1; // 1ms更新一次控制函数
 
-        // if (error_flag)
-        // {
-        //     // 响应ERROR.c中收到的错误
-        //     // error_msg是字符串 看看要不要输出到oled
-        // }
-        // else
-        // {
-        //     // 正常运行
-        //     // StatusSwitch();
-        //     // Run();
-        // }
+        if (error_flag)
+        {
+            // 响应ERROR.c中收到的错误
+            // error_msg是字符串 看看要不要输出到oled
+            P33=0;
+        }
+        else
+        {
+            // 正常运行
+            // StatusSwitch();
+            Run();
+        }
     }
 }

@@ -16,7 +16,7 @@ void Motor_Init()
     //在这里调整一下向下电机的速度 刚好让小船浮起来就好了
     previous_motor_state.bottom_left = 0.1;
     previous_motor_state.bottom_right = 0.1;
-    // Motor_Apply_State(previous_motor_state);
+    Motor_Apply_State(previous_motor_state);
 }
 void Motor_Apply_State(struct Motor_State state)
 {

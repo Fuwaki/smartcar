@@ -105,6 +105,9 @@ float Path_GetNormalError(){
     //TODO:在使用曲线的时候完成这个
     return 0.0;
 }
+void Path_Update(Point2D * now_position){
+    
+}
 
 
 // ref_position 参考位置

@@ -231,5 +231,9 @@ void UART3_SendCommandToMotor(MOTOR_CONTROL_FRAME frame)
     Uart3Send(0x00);
     Uart3Send(0x80);
     Uart3Send(0x7F);
-    Uart3SendByLength(p, sizeof(MOTOR_CONTROL_FRAME));
+    Uart3Send(p[0]);
+    Uart3Send(p[1]);
+    Uart3Send(p[2]);
+    Uart3Send(p[3]);
+    Uart3Send(p[4]);
 }
