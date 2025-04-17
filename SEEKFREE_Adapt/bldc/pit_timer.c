@@ -337,9 +337,9 @@ void pit_motor_control()
             {
                 motor.duty_register = BLDC_PWM_DEADTIME;
             }
-            if (motor.duty_register > (BLDC_MAX_DUTY / 10 + BLDC_PWM_DEADTIME))
-            {
-                motor.duty_register = BLDC_MAX_DUTY / 10 + BLDC_PWM_DEADTIME;
+            if (motor.duty_register >
+                (BLDC_MAX_DUTY / 10 + BLDC_PWM_DEADTIME)) {
+              motor.duty_register = BLDC_MAX_DUTY / 10 + BLDC_PWM_DEADTIME;
             }
         }
 

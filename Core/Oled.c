@@ -479,7 +479,7 @@ void SwitchUpdater()
             break;
         case 2:
             OLED_SetCursor(0 , 0);
-            sprintf(buffer, "Sensor:%d Th:%d", sensor_data.IMU_Acc_X, sensor_data.IMU_Acc_Y);
+            // sprintf(buffer, "Sensor:%d Th:%d", sensor_data.IMU_Acc_X, sensor_data.IMU_Acc_Y);
             OLED_WriteString(buffer);
             break;
         case 0:

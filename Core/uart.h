@@ -1,5 +1,6 @@
 #ifndef __UART_H__
 #define __UART_H__
+#include "Track.h"
     typedef struct 
     {
         #pragma region GPS数据
@@ -33,13 +34,16 @@
         float Encoder_Speed;
         #pragma endregion 编码器数据
     }SENSOR_DATA;
-    extern SENSOR_DATA sensor_data; // 声明全局变量h
+
+    extern SENSOR_DATA sensor_data;
 
     typedef struct 
     {
         unsigned char Motor_ID;
         float Motor_Speed;
     } MOTOR_CONTROL_FRAME;
+
+    extern MOTOR_CONTROL_FRAME motor_control_frame;
 
     // 串口初始化
     void Uart3Init();
@@ -57,5 +61,6 @@
     void Uart3CheckAndReceive(void);
 
     void UartReceiveSensorData(void);
+    void UART3_SendCommandToMotor(unsigned char motor_id, float speed);
     void UART_SendFloat(float value[18]); // 发送浮点数数据
 #endif

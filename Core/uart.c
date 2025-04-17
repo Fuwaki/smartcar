@@ -188,7 +188,7 @@ void UartReceiveSensorData(void)
             if (receive_state == 80) // 数据接收完成
             {
                 // 由于发送时使用的是小端模式反向发送，接收时需要反向处理
-                for (i = 0; i < 18; i++)
+                for (i = 0; i < 19; i++)
                 {
                     p[i*4] = receive_buffer[i*4+3];
                     p[i*4+1] = receive_buffer[i*4+2];
@@ -211,13 +211,13 @@ void UartReceiveSensorData(void)
     }
 }
 
-void UART_SendFloat(float value[18]) // 发送浮点数数据
+void UART_SendFloat(float value[19]) // 发送浮点数数据
 {
     unsigned char *p;
     unsigned int i, j;
     
     // 发送浮点数数据（以字节方式）
-    for (i = 0; i < 18; i++)
+    for (i = 0; i < 19; i++)
     {
         UartSendByLength((unsigned char *)&value[i], 4); //?nnd stc51的寄存器真是恶心
     }
@@ -227,13 +227,14 @@ void UART_SendFloat(float value[18]) // 发送浮点数数据
     UartSend(0x7F);
 }
 
-void UART3_SendCommandToMotor()
+void UART3_SendCommandToMotor(unsigned char motor_id, float speed)
 {
+    motor_control_frame.Motor_ID = motor_id;
+    motor_control_frame.Motor_Speed = speed;
     unsigned char *p = (unsigned char *)&motor_control_frame;
-    
-    Uart3SendByLength(p, sizeof(MOTOR_CONTROL_FRAME));
     Uart3Send(0x00);
     Uart3Send(0x00);
     Uart3Send(0x80);
     Uart3Send(0x7F);
+    Uart3SendByLength(p, sizeof(MOTOR_CONTROL_FRAME));
 }

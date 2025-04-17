@@ -39,18 +39,33 @@ void Init()
     I2C_Init(); // 初始化I2C
     OLED_Init(); // 初始化OLED
     Timer2_Init(); // 初始化定时器2
+    Motor_Init();   // 初始化电机
     EA = 1;
 }
 // 检测状态是否需要切换
 void StatusSwitch()
 {
-    
+    SwitchUpdater(); // 检测开关状态并更新显示
 }
 // 传感器数据更新
-struct Posture SensorUpdate()
+void SensorUpdate()
 {
-
+    //TODO:在这里加入一些传感器错误处理
+    struct Posture posture;
     UartReceiveSensorData();
+
+    posture.position[0] = sensor_data.GPS_Raw_X; // 纬度
+    posture.position[1] = sensor_data.GPS_Raw_Y; // 经度
+    
+
+    posture.attitude[0] = 0;  // 俯仰角
+    posture.attitude[1] = 0;   // 横滚角
+    posture.attitude[2] = sensor_data.IMU_Heading; // 方向
+
+    posture.angular_velocity[0] = sensor_data.IMU_Acc_X; //
+    posture.angular_velocity[1] = sensor_data.IMU_Acc_Y; //
+    posture.angular_velocity[2] = sensor_data.IMU_Acc_Z; //
+
 }
 
 // 控制函数执行超时
@@ -66,7 +81,7 @@ void ControlUpdate()
         struct BoatState boat_state;
         struct Motor_State motor_state;
 
-        posture = SensorUpdate();
+        SensorUpdate();
         boat_state = Track_Update(posture);
         motor_state = Track_Control(boat_state);
         Motor_Apply_State(motor_state);
@@ -105,22 +120,21 @@ void main()
     while (1)
     {
         led =~led; // 反转LED灯
-        // SensorUpdate(); // 传感器数据更新
-        SwitchUpdater(); // 检测开关状态并更新显示
+        SensorUpdate(); // 传感器数据更新
+
         if (timestamp == floor(timestamp))
             shouldUpdateControl = 1; // 1ms更新一次控制函数
 
-
-        // if (error_flag)
-        // {
-        //     // 响应ERROR.c中收到的错误
-        //     // error_msg是字符串 看看要不要输出到oled
-        // }
-        // else
-        // {
-        //     // 正常运行
-        //     StatusSwitch();
-        //     Run();
-        // }
+        if (error_flag)
+        {
+            // 响应ERROR.c中收到的错误
+            // error_msg是字符串 看看要不要输出到oled
+        }
+        else
+        {
+            // 正常运行
+            StatusSwitch();
+            Run();
+        }
     }
 }

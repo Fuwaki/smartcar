@@ -22,7 +22,7 @@
 
 #define BLDC_OPEN_LOOP_WAIT        		(50 )           // 闭环等待换向次数
 
-#define BLDC_SPEED_INCREMENTAL      	(10)            	// 加减速响应 1-20，可修改这个提高加速响应，
+#define BLDC_SPEED_INCREMENTAL      	(8)            	// 加减速响应 1-20，可修改这个提高加速响应，
 														// 设置20响应速度最慢，设置1响应速度最快。
 														// 响应速度越快，越容易出现换相错误，所以建议从20开始，一点一点减小。
 
@@ -37,8 +37,8 @@
 
 #define BLDC_USE_SINE_START             (0)   			// 使用正弦启动
 
-#define BLDC_SINE_START_DUTY            (3)   		    // 正弦启动占空比 1-32 ,值越大正弦启动力越大。
+#define BLDC_SINE_START_DUTY            (1)   		    // 正弦启动占空比 1-32 ,值越大正弦启动力越大。
 
-#define MOTOR_ID 						0x11
+#define MOTOR_ID 						0x14
 #endif
 

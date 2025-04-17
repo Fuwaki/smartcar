@@ -5,7 +5,8 @@
 struct Motor_State{
     float left,right;
     float back_left,back_right; 
+    float bottom_left,bottom_right;
 };
 void Motor_Apply_State(struct Motor_State state);
-int Motor_Init();
+void Motor_Init();
 #endif
