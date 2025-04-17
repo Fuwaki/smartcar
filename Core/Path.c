@@ -1,4 +1,5 @@
 #include "Path.h"
+#include "Error.h"
 //曲线
 Point2D catmull_rom(PointGroup pg,float t) {
     float t2 = t * t;
@@ -75,6 +76,7 @@ PointGroup select_group(Point2D *list,float t){
     return pg;
 }
 Point2D *list;      //当前选中的路径
+Path* selected_path=0;
 Point2D curve( float t) {
     return catmull_rom(select_group(list,t),t-(float)((int)t));
 }
@@ -85,9 +87,25 @@ Point2D ddcurve( float t) {
     return catmull_rom_second_derivative(select_group(list,t),t-(float)((int)t));
 }
 //选择path去操作
-void select_path(Point2D* l){
-    list=l;
+void Path_Select(Path* path){
+    selected_path=path;
 }
+float Path_GetDirection(){
+    if(selected_path==0){
+        ERROR(4,"ldp");
+        return 0.0;
+    }
+    //TODO:Finish this
+}
+float Path_GetNormalError(){
+    if(selected_path==0){
+        ERROR(4,"ldp");
+        return 0.0;
+    }
+    //TODO:在使用曲线的时候完成这个
+    return 0.0;
+}
+
 
 // ref_position 参考位置
 // start_point 开始逼近的起点

@@ -1,6 +1,7 @@
 #ifndef __TRACK_H
 #define __TRACK_H
 #include "Motor.h"
+#include "Path.h"
 
 struct BoatState
 {
@@ -18,7 +19,7 @@ struct Posture
     float angular_velocity[3]; // 角速度 分别是俯仰角 横滚角 偏航角  前两者都是以水平为0点
                                // 偏航角理论来说以任意一个方向是0点都行 然后只有正数 逆时针递增 转一圈归零
 };
-void Track_Init();
-struct BoatState Track_Update(struct Posture p);
-struct Motor_State Track_Control(struct BoatState state);
+void Track_Init(Path *path);
+struct BoatState Track_Update(struct Posture p,float dt);
+struct Motor_State Track_ToMotorState(struct BoatState state);
 #endif

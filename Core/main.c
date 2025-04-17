@@ -9,11 +9,71 @@
 #include <STC32G.H>
 #include <intrins.h>
 #include <math.h>
-int flag = 0;
 // 这么写是为了后面布局各种周期不同的任务
 bit shouldUpdateControl = 0;
 
-sbit led = P4^0;
+sbit led = P4 ^ 0;
+
+int flag = 0; // 0待机 1控制闭环 -1过渡态
+typedef void (*TransitionUpdateFunc)();
+TransitionUpdateFunc TransitionUpdate = NULL;
+float launch_progress = 0.0;
+
+// 抬升电机达到制定转速 其他电机起码要启动起来 怠速状态
+#define TARGET_LIFTING_SPEED 0.5
+#define TARGET_IDLE_SPEED 0.1
+#define LAUNCH_SPEED 0.00001 // 每次进度推进多少
+
+void MildLaunch()
+{
+    struct Motor_State motor_state;
+    if (launch_progress < 0.0)
+    {
+        ERROR(2, "launch_progress out of range");
+        return;
+    }
+    if (launch_progress > 1.0)
+    {
+        flag = 1;           //启动完成
+        TransitionUpdate = NULL; // 过渡完成
+        return;
+    }
+    motor_state.bottom_right = motor_state.bottom_left = TARGET_LIFTING_SPEED * launch_progress;
+    motor_state.back_left = motor_state.back_right = TARGET_IDLE_SPEED * launch_progress;
+
+    Motor_Apply_State(motor_state);
+    launch_progress += LAUNCH_SPEED;
+}
+
+// 响应按钮实现的函数
+void Start()
+{
+    launch_progress=0.0;
+    TransitionUpdate = MildLaunch;
+    flag = -1;
+}
+void AddCurrentPositionAsPathPoint()
+{
+
+
+}
+void AddCurrentPositionAsStopPoint()
+{
+}
+void Stop()
+{
+    struct Motor_State motor_state;
+    motor_state.bottom_right = 0.0f;
+    motor_state.bottom_left = 0.0f;
+    motor_state.back_left = 0.0f;
+    motor_state.back_right = 0.0f;
+    Motor_Apply_State(motor_state);
+    flag = 0;
+}
+void ClearPath()
+{
+
+}
 
 void Init()
 {
@@ -34,12 +94,12 @@ void Init()
     P5M0 = 0x00;
     P5M1 = 0x00;
 
-    // Uart3Init();
+    Uart3Init();
     Uart1Init();
-    I2C_Init(); // 初始化I2C
-    OLED_Init(); // 初始化OLED
+    I2C_Init();    // 初始化I2C
+    OLED_Init();   // 初始化OLED
     Timer2_Init(); // 初始化定时器2
-    Motor_Init();   // 初始化电机
+    Motor_Init();  // 初始化电机
     EA = 1;
 }
 // 检测状态是否需要切换
@@ -47,25 +107,24 @@ void StatusSwitch()
 {
     SwitchUpdater(); // 检测开关状态并更新显示
 }
+
 // 传感器数据更新
-void SensorUpdate()
+struct Posture SensorUpdate()
 {
-    //TODO:在这里加入一些传感器错误处理
+    // TODO:在这里加入一些传感器错误处理
     struct Posture posture;
     UartReceiveSensorData();
 
     posture.position[0] = sensor_data.GPS_Raw_X; // 纬度
     posture.position[1] = sensor_data.GPS_Raw_Y; // 经度
-    
 
-    posture.attitude[0] = 0;  // 俯仰角
-    posture.attitude[1] = 0;   // 横滚角
+    posture.attitude[0] = 0;                       // 俯仰角
+    posture.attitude[1] = 0;                       // 横滚角
     posture.attitude[2] = sensor_data.IMU_Heading; // 方向
 
     posture.angular_velocity[0] = sensor_data.IMU_Acc_X; //
     posture.angular_velocity[1] = sensor_data.IMU_Acc_Y; //
     posture.angular_velocity[2] = sensor_data.IMU_Acc_Z; //
-
 }
 
 // 控制函数执行超时
@@ -81,31 +140,40 @@ void ControlUpdate()
         struct BoatState boat_state;
         struct Motor_State motor_state;
 
-        SensorUpdate();
-        boat_state = Track_Update(posture);
-        motor_state = Track_Control(boat_state);
+        posture=SensorUpdate();
+        boat_state = Track_Update(posture,1.0);         //FIXME:使用定时器来获得准确的dt
+        motor_state = Track_ToMotorState(boat_state);
         Motor_Apply_State(motor_state);
 
         shouldUpdateControl = 0;
     }
 }
-void DebugUpdate()
-{
-    // 按钮调参+屏幕显示
-}
 
+void IdleUpdate()
+{
+    //不空转还能干嘛
+    //那我问你
+    //LOOK IN MY EYES
+}
 void Run()
 {
+    // TODO:看情况加延时函数
     switch (flag)
     {
-    case 0:
+    case -1:
+        if (TransitionUpdate != NULL)
+        {
+            TransitionUpdate();
+        }
+        else
+        {
+            ERROR(1, "TransitionUpdate is NULL");
+        }
+    case 1:
         ControlUpdate();
         break;
-    case 1:
-        DebugUpdate();
-        break;
-    case 2:
-        // Track_Update();
+    case 0:
+        IdleUpdate();
         break;
     default:
         break;
@@ -114,27 +182,39 @@ void Run()
 
 void main()
 {
+    struct Motor_State motor_state;
+    motor_state.bottom_right = 0.2f;
+    motor_state.bottom_left = 0.2f;
+    motor_state.back_left = 0.0f;
+    motor_state.back_right = 0.0f;
+    motor_state.left = 0.0f;
+    motor_state.right = 0.0f;
+    
     Init();
     ES = 1; // 使能串口中断
     led = 1;
+    Start();
+    
     while (1)
     {
-        led =~led; // 反转LED灯
-        SensorUpdate(); // 传感器数据更新
+        Motor_Apply_State(motor_state);
 
-        if (timestamp == floor(timestamp))
-            shouldUpdateControl = 1; // 1ms更新一次控制函数
+        led = ~led;     // 反转LED灯
+        // Uart3Send(0x00);
 
-        if (error_flag)
-        {
-            // 响应ERROR.c中收到的错误
-            // error_msg是字符串 看看要不要输出到oled
-        }
-        else
-        {
-            // 正常运行
-            StatusSwitch();
-            Run();
-        }
+        // if (timestamp == floor(timestamp))
+        //     shouldUpdateControl = 1; // 1ms更新一次控制函数
+
+        // if (error_flag)
+        // {
+        //     // 响应ERROR.c中收到的错误
+        //     // error_msg是字符串 看看要不要输出到oled
+        // }
+        // else
+        // {
+        //     // 正常运行
+        //     // StatusSwitch();
+        //     // Run();
+        // }
     }
 }

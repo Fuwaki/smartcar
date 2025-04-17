@@ -18,8 +18,6 @@ char rptr;
 char buffer[128];
 
 SENSOR_DATA sensor_data; // 临时传感器数据结构体
-MOTOR_CONTROL_FRAME motor_control_frame; // 电机控制帧结构体
-
 unsigned char receive_buffer[128]; // 接收缓冲区
 unsigned char receive_state = 0;   // 接收状态
 
@@ -93,8 +91,8 @@ void Uart3Send(char dat)
 
 void UartSend(char dat)
 {
-    while (busy)
-        ;
+    // while (busy)
+    //     ;
     busy = 1;
     SBUF = dat; // 将数据写入SBUF寄存器
 }
@@ -137,10 +135,9 @@ void Uart3SendByLength(unsigned char *p,int length)
 void UartSendByLength(unsigned char *p,int length)
 {
     int i;
-    p+=length-1;
     for(i=0;i<length;i++)
     {
-        UartSend(*(p--));
+        UartSend(*(p++));
     }
 }
 
@@ -227,11 +224,9 @@ void UART_SendFloat(float value[19]) // 发送浮点数数据
     UartSend(0x7F);
 }
 
-void UART3_SendCommandToMotor(unsigned char motor_id, float speed)
+void UART3_SendCommandToMotor(MOTOR_CONTROL_FRAME frame)
 {
-    motor_control_frame.Motor_ID = motor_id;
-    motor_control_frame.Motor_Speed = speed;
-    unsigned char *p = (unsigned char *)&motor_control_frame;
+    unsigned char *p = (unsigned char *)&frame;
     Uart3Send(0x00);
     Uart3Send(0x00);
     Uart3Send(0x80);
