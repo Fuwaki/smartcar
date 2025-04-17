@@ -55,17 +55,11 @@ void parse_rmc(char *sentence, RMC_Data *rmc_data)
     int i = 0;
     char *ptr;
     
-    // // 判断是否为RMC语句（兼容$GNRMC和$GPRMC）
-    // if (!(strncmp(sentence, "$GNRMC", 6) == 0 || strncmp(sentence, "$GPRMC", 6) == 0)) {
-    //     rmc_data->valid = 0;
-    //     return;
-    // }
-    
     // 初始化数据
     for (i = 0; i < sizeof(RMC_Data); i++)
         ((char *)rmc_data)[i] = 0;
         //memset
-    rmc_data->valid = 0;
+    // rmc_data->valid = 0;
 
     // 复制语句以便进行处理
     i = 0;
@@ -191,13 +185,15 @@ void parse_rmc(char *sentence, RMC_Data *rmc_data)
     rmc_data->valid = (rmc_data->status == 'A');
 }
 
-float gps_to_meters(RMC_Data *rmc_data, NaturePosition *naturePosition)
+void gps_to_meters(RMC_Data *rmc_data, NaturePosition *naturePosition)
 {
-    float lat_diff = rmc_data->latitude - naturePosition->offsetY;
-    float lon_diff = rmc_data->longitude - naturePosition->offsetX;
+    float lat_diff, lon_diff, lat_rad;
+    lat_rad = rmc_data->latitude * 3.141593f / 180.0f; // 将纬度转换为弧度
+    lat_diff = rmc_data->latitude - naturePosition->offsetY;
+    lon_diff = rmc_data->longitude - naturePosition->offsetX;
 
     rmc_data -> latitude_decimal = lat_diff * 111120.0; // 纬度差转换为米
-    rmc_data -> longitude_decimal = lon_diff * 111320.0 * 0.766044; // 经度差转换为米
+    rmc_data -> longitude_decimal = lon_diff * 111320.0 * cos(lat_rad); // 经度差转换为米
 }
 
 void GPS_Calculate(NaturePosition *naturePosition, RMC_Data *rmc_data)
@@ -252,7 +248,7 @@ void Init_GPS_Setting()
     rmc_data.mag_var = 0.0;
     rmc_data.mag_dir = 'E';
     rmc_data.mode = 'V';
-    rmc_data.valid = -1; // 初始化为无效状态
+    rmc_data.valid = 0; // 初始化为无效状态
 
     GPS_SendCommand(set_rate_10hz, sizeof(set_rate_10hz));
     GPS_Delay();

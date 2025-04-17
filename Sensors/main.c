@@ -83,26 +83,15 @@ void Inits()
 
 void messageUpdaterWithUart()
 {
-	if (rmc_data.valid)
-	{
-		#pragma region GPS数据
-		datatosend[0] = rmc_data.latitude_decimal; // 纬度数据
-		datatosend[1] = rmc_data.longitude_decimal;
-		datatosend[2] = naturePosition.x; // 纬度数据
-		datatosend[3] = naturePosition.y; // 经度数据
-		datatosend[4] = rmc_data.course; // 航向数据
-		datatosend[5] = rmc_data.speed; // 速度数据
-	}
-	else
-	{
-		datatosend[0] = 0.0; // 纬度数据
-		datatosend[1] = 0.0; // 经度数据
-		datatosend[2] = 0.0; // 纬度数据
-		datatosend[3] = 0.0; // 经度数据
-		datatosend[4] = 0.0; // 航向数据
-		datatosend[5] = 0.0; // 速度数据
-		#pragma endregion GPS数据
-	}
+	#pragma region GPS数据
+	datatosend[0] = rmc_data.latitude; // 纬度数据
+	datatosend[1] = rmc_data.longitude;
+	datatosend[2] = naturePosition.x; // 纬度数据
+	datatosend[3] = naturePosition.y; // 经度数据
+	datatosend[4] = rmc_data.course; // 航向数据
+	datatosend[5] = rmc_data.speed; // 速度数据
+	#pragma endregion GPS数据
+
 
 	#pragma region 陀螺仪
 	datatosend[6] = gyro_data.accel_x_g;
@@ -140,8 +129,6 @@ void main()
 	{
 		yaw_angle_init(); //航向角初始化
 		Encoder_Update(); //更新编码器数据
-		messageUpdaterWithUart(); //更新数据
-		UART_SendFloat(datatosend); //发送数据
 		//// SPI_SlaveModeMessageUpdater(&senddata); //更新数据
 		// // // 只有在上一次传输完成后才启动新的传输
 		//// if(!SPI_IsStructTransmissionActive())
@@ -193,5 +180,7 @@ void main()
 		// 		UART_SendStr(receive_buffer0d00);
 		// 	}
 		// }
+		messageUpdaterWithUart(); //更新数据
+		UART_SendFloat(datatosend); //发送数据
 	}
 }

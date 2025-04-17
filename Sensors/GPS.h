@@ -44,5 +44,5 @@
     void GPS_SendCommand(unsigned char *cmd, unsigned char length);
     void GPS_Message_Updater(void);
     void GPS_Delay(void);
-    float gps_to_meters(RMC_Data *rmc_data, NaturePosition *naturePosition);
-#endif
+    void gps_to_meters(RMC_Data *rmc_data, NaturePosition *naturePosition);
+#endif // __GPS_H__
