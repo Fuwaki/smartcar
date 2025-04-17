@@ -9,6 +9,7 @@
 #include "uart.h"
 
 unsigned char gps_receive_buffer[128];
+unsigned char gps_buffer_index = 0;
 unsigned char set_rate_10hz[] = {0xF1, 0xD9, 0x06, 0x42, 0x14, 0x00, 0x00, 0x0A, 0x05,
                                  0x00, 0x64, 0x00, 0x00, 0x00, 0x60, 0xEA, 0x00, 0x00, 0xD0, 0x07, 0x00, 0x00, 0xC8, 0x00, 0x00, 0x00, 0xB8, 0xED};
 
@@ -54,7 +55,7 @@ void parse_rmc(char *sentence, RMC_Data *rmc_data)
     int i = 0;
     char *ptr;
     
-    // 判断是否为RMC语句（兼容$GNRMC和$GPRMC）
+    // // 判断是否为RMC语句（兼容$GNRMC和$GPRMC）
     // if (!(strncmp(sentence, "$GNRMC", 6) == 0 || strncmp(sentence, "$GPRMC", 6) == 0)) {
     //     rmc_data->valid = 0;
     //     return;
@@ -190,37 +191,22 @@ void parse_rmc(char *sentence, RMC_Data *rmc_data)
     rmc_data->valid = (rmc_data->status == 'A');
 }
 
-long get_decimal_part(double value)//为GPS坐标提取小数部分
+float gps_to_meters(RMC_Data *rmc_data, NaturePosition *naturePosition)
 {
-    long decimal_part, result; // 小数部分
-    long integer_part; // 整数部分
-    integer_part = floor(fabs(value));  // 取绝对值
-    decimal_part = fabs(value) - integer_part;  // 获取小数部分
-    
-    result = (unsigned long)(decimal_part * 10e5); // 将小数部分转换为整数
-    if (value < 0) // 如果原值为负数，则小数部分也为负数
-    {
-        result = -result;
-    }
+    float lat_diff = rmc_data->latitude - naturePosition->offsetY;
+    float lon_diff = rmc_data->longitude - naturePosition->offsetX;
 
-    return result; // 返回小数部分
-}
-
-// 提取GPS坐标的小数部分用于精确定位
-void extract_gps_precision(RMC_Data *rmc_data)
-{
-    // 提取纬度和经度的小数点后6位
-    rmc_data->latitude_decimal = get_decimal_part(rmc_data->latitude);
-    rmc_data->longitude_decimal = get_decimal_part(rmc_data->longitude);
+    rmc_data -> latitude_decimal = lat_diff * 111120.0; // 纬度差转换为米
+    rmc_data -> longitude_decimal = lon_diff * 111320.0 * 0.766044; // 经度差转换为米
 }
 
 void GPS_Calculate(NaturePosition *naturePosition, RMC_Data *rmc_data)
 {
-    // 提取精确度信息
-    extract_gps_precision(rmc_data);
+    // 提供经纬度差计算
+    gps_to_meters(rmc_data, naturePosition);
     // 计算当前位置
-    naturePosition->y = rmc_data->latitude_decimal - naturePosition->offsetX;
-    naturePosition->x = rmc_data->longitude_decimal - naturePosition->offsetY;
+    naturePosition->y = rmc_data->latitude - naturePosition->offsetY;
+    naturePosition->x = rmc_data->longitude - naturePosition->offsetX;
 }
 
 // 修改函数定义，添加参数类型和输出参数
@@ -293,8 +279,8 @@ unsigned char Init_GPS_Offset(NaturePosition *naturePosition, RMC_Data *rmc_data
         return 1; // 返回错误，数据无效
     }
     // 设置偏移量为当前GPS数据
-    naturePosition->offsetY = rmc_data->latitude_decimal;
-    naturePosition->offsetX = rmc_data->longitude_decimal;
+    naturePosition->offsetY = rmc_data->latitude;
+    naturePosition->offsetX = rmc_data->longitude;
     naturePosition->x = 0;
     naturePosition->y = 0;
     return 0; // 返回成功
@@ -304,19 +290,35 @@ void GPS_Message_Updater()
 {
     if (GPS_UART_Available())
     {
-
-        unsigned char len = GPS_UART_Read(gps_receive_buffer);
-        if (len > 0)
+        unsigned char byte;
+        // 逐字节读取
+        while (GPS_UART_Available())
         {
-            gps_receive_buffer[len] = '\0'; // 添加字符串结束符
-            GPS_Message_Inputer(gps_receive_buffer, &rmc_data, &naturePosition);
-            UART_SendStr(gps_receive_buffer);
+            byte = GPS_UART_ReadByte();
+            
+            // 添加到缓冲区
+            if (byte == '\n' || gps_buffer_index >= sizeof(gps_receive_buffer)-1)
+            {
+                // 行结束或缓冲区满
+                gps_receive_buffer[gps_buffer_index] = '\0';  // 添加终止符
+                
+                // 只处理$GNRMC或$GPRMC语句
+                if (strncmp((char*)gps_receive_buffer, "$GNRMC", 6) == 0 || 
+                    strncmp((char*)gps_receive_buffer, "$GPRMC", 6) == 0)
+                {
+                    GPS_Message_Inputer((char*)gps_receive_buffer, &rmc_data, &naturePosition);
+                    // UART_SendStr(gps_receive_buffer);
+                }
+                
+                // 清空缓冲区准备接收下一句
+                gps_buffer_index = 0;
+            }
+            else if (byte != '\r')  // 忽略回车符
+            {
+                gps_receive_buffer[gps_buffer_index++] = byte;
+            }
         }
     }
-    // else
-    // {
-    //     // UART_SendByte('F'); // 无数据
-    // }
 }
 
 // 算法部分写完辣！！！！！！！ 10/3/2025 16:47

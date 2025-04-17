@@ -204,7 +204,3 @@ error:
     // FIXME:误差未收敛 近似采用也没关系 但是要做点处理
     return curve(now_t);
 }
-
-void Path_Update(Point2D *now_position)
-{
-}

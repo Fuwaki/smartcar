@@ -141,7 +141,7 @@ void main()
 		yaw_angle_init(); //航向角初始化
 		Encoder_Update(); //更新编码器数据
 		messageUpdaterWithUart(); //更新数据
-		// UART_SendFloat(datatosend); //发送数据
+		UART_SendFloat(datatosend); //发送数据
 		//// SPI_SlaveModeMessageUpdater(&senddata); //更新数据
 		// // // 只有在上一次传输完成后才启动新的传输
 		//// if(!SPI_IsStructTransmissionActive())
