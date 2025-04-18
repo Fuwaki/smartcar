@@ -35,7 +35,6 @@ void GPS_Delay(void)	//为初始化GPS模块提供延时
 	while (i) i--;
 }
 
-
 // 将NMEA格式的经纬度转换为标准的十进制度
 double nmea_to_decimal(double val)
 {
@@ -59,7 +58,6 @@ void parse_rmc(char *sentence, RMC_Data *rmc_data)
     for (i = 0; i < sizeof(RMC_Data); i++)
         ((char *)rmc_data)[i] = 0;
         //memset
-    // rmc_data->valid = 0;
 
     // 复制语句以便进行处理
     i = 0;
@@ -142,8 +140,8 @@ void parse_rmc(char *sentence, RMC_Data *rmc_data)
 
     if (field_count > 7)
     {
-        // 速度（节） (字段7)
-        rmc_data->speed = atof(field[7]);
+        // 速度(m/s) (字段7)
+        rmc_data->speed = atof(field[7])*0.51444f; // 转换为米每秒
     }
 
     if (field_count > 8)
@@ -187,8 +185,8 @@ void parse_rmc(char *sentence, RMC_Data *rmc_data)
 
 void gps_to_meters(RMC_Data *rmc_data, NaturePosition *naturePosition)
 {
-    float lat_diff, lon_diff, lat_rad;
-    lat_rad = rmc_data->latitude * 3.141593f / 180.0f; // 将纬度转换为弧度
+    double lat_diff, lon_diff, lat_rad;
+    lat_rad = rmc_data->latitude * 3.141593 / 180.0; // 将纬度转换为弧度
     lat_diff = rmc_data->latitude - naturePosition->offsetY;
     lon_diff = rmc_data->longitude - naturePosition->offsetX;
 
@@ -265,6 +263,7 @@ void Init_GPS_Setting()
     GPS_SendCommand(cmd_zda, sizeof(cmd_zda));
     GPS_Delay();
     GPS_SendCommand(cmd_gst, sizeof(cmd_gst));
+    GPS_Delay();
 }
 
 unsigned char Init_GPS_Offset(NaturePosition *naturePosition, RMC_Data *rmc_data)
@@ -358,3 +357,5 @@ void GPS_Message_Updater()
     // test_rmc_parser();
     // return 0;
 // }
+
+//byd GPSBUG 在4/18/2025被修复

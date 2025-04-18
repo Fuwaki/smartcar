@@ -12,23 +12,10 @@
 #include "SPI_MultiDevice.h"
 #include "Gyroscope.h"
 #include "Magnetic.h"
-
-//先写个这样的函数丢这
-// void SPI_SEND(char *str){
-
-// }
-// void Construct_Data_Frame(struct Posture p){
-// 	//要和核心板的数据接受的解析代码相匹配
-// 	char *s = "";
-// 	SPI_SEND(s);
-// }
-
-unsigned char j;
-
 float datatosend[19] = {0.0};
 
-unsigned char receive_buffer0d00[32];
-unsigned char receive_buffer0d01[32];
+// unsigned char receive_buffer0d00[32];
+// unsigned char receive_buffer0d01[32];
 
 void Delay100us(void)	//@40.000MHz
 {
@@ -144,7 +131,7 @@ void main()
 		}
 		#pragma endregion
 		
-		#pragma region 陀螺仪//0d00
+		#pragma region 陀螺仪
 		Gyro_Updater();
 		#pragma endregion
 		// #pragma region 编码器数据模块

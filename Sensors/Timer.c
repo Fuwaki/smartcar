@@ -31,13 +31,13 @@ void TRUE_YAW_GET()
 
     //GPS纠正航向角 
     //能运行到这里gps不应该是无效的吧qwq
-    if (rmc_data.valid == 1)
+    if (rmc_data.valid == 1 && rmc_data.speed >= 1)
     {
-        if (gyro_data.true_yaw_angle > rmc_data.course)
+        if (gyro_data.true_yaw_angle > 360.0 - rmc_data.course)
         {
             gyro_data.true_yaw_angle += YAW_ADJUST_VALUE;
         }
-        else if (gyro_data.true_yaw_angle < rmc_data.course)
+        else if (gyro_data.true_yaw_angle < 360.0 - rmc_data.course)
         {
             gyro_data.true_yaw_angle -= YAW_ADJUST_VALUE;
         }

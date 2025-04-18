@@ -5,6 +5,7 @@
         "pwm_controller.h": "c",
         "lowpass_filter.h": "c",
         "gyroscope.h": "c",
-        "timer.h": "c"
+        "timer.h": "c",
+        "magnetic.h": "c"
     }
 }

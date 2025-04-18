@@ -7,10 +7,10 @@
         float second;     // 秒
         char status;      // 定位状态，A=有效，V=无效
         double latitude;  // 纬度(度)
-        unsigned long latitude_decimal; // 纬度小数部分
+        double latitude_decimal; //此处更改为m为单位的纬度差
         char ns;          // 纬度方向，N=北半球，S=南半球
         double longitude; // 经度(度)
-        unsigned long longitude_decimal;     // 纬度度数部分
+        double longitude_decimal;//此处更改为m为单位的经度差
         char ew;          // 经度方向，E=东经，W=西经
         float speed;      // 地面速度(节)
         float course;     // 地面航向角(度)
