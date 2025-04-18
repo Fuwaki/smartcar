@@ -1,5 +1,6 @@
 #include "Math.h"
-
+#include <math.h>
+#include <stdio.h>
 float Vec_Norm(Point2D vector)
 {
     return sqrt(vector.x * vector.x + vector.y * vector.y);

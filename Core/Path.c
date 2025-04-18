@@ -1,4 +1,5 @@
 #include "Path.h"
+
 #include "Error.h"
 // 曲线
 Point2D catmull_rom(PointGroup pg, float t)
@@ -77,6 +78,7 @@ PointGroup select_group(Point2D *list, float t)
     return pg;
 }
 Point2D *list; // 当前选中的路径
+
 Path *selected_path = 0;
 Point2D curve(float t)
 {
@@ -91,31 +93,82 @@ Point2D ddcurve(float t)
     return catmull_rom_second_derivative(select_group(list, t), t - (float)((int)t));
 }
 // 选择path去操作
+unsigned int next_target_index = 0;
+Point2D current_position = {0.0f, 0.0f}; // 当前路径点
 void Path_Select(Path *path)
 {
     selected_path = path;
+    next_target_index=0;        //设置起点为0
+    current_position.x=0.0f; 
+    current_position.y=0.0f;
 }
 float Path_GetDirection()
 {
+    float err_x;
+    float err_y;
+    float target_angle;
     if (selected_path == 0)
     {
         ERROR(4, "ldp");
         return 0.0;
     }
-    // TODO:Finish this
+    err_x=selected_path->PointList[next_target_index].x-current_position.x;
+    err_y=selected_path->PointList[next_target_index].y-current_position.y;
+    target_angle = atan2(err_y, err_x);
+    //转换成角度制
+    target_angle = target_angle * 180.0f / 3.1415926f;
+    return target_angle;
 }
 float Path_GetNormalError()
 {
     if (selected_path == 0)
     {
-        ERROR(4, "ldp");
+        ERROR(4, "cnm");
         return 0.0;
     }
-    // TODO:在使用曲线的时候完成这个
+
     return 0.0;
 }
+#define APPROACH_DISTANCE_THRESHOLD 0.1f
 void Path_Update(Point2D * now_position){
-    
+    if(selected_path == 0)
+    {
+        ERROR(514, "fuck u");
+        return;
+    }
+    if (selected_path->PointCount == 0)
+    {
+        ERROR(114, "Path is empty");
+        return;
+    }
+    if(Vec_Norm(Vec_Sub(*now_position,selected_path->PointList[next_target_index]))<APPROACH_DISTANCE_THRESHOLD){
+        //那么判断为已到达 那么下一个
+        next_target_index++;
+    }
+    current_position=*now_position;
+}
+void Path_Init(Path *path,Point2D* pointlist,int count,int maxlength,enum PATH_TYPE path_type){
+    path->PathType=path_type;
+    path->PointList=pointlist;
+    path->PointCount=count;
+    path->MaxLength=maxlength;
+}
+void Path_AppendPoint(Path *path, Point2D point,enum POINT_EFFECT effect){
+    if(path->PointCount<path->MaxLength){
+        path->PointList[path->PointCount]=point;
+        path->PointCount++;
+    }else{
+        ERROR(10,"Path is full");
+    }
+}
+int Path_Check(){
+    if(selected_path==0){
+        ERROR(100,"fk");
+    }
+    if(next_target_index==selected_path->PointCount){
+        return 0;
+    }
+    return 1;
 }
 
 // ref_position 参考位置
