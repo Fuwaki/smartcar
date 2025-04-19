@@ -13,6 +13,17 @@
 unsigned char current_scale = LIS3MDL_FS_4GAUSS;
 unsigned char lis3mdl_spi_id = 0xFF; //初始值为0xFF表示未注册
 
+typedef struct
+{
+    float x;                   // 状态估计值（过滤后的DPS值）
+    float P;                   // 估计误差协方差
+    float Q;                   // 过程噪声协方差（系统噪声）
+    float R;                   // 测量噪声协方差（传感器噪声）
+    float K;                   // 卡尔曼增益
+    unsigned char initialized; // 初始化标志
+} DPS_KalmanFilter;
+DPS_KalmanFilter mag_x_filter, mag_y_filter, mag_z_filter;
+
 // 磁力计校准参数
 typedef struct
 {
@@ -34,6 +45,56 @@ MagneticData mag_data;
 unsigned int sample_count = 0;
 static MagneticData mag_samples[MAG_CALIB_SAMPLES];
 static unsigned char calibration_in_progress = 0;
+
+#pragma region Kalman_Filter
+// 初始化DPS卡尔曼滤波器
+void Mag_Kalman_Init(DPS_KalmanFilter *filter, float process_noise, float measurement_noise)
+{
+    filter->x = 0.0f;              // 初始状态估计为0
+    filter->P = 1.0f;              // 初始估计误差协方差较大，表示不确定性
+    filter->Q = process_noise;     // 过程噪声协方差 (推荐值: 0.001 - 0.01)
+    filter->R = measurement_noise; // 测量噪声协方差 (推荐值: 0.01 - 0.1)
+    filter->K = 0.0f;              // 初始卡尔曼增益
+    filter->initialized = 0;       // 未初始化状态
+}
+
+// 卡尔曼滤波器更新 - 处理陀螺仪DPS值
+float Mag_Kalman_Update(DPS_KalmanFilter *filter, float measurement)
+{
+    // 第一次使用时直接初始化状态为测量值
+    if (!filter->initialized)
+    {
+        filter->x = measurement;
+        filter->initialized = 1;
+        return filter->x;
+    }
+
+    // 预测步骤 - 状态预测(简化模型假设状态不变)
+    // 更新误差协方差
+    filter->P = filter->P + filter->Q;
+
+    // 更新步骤
+    // 计算卡尔曼增益
+    filter->K = filter->P / (filter->P + filter->R);
+
+    // 用测量值更新状态估计
+    filter->x = filter->x + filter->K * (measurement - filter->x);
+
+    // 更新误差协方差
+    filter->P = (1.0f - filter->K) * filter->P;
+
+    return filter->x;
+}
+
+// 重置滤波器
+void Mag_Kalman_Reset(DPS_KalmanFilter *filter)
+{
+    filter->x = 0.0f;
+    filter->P = 1.0f;
+    filter->K = 0.0f;
+    filter->initialized = 0;
+}
+#pragma endregion
 
 
 void Mag_Delay(void) //1ms
@@ -86,6 +147,9 @@ unsigned char LIS3MDL_Init(void)
         return 0;
     }
 
+    Mag_Kalman_Init(&mag_x_filter, 0.0015f, 0.05f);
+    Mag_Kalman_Init(&mag_y_filter, 0.0015f, 0.05f);
+    Mag_Kalman_Init(&mag_z_filter, 0.0015f, 0.05f);
     // 适当延时以确保SPI总线稳定
     Mag_Delay();
 
@@ -193,22 +257,32 @@ unsigned char LIS3MDL_ReadData(MagneticData *dataM) //用这个函数来判断sp
 
 void LIS3MDL_Updater()
 {
-    // 读取磁力计数据
-    if (LIS3MDL_ReadData(&mag_data))
-    {
-        // 如果正在校准
-        if (calibration_in_progress)
-        {
-            // 添加样本到校准集
-            LIS3MDL_AddCalibrationSample(&mag_data);
-        }
-        else
-        {
-            // 校准已完成，计算方位角
-            LIS3MDL_CalculateHeading(&mag_data);
-            // 使用计算出的方位角进行其他操作...
-        }
-    }
+    // // 读取磁力计数据
+    // if (LIS3MDL_ReadData(&mag_data))
+    // {
+    //     // 如果正在校准
+    //     if (calibration_in_progress)
+    //     {
+    //         // 添加样本到校准集
+    //         LIS3MDL_AddCalibrationSample(&mag_data);
+    //     }
+    //     else
+    //     {
+    //         // 校准已完成，计算方位角
+    //         LIS3MDL_CalculateHeading(&mag_data);
+    //         // 使用计算出的方位角进行其他操作...
+    //     }
+    // }
+
+    LIS3MDL_ReadData(&mag_data); // 读取磁力计数据
+    mag_data.x_gauss_kalman = Mag_Kalman_Update(&mag_x_filter, mag_data.x_mag); // 更新X轴滤波器
+    mag_data.y_gauss_kalman = Mag_Kalman_Update(&mag_y_filter, mag_data.y_mag); // 更新Y轴滤波器
+    mag_data.z_gauss_kalman = Mag_Kalman_Update(&mag_z_filter, mag_data.z_mag); // 更新Z轴滤波器
+
+    #pragma region 计算航向角
+    // 计算航向角
+
+    #pragma endregion
 }
 
 // 计算实际磁场值（高斯）

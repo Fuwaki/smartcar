@@ -38,6 +38,9 @@
         float x_adj;
         float y_adj;
         float z_adj;
+        float x_gauss_kalman;
+        float y_gauss_kalman;
+        float z_gauss_kalman;
         float heading;
     } MagneticData;
 

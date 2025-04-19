@@ -429,6 +429,16 @@
               <FileType>5</FileType>
               <FilePath>.\Magnetic.h</FilePath>
             </File>
+            <File>
+              <FileName>AR_PF.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\AR_PF.c</FilePath>
+            </File>
+            <File>
+              <FileName>AR_PF.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\AR_PF.h</FilePath>
+            </File>
           </Files>
         </Group>
       </Groups>

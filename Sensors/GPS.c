@@ -24,6 +24,9 @@ unsigned char cmd_gst[] = {0xF1, 0xD9, 0x06, 0x01, 0x03, 0x00, 0xF0, 0x20, 0x00,
 RMC_Data rmc_data;
 NaturePosition naturePosition;
 
+float NATURE_POSITION_X = 0.0f; // 初始经度差
+float NATURE_POSITION_Y = 0.0f; // 初始纬度差
+
 void GPS_Delay(void)	//为初始化GPS模块提供延时
 {
 	unsigned long edata i;
@@ -196,11 +199,10 @@ void gps_to_meters(RMC_Data *rmc_data, NaturePosition *naturePosition)
 
 void GPS_Calculate(NaturePosition *naturePosition, RMC_Data *rmc_data)
 {
-    // 提供经纬度差计算
     gps_to_meters(rmc_data, naturePosition);
     // 计算当前位置
-    naturePosition->y = rmc_data->latitude - naturePosition->offsetY;
-    naturePosition->x = rmc_data->longitude - naturePosition->offsetX;
+    naturePosition->y = rmc_data->latitude_decimal;
+    naturePosition->x = rmc_data->longitude_decimal;
 }
 
 // 修改函数定义，添加参数类型和输出参数
@@ -315,6 +317,7 @@ void GPS_Message_Updater()
         }
     }
 }
+
 
 // 算法部分写完辣！！！！！！！ 10/3/2025 16:47
 // 之后要测试一下这个算法

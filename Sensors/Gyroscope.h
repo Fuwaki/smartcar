@@ -88,6 +88,9 @@
         float gyro_x_dps;
         float gyro_y_dps;
         float gyro_z_dps;
+        float gyro_x_dps_kf; // 卡尔曼滤波后的陀螺仪X轴数据
+        float gyro_y_dps_kf; // 卡尔曼滤波后的陀螺仪Y轴数据
+        float gyro_z_dps_kf; // 卡尔曼滤波后的陀螺仪Z轴数据
         float temp_c;
 
         float true_yaw_angle; //! 真航向角

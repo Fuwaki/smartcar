@@ -11,18 +11,82 @@ static unsigned char icm42688_spi_id = 0xFF;
 
 icm42688_data_t gyro_data;
 
-bit allowUpdate = 0; //允许陀螺仪更新航向角数据
+static float gyro_z_offset = 0.0f;
+static bit gyro_z_calibrated = 0;  // 校准标志位
 
-void Gyrp_Delay(void)	//@40.000MHz 10ms延时
+typedef struct
 {
-	unsigned long edata i;
+    float x;                   // 状态估计值（过滤后的DPS值）
+    float P;                   // 估计误差协方差
+    float Q;                   // 过程噪声协方差（系统噪声）
+    float R;                   // 测量噪声协方差（传感器噪声）
+    float K;                   // 卡尔曼增益
+    unsigned char initialized; // 初始化标志
+} DPS_KalmanFilter;
+DPS_KalmanFilter gyro_x_filter, gyro_y_filter, gyro_z_filter;
 
-	_nop_();
-	_nop_();
-	i = 99998UL;
-	while (i) i--;
+bit allowUpdate = 0; // 允许陀螺仪更新航向角数据
+
+#pragma region Kalman_Filter
+// 初始化DPS卡尔曼滤波器
+void DPS_Kalman_Init(DPS_KalmanFilter *filter, float process_noise, float measurement_noise)
+{
+    filter->x = 0.0f;              // 初始状态估计为0
+    filter->P = 1.0f;              // 初始估计误差协方差较大，表示不确定性
+    filter->Q = process_noise;     // 过程噪声协方差 (推荐值: 0.001 - 0.01)
+    filter->R = measurement_noise; // 测量噪声协方差 (推荐值: 0.01 - 0.1)
+    filter->K = 0.0f;              // 初始卡尔曼增益
+    filter->initialized = 0;       // 未初始化状态
 }
 
+// 卡尔曼滤波器更新 - 处理陀螺仪DPS值
+float DPS_Kalman_Update(DPS_KalmanFilter *filter, float measurement)
+{
+    // 第一次使用时直接初始化状态为测量值
+    if (!filter->initialized)
+    {
+        filter->x = measurement;
+        filter->initialized = 1;
+        return filter->x;
+    }
+
+    // 预测步骤 - 状态预测(简化模型假设状态不变)
+    // 更新误差协方差
+    filter->P = filter->P + filter->Q;
+
+    // 更新步骤
+    // 计算卡尔曼增益
+    filter->K = filter->P / (filter->P + filter->R);
+
+    // 用测量值更新状态估计
+    filter->x = filter->x + filter->K * (measurement - filter->x);
+
+    // 更新误差协方差
+    filter->P = (1.0f - filter->K) * filter->P;
+
+    return filter->x;
+}
+
+// 重置滤波器
+void DPS_Kalman_Reset(DPS_KalmanFilter *filter)
+{
+    filter->x = 0.0f;
+    filter->P = 1.0f;
+    filter->K = 0.0f;
+    filter->initialized = 0;
+}
+#pragma endregion
+
+void Gyro_Delay(void) //@40.000MHz 10ms延时
+{
+    unsigned long edata i;
+
+    _nop_();
+    _nop_();
+    i = 99998UL;
+    while (i)
+        i--;
+}
 
 // 读取ICM42688-P寄存器
 unsigned char ICM42688_ReadRegister(unsigned char slave_id, unsigned char reg_addr)
@@ -51,8 +115,8 @@ unsigned char ICM42688_Init()
     spi_slave_config_t icm42688_config;
     icm42688_config.cs_port = 0;
     icm42688_config.cs_pin = 2;
-    icm42688_config.mode = SPI_MODE0;   // ICM42688使用SPI模式0
-    icm42688_config.clock_div = SPI_CLOCK_DIV4;   // SPI时钟速率设置，根据需要调整
+    icm42688_config.mode = SPI_MODE0;           // ICM42688使用SPI模式0
+    icm42688_config.clock_div = SPI_CLOCK_DIV4; // SPI时钟速率设置，根据需要调整
 
     // 注册ICM42688-P为SPI从设备
     icm42688_spi_id = SPI_RegisterSlave(&icm42688_config);
@@ -65,18 +129,25 @@ unsigned char ICM42688_Init()
     {
         return 1; // 初始化失败，设备ID不匹配
     }
+    // 初始化滤波器 - 参数可根据实际噪声情况调整
+    // 第一个参数: 过程噪声(越大响应越快但越不稳定)
+    // 第二个参数: 测量噪声(越大滤波越强但滞后越明显)
+    DPS_Kalman_Init(&gyro_x_filter, 0.0015f, 0.05f);
+    DPS_Kalman_Init(&gyro_y_filter, 0.0015f, 0.05f);
+    DPS_Kalman_Init(&gyro_z_filter, 0.0015f, 0.05f);
 
     // 配置电源管理，使能加速度计和陀螺仪，低噪声模式
     ICM42688_WriteRegister(icm42688_spi_id, ICM42688_PWR_MGMT0,
                            ICM42688_PWR_MGMT0_ACCEL_MODE_LN | ICM42688_PWR_MGMT0_GYRO_MODE_LN);
-    
+
     // 等待传感器启动（按需调整延迟时间）
-    Gyrp_Delay();
+    Gyro_Delay();
 
     // 设置默认范围
-    //TODO: 选择合适的量程
-    ICM42688_SetGyroRange(GYRO_RANGE_125_DPS);     
+    // TODO: 选择合适的量程
+    ICM42688_SetGyroRange(GYRO_RANGE_125_DPS);
     ICM42688_SetAccelRange(ACCEL_RANGE_4G);
+    // ICM42688_CalibrateGyroZ();
 
     gyro_data.true_yaw_angle = 0.0f; // 初始化偏航角为0.0f
 
@@ -142,16 +213,16 @@ void ICM42688_ReadSensorData(icm42688_data_t *dataf)
     /*如果你想用卡尔曼滤波器，就在这里插入卡尔曼滤波器的代码
         Put you code here!
     */
-    
+
     // 计算转换后的物理单位数据
     dataf->accel_x_g = ICM42688_AccelConvert(dataf->accel_x, current_accel_range);
     dataf->accel_y_g = ICM42688_AccelConvert(dataf->accel_y, current_accel_range);
     dataf->accel_z_g = ICM42688_AccelConvert(dataf->accel_z, current_accel_range);
-    
+
     dataf->gyro_x_dps = ICM42688_GyroConvert(dataf->gyro_x, current_gyro_range);
     dataf->gyro_y_dps = ICM42688_GyroConvert(dataf->gyro_y, current_gyro_range);
-    dataf->gyro_z_dps = ICM42688_GyroConvert(dataf->gyro_z, current_gyro_range);
-    
+    dataf->gyro_z_dps = ICM42688_GyroConvert(dataf->gyro_z, current_gyro_range) - 0.0191f;
+
     dataf->temp_c = ICM42688_GetTemperature(dataf->temp);
 }
 
@@ -159,10 +230,10 @@ void ICM42688_ReadSensorData(icm42688_data_t *dataf)
 void ICM42688_Reset()
 {
     // 写入设备配置寄存器，设置软件复位位
-    ICM42688_WriteRegister(icm42688_spi_id , ICM42688_DEVICE_CONFIG, 0x01);
+    ICM42688_WriteRegister(icm42688_spi_id, ICM42688_DEVICE_CONFIG, 0x01);
 
     // 等待复位完成（通常需要几毫秒）
-    Gyrp_Delay();
+    Gyro_Delay();
 }
 
 // 检查传感器通信是否正常
@@ -248,144 +319,85 @@ float ICM42688_AccelConvert(int raw_accel, accel_range_t range)
     return raw_accel * g_per_lsb;
 }
 
+// void ICM42688_CalibrateGyroZ()
+// {
+//     unsigned int i;
+//     unsigned char samples = 100; // 采样数量
+//     float filtered_value; 
+//     float sum = 0.0f;
+//     icm42688_data_t temp_data;
+    
+//     // 等待传感器稳定
+//     for (i = 0; i < 10; i++)
+//     {
+//         Gyro_Delay();  // 假设此函数提供约10ms延时
+//     }
+    
+//     // 采集多个样本并计算平均值
+//     for (i = 0; i < samples; i++) 
+//     {
+//         // 读取原始传感器数据
+//         ICM42688_ReadSensorData(&temp_data);
+        
+//         // 应用卡尔曼滤波但不减去任何偏移量
+//         filtered_value = DPS_Kalman_Update(&gyro_z_filter, temp_data.gyro_z_dps);
+//         // 累加滤波后的值
+//         sum += filtered_value;
+        
+//         Gyro_Delay();  // 延时以允许传感器稳定
+//     }
+    
+//     // 计算平均偏移量
+//     gyro_z_offset = sum / samples;
+//     gyro_z_calibrated = 1;
+
+// }
+
 void Gyro_Updater()
 {
-    // 在这里处理传感器数据
-
-
-    // static icm42688_data_t filtered_data;
-    // static kalman_filter_t kf_accel_x, kf_accel_y, kf_accel_z;
-    // static kalman_filter_t kf_gyro_x, kf_gyro_y, kf_gyro_z;
-    // static unsigned char is_initialized = 0;
-    
-    // // 初始化卡尔曼滤波器（仅在第一次调用时）
-    // if (!is_initialized) {
-    //     init_gyro_kalman_filters(&kf_accel_x, &kf_accel_y, &kf_accel_z,
-    //                          &kf_gyro_x, &kf_gyro_y, &kf_gyro_z);
-    //     is_initialized = 1;
-    // }
-    
     // 读取传感器数据
     ICM42688_ReadSensorData(&gyro_data);
-
-
-    
-    // 应用卡尔曼滤波
-    // apply_kalman_filter(&sensor_data, &filtered_data, 
-    //                     &kf_accel_x, &kf_accel_y, &kf_accel_z,
-    //                     &kf_gyro_x, &kf_gyro_y, &kf_gyro_z);
-    
-
-    //比如说FK u;
+    // 使用卡尔曼滤波器处理DPS数据 - 0.01796 、、- 0.02796
+    gyro_data.gyro_x_dps_kf = DPS_Kalman_Update(&gyro_x_filter, gyro_data.gyro_x_dps);
+    gyro_data.gyro_y_dps_kf = DPS_Kalman_Update(&gyro_y_filter, gyro_data.gyro_y_dps);
+    // 使用动态校准的偏移量而非固定值
+    // if (gyro_z_calibrated) 
+    // {
+    //     gyro_data.gyro_z_dps_kf = DPS_Kalman_Update(&gyro_z_filter, gyro_data.gyro_z_dps) - gyro_z_offset;
+    // } 
+    // else 
+    // {
+    gyro_data.gyro_z_dps_kf = DPS_Kalman_Update(&gyro_z_filter, gyro_data.gyro_z_dps);
+    // }
 }
 
-
-#pragma region KalmanFilter// 卡尔曼滤波器结构体
-/**
- * @brief 初始化卡尔曼滤波器
- * @param filter 滤波器结构体指针
- * @param Q 过程噪声协方差
- * @param R 测量噪声协方差
- * @param P_initial 初始估计误差协方差
- * @param x_initial 初始状态估计
- */
-void kalman_init(kalman_filter_t *filter, float Q, float R, float P_initial, float x_initial) 
-{
-    filter->x = x_initial;
-    filter->P = P_initial;
-    filter->Q = Q;
-    filter->R = R;
-    filter->K = 0;
-}
-
-/**
- * @brief 卡尔曼滤波更新步骤
- * @param filter 滤波器结构体指针
- * @param measurement 当前测量值
- * @return 滤波后的估计值
- */
-float kalman_update(kalman_filter_t *filter, float measurement) 
-{
-    // 预测步骤
-    // x = x (状态预测，简化模型下保持不变)
-    filter->P = filter->P + filter->Q;
-    
-    // 更新步骤
-    filter->K = filter->P / (filter->P + filter->R);
-    filter->x = filter->x + filter->K * (measurement - filter->x);
-    filter->P = (1 - filter->K) * filter->P;
-    
-    return filter->x;
-}
-
-/**
- * @brief 初始化所有陀螺仪数据的卡尔曼滤波器
- * @param kf_accel_x,kf_accel_y,kf_accel_z 加速度数据的滤波器
- * @param kf_gyro_x,kf_gyro_y,kf_gyro_z 陀螺仪数据的滤波器
- */
-void init_gyro_kalman_filters(kalman_filter_t *kf_accel_x, kalman_filter_t *kf_accel_y, kalman_filter_t *kf_accel_z,
-    kalman_filter_t *kf_gyro_x, kalman_filter_t *kf_gyro_y, kalman_filter_t *kf_gyro_z)
-{
-    // 初始化加速度计滤波器
-    // 参数可根据实际应用调整：Q(过程噪声), R(测量噪声), 初始P, 初始x
-    kalman_init(kf_accel_x, 0.01f, 0.1f, 1.0f, 0.0f);
-    kalman_init(kf_accel_y, 0.01f, 0.1f, 1.0f, 0.0f);
-    kalman_init(kf_accel_z, 0.01f, 0.1f, 1.0f, 0.0f);
-
-    // 初始化陀螺仪滤波器
-    kalman_init(kf_gyro_x, 0.003f, 0.03f, 1.0f, 0.0f);
-    kalman_init(kf_gyro_y, 0.003f, 0.03f, 1.0f, 0.0f);
-    kalman_init(kf_gyro_z, 0.003f, 0.03f, 1.0f, 0.0f);
-}
-
-/**
- * @brief 对陀螺仪和加速度数据应用卡尔曼滤波
- * @param raw_data 原始传感器数据
- * @param filtered_data 滤波后的数据
- * @param kf_accel_x,kf_accel_y,kf_accel_z 加速度数据的滤波器
- * @param kf_gyro_x,kf_gyro_y,kf_gyro_z 陀螺仪数据的滤波器
- */
-void apply_kalman_filter(icm42688_data_t *raw_data, icm42688_data_t *filtered_data, 
-    kalman_filter_t *kf_accel_x, kalman_filter_t *kf_accel_y, kalman_filter_t *kf_accel_z,
-    kalman_filter_t *kf_gyro_x, kalman_filter_t *kf_gyro_y, kalman_filter_t *kf_gyro_z)
-{
-    // 复制原始数据，以便处理转换后的值
-    *filtered_data = *raw_data;
-    
-    // 更新加速度数据
-    filtered_data->accel_x_g = kalman_update(kf_accel_x, raw_data->accel_x_g);
-    filtered_data->accel_y_g = kalman_update(kf_accel_y, raw_data->accel_y_g);
-    filtered_data->accel_z_g = kalman_update(kf_accel_z, raw_data->accel_z_g);
-
-    // 更新陀螺仪数据
-    filtered_data->gyro_x_dps = kalman_update(kf_gyro_x, raw_data->gyro_x_dps);
-    filtered_data->gyro_y_dps = kalman_update(kf_gyro_y, raw_data->gyro_y_dps);
-    filtered_data->gyro_z_dps = kalman_update(kf_gyro_z, raw_data->gyro_z_dps);
-}
-#pragma endregion
-
-//huh, maybe that's shall be end.Fuwaki Ur shall be happy to see this.
-//I'm brain fucked by this code. I'm not sure if it's right or wrong. I'm not sure if it's useful or not.
-//I'm not sure if it's a good idea to use this code or not. I'm not sure if it's a good idea to use this code or not.
-//EDITED by UNIKOZERA!
-//Ciallo! I'm UNIKOZERA
+// huh, maybe that's shall be end.Fuwaki Ur shall be happy to see this.
+// I'm brain fucked by this code. I'm not sure if it's right or wrong. I'm not sure if it's useful or not.
+// I'm not sure if it's a good idea to use this code or not. I'm not sure if it's a good idea to use this code or not.
+// EDITED by UNIKOZERA!
+// Ciallo! I'm UNIKOZERA
 
 #pragma region yaw_Calculation //!yaw的陀螺仪累加已经在timer中实现
 void yaw_angle_init()
 {
-    static float yaw_angle_offset = 0.0f; // 偏航角偏移量
-    static float yaw_angle_sum = 0.0f; // 偏航角累加值
-    static unsigned char i = 0;
-    if (rmc_data.valid && i <= 50 && !allowUpdate)
+    // static float yaw_angle_offset = 0.0f; // 偏航角偏移量
+    // static float yaw_angle_sum = 0.0f;    // 偏航角累加值
+    // static unsigned char i = 0;
+    // if (rmc_data.valid && i <= 50 && !allowUpdate)
+    // {
+    //     yaw_angle_sum += rmc_data.course;
+    //     i++;
+    // }
+    // else if (rmc_data.valid && i > 50 && !allowUpdate)
+    // {
+    //     yaw_angle_offset = yaw_angle_sum / 50.0f; // 计算偏航角偏移量
+    //     gyro_data.true_yaw_angle = yaw_angle_offset;
+    //     allowUpdate = 1; // 允许更新航向角数据
+    // } // 成功初始化
+    if (!allowUpdate) // 如果允许更新航向角数据，则返回
     {
-        yaw_angle_sum += rmc_data.course;
-        i ++;
+        gyro_data.true_yaw_angle = 60;
+        allowUpdate = 1; // 禁止更新航向角数据
     }
-    else if (rmc_data.valid && i > 50 && !allowUpdate)
-    {
-        yaw_angle_offset = yaw_angle_sum / 50.0f; // 计算偏航角偏移量
-        gyro_data.true_yaw_angle = yaw_angle_offset;
-        allowUpdate = 1; // 允许更新航向角数据
-    } //成功初始化
 }
 #pragma endregion

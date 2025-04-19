@@ -45,4 +45,5 @@
     void GPS_Message_Updater(void);
     void GPS_Delay(void);
     void gps_to_meters(RMC_Data *rmc_data, NaturePosition *naturePosition);
+    void LowPassFilter(float *raw_data, float *filtered_data, float alpha);
 #endif // __GPS_H__
